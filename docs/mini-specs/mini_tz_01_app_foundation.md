@@ -4,13 +4,13 @@
 Подготовить базовый каркас iOS-приложения с модульной структурой и DI, чтобы все feature-команды могли разрабатывать независимо.
 
 ## Scope
-- Настроить структуру каталогов: `App`, `Core`, `Domain`, `Services`, `Features`.
+- Настроить структуру каталогов: `App`, `Common`, `Services`, `Modules`, `UIComponents`.
 - Создать `AppEnvironment` и `DIContainer`.
 - Поднять корневую навигацию на `NavigationStack`.
 - Добавить заглушки экранов всех feature-модулей.
 
 ## Артефакты
-- Базовые модели домена: `Lecture`, `Flashcard`, `QuizQuestion`.
+- Базовые модели домена в `Common/Models`: `Lecture`, `Flashcard`, `QuizQuestion`.
 - Контракты сервисов (протоколы) без полной реализации.
 - Стандарт состояния загрузки/ошибок для ViewModel.
 

@@ -362,15 +362,13 @@ SubscriptionManager
 
 ```
 App
-
-Core
  AppEnvironment
  DIContainer
 
-Domain
- Lecture
- Flashcard
- QuizQuestion
+Common
+ Models
+ Extensions
+ Resources
 
 Services
  RecordingManager
@@ -379,17 +377,35 @@ Services
  StorageUploadService
  SubscriptionManager
 
-Features
+Modules
 
  Onboarding
  LecturesList
  Recorder
+ Processing
  LectureDetail
  FlashcardsPractice
  Quiz
  Paywall
  Settings
+
+UIComponents
+ Reusable SwiftUI components
 ```
+
+### 4.3 Правило структуры (обязательно)
+
+Для всех новых задач, экранов и рефакторинга используется только структура:
+
+```
+App
+Common
+Services
+Modules
+UIComponents
+```
+
+Новые feature-экраны должны добавляться в `Modules/<FeatureName>`, а общие модели и утилиты — в `Common`.
 
 ## 5. Firebase архитектура
 
