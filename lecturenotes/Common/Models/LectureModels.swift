@@ -66,10 +66,21 @@ struct QuizQuestion: Identifiable, Hashable, Codable {
     }
 }
 
+struct LectureFolder: Identifiable, Hashable, Codable {
+    let id: UUID
+    var name: String
+
+    init(id: UUID = UUID(), name: String) {
+        self.id = id
+        self.name = name
+    }
+}
+
 struct Lecture: Identifiable, Hashable, Codable {
     let id: UUID
     var title: String
     var course: String
+    var folderID: LectureFolder.ID?
     var createdAt: Date
     var duration: Duration
     var status: LectureStatus
@@ -85,6 +96,7 @@ struct Lecture: Identifiable, Hashable, Codable {
         id: UUID = UUID(),
         title: String,
         course: String,
+        folderID: LectureFolder.ID? = nil,
         createdAt: Date,
         duration: Duration,
         status: LectureStatus,
@@ -99,6 +111,7 @@ struct Lecture: Identifiable, Hashable, Codable {
         self.id = id
         self.title = title
         self.course = course
+        self.folderID = folderID
         self.createdAt = createdAt
         self.duration = duration
         self.status = status

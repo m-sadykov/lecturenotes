@@ -2,18 +2,28 @@ import Foundation
 
 protocol LectureRepository {
     func fetchLectures() async -> [Lecture]
+    func fetchFolders() async -> [LectureFolder]
     func fetchLecture(id: UUID) async -> Lecture?
 }
 
 struct MockLectureRepository: LectureRepository {
+    private let folders: [LectureFolder]
     private let lectures: [Lecture]
 
-    init(lectures: [Lecture] = MockLectures.makeLectures()) {
-        self.lectures = lectures
+    init(
+        folders: [LectureFolder] = MockLectures.makeFolders(),
+        lectures: [Lecture]? = nil
+    ) {
+        self.folders = folders
+        self.lectures = lectures ?? MockLectures.makeLectures(folders: folders)
     }
 
     func fetchLectures() async -> [Lecture] {
         lectures.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    func fetchFolders() async -> [LectureFolder] {
+        folders
     }
 
     func fetchLecture(id: UUID) async -> Lecture? {
@@ -22,11 +32,25 @@ struct MockLectureRepository: LectureRepository {
 }
 
 enum MockLectures {
-    static func makeLectures() -> [Lecture] {
+    static func makeFolders() -> [LectureFolder] {
         [
+            LectureFolder(name: "Folder 1"),
+            LectureFolder(name: "Folder 2"),
+            LectureFolder(name: "Folder 3")
+        ]
+    }
+
+    static func makeLectures() -> [Lecture] {
+        let folders = makeFolders()
+        return makeLectures(folders: folders)
+    }
+
+    static func makeLectures(folders: [LectureFolder]) -> [Lecture] {
+        return [
             Lecture(
                 title: "Plant Physiology Basics",
                 course: "Biology 101",
+                folderID: nil,
                 createdAt: .now.addingTimeInterval(-3_600),
                 duration: .seconds(2_440),
                 status: .ready,
@@ -50,6 +74,7 @@ enum MockLectures {
             Lecture(
                 title: "Thermodynamics Intro",
                 course: "Physics",
+                folderID: nil,
                 createdAt: .now.addingTimeInterval(-86_400),
                 duration: .seconds(1_860),
                 status: .generating,
@@ -64,6 +89,7 @@ enum MockLectures {
             Lecture(
                 title: "Linear Algebra: Matrices",
                 course: "Math",
+                folderID: nil,
                 createdAt: .now.addingTimeInterval(-170_000),
                 duration: .seconds(3_000),
                 status: .failed,

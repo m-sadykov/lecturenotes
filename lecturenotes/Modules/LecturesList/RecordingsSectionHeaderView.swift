@@ -1,16 +1,26 @@
 import SwiftUI
 
 struct RecordingsSectionHeaderView: View {
+    let foldersDestination: FoldersScreen
+
     var body: some View {
         HStack {
             Text("Recordings")
                 .font(.title)
                 .bold()
             Spacer()
-            Image(systemName: "folder")
+            NavigationLink {
+                foldersDestination
+            } label: {
+                Image(systemName: "folder")
+                    .foregroundStyle(.blue)
+            }
+            .buttonStyle(.plain)
+
+            Button("Search", systemImage: "magnifyingglass") {}
+                .labelStyle(.iconOnly)
                 .foregroundStyle(.blue)
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.blue)
+                .buttonStyle(.plain)
         }
     }
 }

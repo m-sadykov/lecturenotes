@@ -3,7 +3,9 @@ import UniformTypeIdentifiers
 
 struct LecturesListView: View {
     @State var viewModel: LecturesListViewModel
-    @State private var selectedLecture: Lecture?
+    @State private var activeSheet: ActiveSheet?
+    @State private var toastMessage: String?
+    @State private var removalFeedbackToken = 0
     @State private var isImporterPresented = false
     @State private var isImportAlertPresented = false
     @State private var importAlertMessage = ""
@@ -22,7 +24,15 @@ struct LecturesListView: View {
                         QuickActionsStripView {
                             isImporterPresented = true
                         }
-                        RecordingsSectionHeaderView()
+                        RecordingsSectionHeaderView(
+                            foldersDestination: FoldersScreen(viewModel: viewModel)
+                        )
+                        if !viewModel.folders.isEmpty {
+                            FolderFilterChipsView(
+                                folders: viewModel.folders,
+                                selectedFolderID: $viewModel.selectedFolderID
+                            )
+                        }
 
                         if viewModel.isLoading {
                             ProgressView("Loading lectures")
@@ -32,7 +42,7 @@ struct LecturesListView: View {
                                 ForEach(viewModel.filteredLectures) { lecture in
                                     NavigationLink(value: lecture) {
                                         LectureRowView(lecture: lecture) {
-                                            selectedLecture = lecture
+                                            activeSheet = .actions(lecture.id)
                                         }
                                     }
                                     .buttonStyle(.plain)
@@ -50,22 +60,66 @@ struct LecturesListView: View {
                 LectureDetailView(lecture: lecture)
             }
             .overlay(alignment: .bottomTrailing) {
-                FloatingRecordButton()
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 20)
+                if activeSheet == nil {
+                    FloatingRecordButton()
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 20)
+                }
             }
-            .sheet(item: $selectedLecture) { lecture in
-                RecordingActionsSheet(
-                    lecture: lecture,
-                    onAddToFolder: {},
-                    onEditTitle: {},
-                    onShare: {},
-                    onDelete: {
-                        selectedLecture = nil
+            .overlay(alignment: .top) {
+                if let toastMessage {
+                    ToastBannerView(message: toastMessage)
+                        .padding(.top, 12)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: toastMessage != nil)
+            .sensoryFeedback(.success, trigger: removalFeedbackToken)
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .actions(let lectureID):
+                    if let lecture = viewModel.lecture(withID: lectureID) {
+                        RecordingActionsSheet(
+                            lecture: lecture,
+                            onAddToFolder: {
+                                activeSheet = .folderPicker(lectureID)
+                            },
+                            onRemoveFromFolder: lecture.folderID == nil ? nil : {
+                                let folderName = viewModel.removeLectureFromFolder(lectureID)
+                                activeSheet = nil
+                                removalFeedbackToken += 1
+                                showToast(
+                                    folderName.map { "Removed from \($0)." } ?? "Removed from folder."
+                                )
+                            },
+                            onEditTitle: {},
+                            onShare: {},
+                            onDelete: {
+                                activeSheet = nil
+                            }
+                        )
+                        .presentationDetents([.height(lecture.folderID == nil ? 290 : 340), .fraction(0.52)])
                     }
-                )
-                .presentationDetents([.height(270)])
-                .presentationCornerRadius(28)
+                case .folderPicker(let lectureID):
+                    if let lecture = viewModel.lecture(withID: lectureID) {
+                        FolderSelectionSheet(
+                            lecture: lecture,
+                            folders: viewModel.folders,
+                            selectedFolderID: lecture.folderID,
+                            onCreateFolder: { folderName in
+                                viewModel.createFolder(named: folderName)
+                            },
+                            onSelectFolder: { folderID in
+                                viewModel.addLecture(lectureID, toFolder: folderID)
+                                activeSheet = nil
+                            },
+                            onClose: {
+                                activeSheet = nil
+                            }
+                        )
+                        .presentationDetents([.fraction(0.52), .large])
+                    }
+                }
             }
             .fileImporter(
                 isPresented: $isImporterPresented,
@@ -85,6 +139,20 @@ struct LecturesListView: View {
         }
     }
 
+    private func showToast(_ message: String) {
+        toastMessage = message
+
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            await MainActor.run {
+                guard toastMessage == message else {
+                    return
+                }
+                toastMessage = nil
+            }
+        }
+    }
+
     private func handleAudioImport(_ result: Result<[URL], Error>) {
         switch result {
         case .success(let urls):
@@ -98,6 +166,34 @@ struct LecturesListView: View {
         case .failure(let error):
             importAlertMessage = "Import failed: \(error.localizedDescription)"
             isImportAlertPresented = true
+        }
+    }
+}
+
+private struct ToastBannerView: View {
+    let message: String
+
+    var body: some View {
+        Text(message)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.black.opacity(0.88))
+            .clipShape(.rect(cornerRadius: 14))
+            .shadow(radius: 10, y: 4)
+    }
+}
+
+private enum ActiveSheet: Identifiable {
+    case actions(Lecture.ID)
+    case folderPicker(Lecture.ID)
+
+    var id: String {
+        switch self {
+        case .actions(let lectureID):
+            "actions-\(lectureID)"
+        case .folderPicker(let lectureID):
+            "folderPicker-\(lectureID)"
         }
     }
 }

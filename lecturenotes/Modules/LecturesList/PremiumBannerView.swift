@@ -1,9 +1,11 @@
 import SwiftUI
 
 struct PremiumBannerView: View {
+    @State private var isPaywallPresented = false
+
     var body: some View {
-        NavigationLink {
-            PaywallView()
+        Button {
+            isPaywallPresented = true
         } label: {
             HStack {
                 VStack(alignment: .leading) {
@@ -35,5 +37,8 @@ struct PremiumBannerView: View {
             .clipShape(.rect(cornerRadius: 12))
         }
         .buttonStyle(.plain)
+        .fullScreenCover(isPresented: $isPaywallPresented) {
+            PaywallView()
+        }
     }
 }
