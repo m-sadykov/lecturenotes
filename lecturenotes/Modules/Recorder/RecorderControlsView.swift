@@ -6,22 +6,18 @@ struct RecorderControlsView: View {
     var body: some View {
         VStack {
             Button("Record", systemImage: "record.circle") {
-                viewModel.record()
+                Task {
+                    await viewModel.start()
+                }
             }
             .buttonStyle(.borderedProminent)
             .disabled(viewModel.mode == .recording)
 
-            Button("Pause", systemImage: "pause.circle") {
-                viewModel.pause()
+            Button(viewModel.mode == .paused ? "Resume" : "Pause", systemImage: viewModel.mode == .paused ? "play.circle" : "pause.circle") {
+                viewModel.togglePause()
             }
             .buttonStyle(.bordered)
-            .disabled(viewModel.mode != .recording)
-
-            Button("Resume", systemImage: "play.circle") {
-                viewModel.resume()
-            }
-            .buttonStyle(.bordered)
-            .disabled(viewModel.mode != .paused)
+            .disabled(!viewModel.canTogglePause)
 
             Button("Stop", systemImage: "stop.circle") {
                 viewModel.stop()

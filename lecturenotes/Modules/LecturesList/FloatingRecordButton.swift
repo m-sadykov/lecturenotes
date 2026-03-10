@@ -1,10 +1,10 @@
 import SwiftUI
 
 struct FloatingRecordButton: View {
+    let action: () -> Void
+
     var body: some View {
-        NavigationLink {
-            RecorderView(viewModel: RecorderViewModel())
-        } label: {
+        Button(action: action) {
             Image(systemName: "mic.fill")
                 .font(.title2)
                 .foregroundStyle(.white)

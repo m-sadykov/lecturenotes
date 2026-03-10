@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 struct LecturesListView: View {
     @State var viewModel: LecturesListViewModel
     @State private var activeSheet: ActiveSheet?
+    @State private var recorderViewModel: RecorderViewModel?
     @State private var toastMessage: String?
     @State private var removalFeedbackToken = 0
     @State private var isImporterPresented = false
@@ -60,10 +61,28 @@ struct LecturesListView: View {
                 LectureDetailView(lecture: lecture)
             }
             .overlay(alignment: .bottomTrailing) {
-                if activeSheet == nil {
-                    FloatingRecordButton()
+                if activeSheet == nil && recorderViewModel == nil {
+                    FloatingRecordButton {
+                        recorderViewModel = RecorderViewModel()
+                    }
                         .padding(.trailing, 20)
                         .padding(.bottom, 20)
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if let recorderViewModel {
+                    ZStack(alignment: .bottom) {
+                        Color.black.opacity(0.18)
+                            .ignoresSafeArea()
+                            .transition(.opacity)
+
+                        MiniRecorderSheetView(viewModel: recorderViewModel) {
+                            self.recorderViewModel = nil
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                    .ignoresSafeArea(edges: .bottom)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
             .overlay(alignment: .top) {
@@ -74,6 +93,7 @@ struct LecturesListView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: toastMessage != nil)
+            .animation(.spring(response: 0.32, dampingFraction: 0.88), value: recorderViewModel != nil)
             .sensoryFeedback(.success, trigger: removalFeedbackToken)
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
