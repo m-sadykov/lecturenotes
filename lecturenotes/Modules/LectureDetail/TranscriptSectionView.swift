@@ -6,6 +6,7 @@ struct TranscriptSectionView: View {
     var body: some View {
         ScrollView {
             Text(lecture.transcript.isEmpty ? "Transcript is not available yet." : lecture.transcript)
+                .font(.body)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding()
         }

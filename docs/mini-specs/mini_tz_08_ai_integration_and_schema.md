@@ -7,7 +7,8 @@
 - STT: `gpt-4o-mini-transcribe` для получения transcript.
 - LLM: `GPT-4.1 mini` для генерации JSON.
 - Валидация структуры ответа перед сохранением.
-- Нормализация данных `outline/glossary/flashcards/quiz`.
+- Нормализация данных `flashcards/quiz`.
+- `outline` и `glossary` выведены из scope и переносятся в `v2`.
 
 ## Артефакты
 - AI-клиент на backend.
@@ -16,7 +17,7 @@
 
 ## Критерии приемки
 - Ответ модели валидируется и парсится без падений pipeline.
-- Сохраняются поля: `title`, `summaryShort`, `summaryLong`, `outline`, `glossary`, `flashcards`, `quiz`.
+- Сохраняются поля: `title`, `summaryShort`, `summaryLong`, `flashcards`, `quiz`.
 - Генерируется минимум 10 карточек и 5 quiz-вопросов.
 
 ## Зависимости

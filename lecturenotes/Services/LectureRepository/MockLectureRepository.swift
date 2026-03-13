@@ -32,11 +32,28 @@ struct MockLectureRepository: LectureRepository {
 }
 
 enum MockLectures {
+    private static let folder1ID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+    private static let folder2ID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+    private static let folder3ID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+
+    private static let lecture1ID = UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!
+    private static let lecture2ID = UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!
+    private static let lecture3ID = UUID(uuidString: "CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC")!
+
+    private static let flashcard1ID = UUID(uuidString: "E1111111-1111-1111-1111-111111111111")!
+    private static let flashcard2ID = UUID(uuidString: "E2222222-2222-2222-2222-222222222222")!
+    private static let quiz1ID = UUID(uuidString: "F1111111-1111-1111-1111-111111111111")!
+    private static let quiz2ID = UUID(uuidString: "F2222222-2222-2222-2222-222222222222")!
+
+    private static let lecture1Date = Date(timeIntervalSinceReferenceDate: 794_855_467)
+    private static let lecture2Date = Date(timeIntervalSinceReferenceDate: 794_772_667)
+    private static let lecture3Date = Date(timeIntervalSinceReferenceDate: 794_687_067)
+
     static func makeFolders() -> [LectureFolder] {
         [
-            LectureFolder(name: "Folder 1"),
-            LectureFolder(name: "Folder 2"),
-            LectureFolder(name: "Folder 3")
+            LectureFolder(id: folder1ID, name: "Folder 1"),
+            LectureFolder(id: folder2ID, name: "Folder 2"),
+            LectureFolder(id: folder3ID, name: "Folder 3")
         ]
     }
 
@@ -48,56 +65,53 @@ enum MockLectures {
     static func makeLectures(folders: [LectureFolder]) -> [Lecture] {
         return [
             Lecture(
+                id: lecture1ID,
                 title: "Plant Physiology Basics",
                 course: "Biology 101",
+                audioURL: nil,
                 folderID: nil,
-                createdAt: .now.addingTimeInterval(-3_600),
+                createdAt: lecture1Date,
                 duration: .seconds(2_440),
                 status: .ready,
                 transcript: "Today we covered photosynthesis, chloroplasts, and ATP synthesis in plants.",
                 summaryShort: "Lecture introduced photosynthesis and how plants convert sunlight into energy.",
                 summaryLong: "We explored photosynthesis stages, light-dependent reactions, ATP production, and practical examples about plant metabolism.",
-                outline: ["Introduction", "Photosynthesis Stages", "Cell Structures", "Key Takeaways"],
-                glossary: [
-                    GlossaryItem(term: "Photosynthesis", definition: "Conversion of light into chemical energy."),
-                    GlossaryItem(term: "Chlorophyll", definition: "Pigment responsible for light absorption.")
-                ],
                 flashcards: [
-                    Flashcard(question: "What is photosynthesis?", answer: "A process where plants convert light into chemical energy."),
-                    Flashcard(question: "Where does photosynthesis occur?", answer: "In chloroplasts.")
+                    Flashcard(id: flashcard1ID, question: "What is photosynthesis?", answer: "A process where plants convert light into chemical energy."),
+                    Flashcard(id: flashcard2ID, question: "Where does photosynthesis occur?", answer: "In chloroplasts.")
                 ],
                 quiz: [
-                    QuizQuestion(question: "Which pigment absorbs sunlight?", options: ["Chlorophyll", "Keratin", "Hemoglobin", "Melanin"], correctIndex: 0),
-                    QuizQuestion(question: "Main product of light reaction?", options: ["ATP", "Insulin", "DNA", "Collagen"], correctIndex: 0)
+                    QuizQuestion(id: quiz1ID, question: "Which pigment absorbs sunlight?", options: ["Chlorophyll", "Keratin", "Hemoglobin", "Melanin"], correctIndex: 0),
+                    QuizQuestion(id: quiz2ID, question: "Main product of light reaction?", options: ["ATP", "Insulin", "DNA", "Collagen"], correctIndex: 0)
                 ]
             ),
             Lecture(
+                id: lecture2ID,
                 title: "Thermodynamics Intro",
                 course: "Physics",
+                audioURL: nil,
                 folderID: nil,
-                createdAt: .now.addingTimeInterval(-86_400),
+                createdAt: lecture2Date,
                 duration: .seconds(1_860),
                 status: .generating,
                 transcript: "",
                 summaryShort: "",
                 summaryLong: "",
-                outline: [],
-                glossary: [],
                 flashcards: [],
                 quiz: []
             ),
             Lecture(
+                id: lecture3ID,
                 title: "Linear Algebra: Matrices",
                 course: "Math",
+                audioURL: nil,
                 folderID: nil,
-                createdAt: .now.addingTimeInterval(-170_000),
+                createdAt: lecture3Date,
                 duration: .seconds(3_000),
                 status: .failed,
                 transcript: "",
                 summaryShort: "",
                 summaryLong: "",
-                outline: [],
-                glossary: [],
                 flashcards: [],
                 quiz: []
             )

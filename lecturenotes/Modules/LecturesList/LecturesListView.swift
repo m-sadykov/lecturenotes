@@ -3,6 +3,7 @@ import UniformTypeIdentifiers
 
 struct LecturesListView: View {
     @State var viewModel: LecturesListViewModel
+    @State private var selectedLecture: Lecture?
     @State private var activeSheet: ActiveSheet?
     @State private var recorderViewModel: RecorderViewModel?
     @State private var toastMessage: String?
@@ -22,12 +23,16 @@ struct LecturesListView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         PremiumBannerView()
+                        
                         QuickActionsStripView {
                             isImporterPresented = true
                         }
+                        
                         RecordingsSectionHeaderView(
-                            foldersDestination: FoldersScreen(viewModel: viewModel)
+                            foldersDestination: FoldersScreen(viewModel: viewModel),
+                            showsFoldersNavigation: true
                         )
+                        
                         if !viewModel.folders.isEmpty {
                             FolderFilterChipsView(
                                 folders: viewModel.folders,
@@ -38,15 +43,26 @@ struct LecturesListView: View {
                         if viewModel.isLoading {
                             ProgressView("Loading lectures")
                                 .frame(maxWidth: .infinity)
+                        } else if viewModel.lectures.isEmpty {
+                            EmptyLecturesPlaceholderView()
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 40)
+                        } else if viewModel.filteredLectures.isEmpty, viewModel.selectedFolderID != nil {
+                            EmptyFolderPlaceholderView()
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 40)
                         } else {
-                            LazyVStack {
+                            VStack(spacing: 12) {
                                 ForEach(viewModel.filteredLectures) { lecture in
-                                    NavigationLink(value: lecture) {
-                                        LectureRowView(lecture: lecture) {
+                                    LectureRowView(
+                                        lecture: lecture,
+                                        onOpen: {
+                                            selectedLecture = lecture
+                                        },
+                                        onMore: {
                                             activeSheet = .actions(lecture.id)
                                         }
-                                    }
-                                    .buttonStyle(.plain)
+                                    )
                                 }
                             }
                         }
@@ -57,7 +73,7 @@ struct LecturesListView: View {
             }
             .background(Color(.systemGray6))
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: Lecture.self) { lecture in
+            .navigationDestination(item: $selectedLecture) { lecture in
                 LectureDetailView(lecture: lecture)
             }
             .overlay(alignment: .bottomTrailing) {
@@ -69,16 +85,22 @@ struct LecturesListView: View {
                         .padding(.bottom, 20)
                 }
             }
-            .overlay(alignment: .bottom) {
-                if let recorderViewModel {
-                    ZStack(alignment: .bottom) {
+            .overlay {
+                if recorderViewModel != nil {
+                    Button {
+                        recorderViewModel = nil
+                    } label: {
                         Color.black.opacity(0.18)
                             .ignoresSafeArea()
-                            .transition(.opacity)
-
-                        MiniRecorderSheetView(viewModel: recorderViewModel) {
-                            self.recorderViewModel = nil
-                        }
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.opacity)
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if let recorderViewModel {
+                    MiniRecorderSheetView(viewModel: recorderViewModel) {
+                        self.recorderViewModel = nil
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                     .ignoresSafeArea(edges: .bottom)
@@ -204,6 +226,26 @@ private struct ToastBannerView: View {
     }
 }
 
+private struct EmptyLecturesPlaceholderView: View {
+    var body: some View {
+        ContentUnavailableView {
+            Text("No recordings yet")
+        } description: {
+            Text("Tap the mic button to start recording.")
+        }
+    }
+}
+
+private struct EmptyFolderPlaceholderView: View {
+    var body: some View {
+        ContentUnavailableView {
+            Text("No recordings in this folder")
+        } description: {
+            Text("Use the menu button on a recording to move it into this folder.")
+        }
+    }
+}
+
 private enum ActiveSheet: Identifiable {
     case actions(Lecture.ID)
     case folderPicker(Lecture.ID)
@@ -219,5 +261,99 @@ private enum ActiveSheet: Identifiable {
 }
 
 #Preview {
-    LecturesListView(viewModel: LecturesListViewModel(repository: MockLectureRepository()))
+    LecturesListPreviewCanvas()
+}
+
+private struct LecturesListPreviewCanvas: View {
+    private let lectures = MockLectures.makeLectures()
+    private let folders = MockLectures.makeFolders()
+
+    var body: some View {
+        VStack(spacing: 0) {
+            previewHeader
+                .padding(.horizontal, 20)
+                .padding(.top, 6)
+                .padding(.bottom, 12)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    PremiumBannerView()
+                    QuickActionsStripView {}
+                    previewSectionHeader
+                    previewFolderChips
+
+                    if let firstLecture = lectures.first {
+                        LectureRowView(lecture: firstLecture, onOpen: {}, onMore: {})
+                    }
+
+                    if lectures.count > 1 {
+                        LectureRowView(lecture: lectures[1], onOpen: {}, onMore: {})
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 100)
+            }
+        }
+        .background(Color(.systemGray6))
+    }
+
+    private var previewHeader: some View {
+        HStack {
+            Text("LectureNotes")
+                .font(.title)
+                .bold()
+            Spacer()
+            Image(systemName: "gearshape")
+                .font(.title3)
+                .frame(width: 44, height: 44)
+                .background(.black.opacity(0.05))
+                .clipShape(.circle)
+        }
+    }
+
+    private var previewSectionHeader: some View {
+        HStack {
+            Text("Recordings")
+                .font(.title)
+                .bold()
+            Spacer()
+            Image(systemName: "folder")
+                .foregroundStyle(.blue.opacity(0.5))
+            Button("Search", systemImage: "magnifyingglass") {}
+                .labelStyle(.iconOnly)
+                .foregroundStyle(.blue)
+                .buttonStyle(.plain)
+        }
+    }
+
+    private var previewFolderChips: some View {
+        ScrollView(.horizontal) {
+            HStack {
+                previewChip(title: "All", isSelected: true)
+
+                if !folders.isEmpty {
+                    previewChip(title: folders[0].name, isSelected: false)
+                }
+
+                if folders.count > 1 {
+                    previewChip(title: folders[1].name, isSelected: false)
+                }
+
+                if folders.count > 2 {
+                    previewChip(title: folders[2].name, isSelected: false)
+                }
+            }
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    private func previewChip(title: String, isSelected: Bool) -> some View {
+        Text(title)
+            .font(.caption)
+            .foregroundStyle(isSelected ? .white : .primary)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(isSelected ? .black : .white)
+            .clipShape(.rect(cornerRadius: 16))
+    }
 }

@@ -8,6 +8,8 @@
 - Upload в путь: `audio/{uid}/{lectureId}.m4a`.
 - Создание документа `users/{uid}/lectures/{lectureId}`.
 - Первичный статусный pipeline: `draft -> uploading -> transcribing`.
+- Сохранение `transcript` в документе лекции после получения частичной или финальной транскрибации.
+- Обновление поля `Lecture.transcript` в документе лекции без промежуточной отдельной модели записи.
 
 ## Артефакты
 - `StorageUploadService`.
@@ -17,6 +19,7 @@
 ## Критерии приемки
 - Для каждой записи создается связка: файл в Storage + документ в Firestore.
 - `audioPath`, `createdAt`, `durationSec`, `status` сохраняются корректно.
+- `transcript` сохраняется в документе лекции и не теряется между этапами `transcribing -> generating -> ready`.
 - Ошибка upload переводит лекцию в `failed` с сообщением об ошибке.
 
 ## Зависимости

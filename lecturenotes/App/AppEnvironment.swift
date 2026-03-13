@@ -4,7 +4,7 @@ import Observation
 @MainActor
 @Observable
 final class AppEnvironment {
-    var repository: LectureRepository
+    @ObservationIgnored var repository: LectureRepository
 
     init(repository: LectureRepository = MockLectureRepository()) {
         self.repository = repository

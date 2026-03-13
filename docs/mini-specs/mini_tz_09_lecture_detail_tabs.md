@@ -4,7 +4,8 @@
 Предоставить единый экран просмотра результата обработки лекции по разделам.
 
 ## Scope
-- Вкладки: `Summary`, `Outline`, `Glossary`, `Flashcards`, `Quiz`, `Transcript`.
+- Вкладки: `Summary`, `Flashcards`, `Quiz`, `Transcript`.
+- `Outline` и `Glossary` перенесены в `v2` и не входят в текущий detail screen.
 - Загрузка лекции по `lectureId`.
 - Отображение пустых/ошибочных состояний.
 - Базовые действия: открыть practice/quiz режим.

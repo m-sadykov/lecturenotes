@@ -4,13 +4,12 @@ struct SummarySectionView: View {
     let lecture: Lecture
 
     var body: some View {
-        List {
-            Section("Short") {
-                Text(lecture.summaryShort.isEmpty ? "No summary yet." : lecture.summaryShort)
-            }
-            Section("Detailed") {
-                Text(lecture.summaryLong.isEmpty ? "No detailed summary yet." : lecture.summaryLong)
-            }
+        ScrollView {
+            Text(lecture.summaryLong.isEmpty ? "No detailed summary yet." : lecture.summaryLong)
+                .font(.body)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .textSelection(.enabled)
         }
     }
 }

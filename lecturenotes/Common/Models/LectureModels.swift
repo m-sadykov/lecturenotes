@@ -28,18 +28,6 @@ enum LectureStatus: String, CaseIterable, Identifiable, Codable {
     }
 }
 
-struct GlossaryItem: Identifiable, Hashable, Codable {
-    let id: UUID
-    var term: String
-    var definition: String
-
-    init(id: UUID = UUID(), term: String, definition: String) {
-        self.id = id
-        self.term = term
-        self.definition = definition
-    }
-}
-
 struct Flashcard: Identifiable, Hashable, Codable {
     let id: UUID
     var question: String
@@ -80,6 +68,7 @@ struct Lecture: Identifiable, Hashable, Codable {
     let id: UUID
     var title: String
     var course: String
+    var audioURL: URL?
     var folderID: LectureFolder.ID?
     var createdAt: Date
     var duration: Duration
@@ -87,8 +76,6 @@ struct Lecture: Identifiable, Hashable, Codable {
     var transcript: String
     var summaryShort: String
     var summaryLong: String
-    var outline: [String]
-    var glossary: [GlossaryItem]
     var flashcards: [Flashcard]
     var quiz: [QuizQuestion]
 
@@ -96,6 +83,7 @@ struct Lecture: Identifiable, Hashable, Codable {
         id: UUID = UUID(),
         title: String,
         course: String,
+        audioURL: URL? = nil,
         folderID: LectureFolder.ID? = nil,
         createdAt: Date,
         duration: Duration,
@@ -103,14 +91,13 @@ struct Lecture: Identifiable, Hashable, Codable {
         transcript: String,
         summaryShort: String,
         summaryLong: String,
-        outline: [String],
-        glossary: [GlossaryItem],
         flashcards: [Flashcard],
         quiz: [QuizQuestion]
     ) {
         self.id = id
         self.title = title
         self.course = course
+        self.audioURL = audioURL
         self.folderID = folderID
         self.createdAt = createdAt
         self.duration = duration
@@ -118,8 +105,6 @@ struct Lecture: Identifiable, Hashable, Codable {
         self.transcript = transcript
         self.summaryShort = summaryShort
         self.summaryLong = summaryLong
-        self.outline = outline
-        self.glossary = glossary
         self.flashcards = flashcards
         self.quiz = quiz
     }

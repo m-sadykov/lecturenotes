@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RecordingsSectionHeaderView: View {
     let foldersDestination: FoldersScreen
+    let showsFoldersNavigation: Bool
 
     var body: some View {
         HStack {
@@ -9,13 +10,18 @@ struct RecordingsSectionHeaderView: View {
                 .font(.title)
                 .bold()
             Spacer()
-            NavigationLink {
-                foldersDestination
-            } label: {
+            if showsFoldersNavigation {
+                NavigationLink {
+                    foldersDestination
+                } label: {
+                    Image(systemName: "folder")
+                        .foregroundStyle(.blue)
+                }
+                .buttonStyle(.plain)
+            } else {
                 Image(systemName: "folder")
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(.blue.opacity(0.5))
             }
-            .buttonStyle(.plain)
 
             Button("Search", systemImage: "magnifyingglass") {}
                 .labelStyle(.iconOnly)

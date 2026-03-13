@@ -4,7 +4,7 @@ import Observation
 @MainActor
 @Observable
 final class LecturesListViewModel {
-    private let repository: LectureRepository
+    @ObservationIgnored private let repository: LectureRepository
 
     var lectures: [Lecture] = []
     var folders: [LectureFolder] = []

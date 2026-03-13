@@ -7,14 +7,14 @@ struct PaywallView: View {
                 Section("Free") {
                     Text("3 lectures per month")
                     Text("10 minutes max per lecture")
-                    Text("Summary + Outline")
+                    Text("Summary")
                 }
 
                 Section("Pro") {
                     Text("$4.99 / month")
                     Text("50 lectures per month")
                     Text("60 minutes max per lecture")
-                    Text("Flashcards + Quiz + Glossary")
+                    Text("Flashcards + Quiz")
                 }
 
                 Section {

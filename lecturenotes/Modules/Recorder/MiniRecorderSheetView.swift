@@ -3,6 +3,7 @@ import SwiftUI
 struct MiniRecorderSheetView: View {
     @Bindable var viewModel: RecorderViewModel
     let onClose: () -> Void
+    @State private var feedbackTrigger = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -29,6 +30,7 @@ struct MiniRecorderSheetView: View {
         .task {
             await viewModel.start()
         }
+        .sensoryFeedback(.impact(weight: .light), trigger: feedbackTrigger)
         .alert("Recording Error", isPresented: errorBinding) {
             Button("OK") {}
         } message: {
@@ -67,6 +69,7 @@ struct MiniRecorderSheetView: View {
     private var controlRow: some View {
         HStack(spacing: 18) {
             Button {
+                triggerFeedback()
                 viewModel.stopAndDiscard()
                 onClose()
             } label: {
@@ -81,6 +84,7 @@ struct MiniRecorderSheetView: View {
             .buttonStyle(.plain)
 
             Button {
+                triggerFeedback()
                 viewModel.stopAndDiscard()
                 onClose()
             } label: {
@@ -88,13 +92,14 @@ struct MiniRecorderSheetView: View {
                     .font(.title3)
                     .foregroundStyle(.white)
                     .frame(width: 84, height: 84)
-                    .background(Color.red)
+                    .background(Color(red: 0.88, green: 0.33, blue: 0.33))
                     .clipShape(.circle)
-                    .shadow(color: .red.opacity(0.3), radius: 18, y: 8)
+                    .shadow(color: Color.red.opacity(0.18), radius: 14, y: 6)
             }
             .buttonStyle(.plain)
 
             Button {
+                triggerFeedback()
                 viewModel.togglePause()
             } label: {
                 Image(systemName: viewModel.mode == .paused ? "play.fill" : "pause.fill")
@@ -138,6 +143,10 @@ struct MiniRecorderSheetView: View {
                 }
             }
         )
+    }
+
+    private func triggerFeedback() {
+        feedbackTrigger += 1
     }
 }
 

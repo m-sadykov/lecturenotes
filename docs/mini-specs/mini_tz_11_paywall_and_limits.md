@@ -6,8 +6,9 @@
 ## Scope
 - Экран `Paywall` (Free/Pro).
 - Покупка подписки и `restore purchases`.
-- Ограничения Free: 3 лекции/месяц, до 10 минут, только `summary + outline`.
-- Ограничения Pro: 50 лекций/месяц, до 60 минут, доступ к `flashcards/quiz/glossary`.
+- Ограничения Free: 3 лекции/месяц, до 10 минут, только `summary`.
+- Ограничения Pro: 50 лекций/месяц, до 60 минут, доступ к `flashcards/quiz`.
+- `outline` и `glossary` не входят в `v1` и перенесены в `v2`.
 
 ## Артефакты
 - `SubscriptionManager`.

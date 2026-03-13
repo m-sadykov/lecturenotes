@@ -85,6 +85,8 @@ failed
 
 Каждая лекция содержит:
 
+`Outline` и `Glossary` исключены из `v1` и перенесены в `v2`.
+
 **Summary**
 
 • короткий конспект
@@ -92,30 +94,6 @@ failed
 • подробный конспект
 
 ⸻
-
-**Outline**
-
-Структура лекции:
-
-```
-Topic 1
-Topic 2
-Topic 3
-```
-
-**Glossary**
-
-Термины:
-
-```
-term → definition
-```
-
-пример:
-
-```
-Photosynthesis → process where plants convert sunlight into energy
-```
 
 **Flashcards**
 
@@ -236,8 +214,6 @@ Tabs:
 
 ```
 Summary
-Outline
-Glossary
 Flashcards
 Quiz
 Transcript
@@ -456,10 +432,6 @@ transcript
 summaryShort
 summaryLong
 
-outline[]
-
-glossary[]
-
 flashcards[]
 
 quiz[]
@@ -512,8 +484,6 @@ generateStudyPack
 
 ```
 summary
-outline
-glossary
 flashcards
 quiz
 ```
@@ -533,10 +503,6 @@ LLM должен возвращать JSON.
  "title": "string",
  "summaryShort": "string",
  "summaryLong": "string",
- "outline": ["string"],
- "glossary": [
-   { "term": "string", "definition": "string" }
- ],
  "flashcards": [
    { "q": "string", "a": "string" }
  ],
@@ -557,7 +523,7 @@ LLM должен возвращать JSON.
 ```
 3 лекции в месяц
 10 минут максимум
-summary + outline
+summary
 ```
 
 **Pro**
@@ -570,7 +536,6 @@ $4.99 / month
 
 flashcards
 quiz
-glossary
 ```
 
 ## 9. Безопасность
@@ -665,8 +630,6 @@ GPT-4.1 mini
 
 ```
 summary
-outline
-glossary
 flashcards
 quiz generation
 ```
@@ -701,10 +664,8 @@ From the lecture transcript generate:
 1. Title
 2. Short summary
 3. Detailed summary
-4. Lecture outline
-5. Key terms glossary
-6. 10 flashcards (question-answer)
-7. 5 quiz questions (multiple choice)
+4. 10 flashcards (question-answer)
+5. 5 quiz questions (multiple choice)
 
 Return ONLY valid JSON.
 ```
@@ -716,10 +677,6 @@ Return ONLY valid JSON.
  "title": "string",
  "summaryShort": "string",
  "summaryLong": "string",
- "outline": ["string"],
- "glossary":[
-   {"term":"string","definition":"string"}
- ],
  "flashcards":[
    {"q":"string","a":"string"}
  ],

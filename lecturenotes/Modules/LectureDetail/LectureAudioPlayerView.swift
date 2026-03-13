@@ -1,0 +1,173 @@
+import SwiftUI
+
+struct LectureAudioPlayerView: View {
+    let lecture: Lecture
+    @Bindable var viewModel: LecturePlayerViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(lecture.title)
+                    .font(.title)
+                    .bold()
+                    .lineLimit(2)
+
+                Text(metadataText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(alignment: .top, spacing: 14) {
+                Button(action: viewModel.togglePlayback) {
+                    Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.title3)
+                        .foregroundStyle(.primary)
+                        .frame(width: 52, height: 52)
+                        .background(Color.black.opacity(0.03))
+                        .clipShape(.circle)
+                }
+                .buttonStyle(.plain)
+                .disabled(!viewModel.canPlay)
+
+                VStack(spacing: 8) {
+                    PlayerProgressBarView(
+                        progress: Binding(
+                            get: { viewModel.progress },
+                            set: { viewModel.seek(to: $0) }
+                        ),
+                        isEnabled: viewModel.canPlay
+                    )
+
+                    HStack {
+                        Text(LectureFormatters.clockText(viewModel.currentTime))
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+
+                        Spacer()
+
+                        Text(LectureFormatters.clockText(viewModel.totalDuration))
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.top, 14)
+
+                Menu {
+                    speedButton(1)
+                    speedButton(1.25)
+                    speedButton(1.5)
+                    speedButton(2)
+                } label: {
+                    Text(rateText)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .frame(minWidth: 36)
+                }
+                .disabled(!viewModel.canPlay)
+                .padding(.top, 18)
+            }
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 6)
+    }
+
+    private var rateText: String {
+        if viewModel.playbackRate == floor(viewModel.playbackRate) {
+            "\(Int(viewModel.playbackRate))x"
+        } else {
+            "\(viewModel.playbackRate.formatted(.number.precision(.fractionLength(2))))x"
+        }
+    }
+
+    private var metadataText: String {
+        "\(lecture.createdAt.formatted(.dateTime.month(.abbreviated).day().year())) · \(LectureFormatters.clockText(lecture.duration)) · Voice Recording"
+    }
+
+    @ViewBuilder
+    private func speedButton(_ rate: Float) -> some View {
+        Button(rate == floor(rate) ? "\(Int(rate))x" : "\(rate.formatted(.number.precision(.fractionLength(2))))x") {
+            viewModel.setPlaybackRate(rate)
+        }
+    }
+}
+
+private struct PlayerProgressBarView: View {
+    @Binding var progress: Double
+
+    let isEnabled: Bool
+
+    var body: some View {
+        GeometryReader { geometry in
+            let width = max(geometry.size.width, 1)
+            let clampedProgress = progress.clamped(to: 0...1)
+            let thumbOffset = width * clampedProgress
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color(red: 0.91, green: 0.91, blue: 0.94))
+                    .frame(height: 6)
+
+                Capsule()
+                    .fill(Color(red: 0.78, green: 0.82, blue: 1.0))
+                    .frame(width: max(thumbOffset, 6), height: 6)
+
+                Circle()
+                    .fill(Color(red: 0.34, green: 0.45, blue: 0.98))
+                    .frame(width: 18, height: 18)
+                    .shadow(color: .black.opacity(0.08), radius: 8, y: 2)
+                    .offset(x: min(max(thumbOffset - 9, 0), width - 18))
+            }
+            .frame(height: 24)
+            .contentShape(.rect)
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        guard isEnabled else {
+                            return
+                        }
+
+                        progress = (value.location.x / width).clamped(to: 0...1)
+                    }
+                    .onEnded { value in
+                        guard isEnabled else {
+                            return
+                        }
+
+                        progress = (value.location.x / width).clamped(to: 0...1)
+                    }
+            )
+        }
+        .frame(height: 24)
+        .allowsHitTesting(isEnabled)
+    }
+}
+
+private extension Double {
+    func clamped(to range: ClosedRange<Double>) -> Double {
+        min(max(self, range.lowerBound), range.upperBound)
+    }
+}
+
+#Preview {
+    LectureAudioPlayerView(
+        lecture: previewLectureForPlayer,
+        viewModel: LecturePlayerViewModel(
+            audioURL: nil,
+            fallbackDuration: .seconds(600)
+        )
+    )
+    .padding()
+}
+
+private let previewLectureForPlayer = Lecture(
+    title: "New Recording",
+    course: "Biology 101",
+    createdAt: Date(timeIntervalSinceReferenceDate: 794_855_467),
+    duration: .seconds(32),
+    status: .ready,
+    transcript: "",
+    summaryShort: "",
+    summaryLong: "",
+    flashcards: [],
+    quiz: []
+)
