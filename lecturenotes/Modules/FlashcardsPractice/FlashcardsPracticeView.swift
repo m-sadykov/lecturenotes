@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FlashcardsPracticeView: View {
     @State var viewModel: FlashcardsPracticeViewModel
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ZStack {
@@ -46,6 +47,16 @@ struct FlashcardsPracticeView: View {
         }
         .navigationTitle("Flashcards")
         .navigationBarTitleDisplayMode(.inline)
+        .interactiveDismissDisabled(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Close", systemImage: "xmark") {
+                    dismiss()
+                }
+                .labelStyle(.iconOnly)
+                .foregroundStyle(.primary)
+            }
+        }
     }
 }
 

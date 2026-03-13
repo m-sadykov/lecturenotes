@@ -1,16 +1,28 @@
 import SwiftUI
+import UIKit
 
 struct LectureDetailView: View {
     let lecture: Lecture
+    @State private var editableLecture: Lecture
     @State private var playerViewModel: LecturePlayerViewModel?
     @State private var selectedSection: LectureDetailSection = .summary
     @State private var activeDestination: LectureDetailDestination?
+    @State private var isRenameAlertPresented = false
+    @State private var isDeleteAlertPresented = false
+    @State private var draftTitle = ""
+    @State private var toastMessage: String?
+    @Environment(\.dismiss) private var dismiss
+
+    init(lecture: Lecture) {
+        self.lecture = lecture
+        _editableLecture = State(initialValue: lecture)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 18) {
                 if let playerViewModel {
-                    LectureAudioPlayerView(lecture: lecture, viewModel: playerViewModel)
+                    LectureAudioPlayerView(lecture: editableLecture, viewModel: playerViewModel)
                 }
             }
             .padding(.horizontal)
@@ -22,6 +34,8 @@ struct LectureDetailView: View {
                     switch section {
                     case .flashcards:
                         activeDestination = .flashcards
+                    case .quiz:
+                        activeDestination = .quiz
                     default:
                         selectedSection = section
                     }
@@ -31,11 +45,12 @@ struct LectureDetailView: View {
                 .padding(.bottom, 8)
 
             LectureDetailSectionContentView(
-                lecture: lecture,
+                lecture: editableLecture,
                 selectedSection: selectedSection
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .background(Color(.systemGray6))
         .task {
             guard playerViewModel == nil else {
                 return
@@ -49,10 +64,104 @@ struct LectureDetailView: View {
         .onDisappear {
             playerViewModel?.cleanup()
         }
-        .navigationDestination(item: $activeDestination) { destination in
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Copy", systemImage: "doc.on.doc") {
+                    copyActiveSectionText()
+                }
+                .disabled(copyableText == nil)
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button("Edit Title", systemImage: "pencil") {
+                        draftTitle = editableLecture.title
+                        isRenameAlertPresented = true
+                    }
+
+                    Button("Delete Recording", systemImage: "trash", role: .destructive) {
+                        isDeleteAlertPresented = true
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.title3)
+                        .foregroundStyle(.primary)
+                }
+            }
+        }
+        .overlay(alignment: .top) {
+            if let toastMessage {
+                LectureDetailToastView(message: toastMessage)
+                    .padding(.top, 12)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .fullScreenCover(item: $activeDestination) { destination in
+            NavigationStack {
             switch destination {
             case .flashcards:
-                FlashcardsPracticeView(viewModel: FlashcardsPracticeViewModel(cards: lecture.flashcards))
+                FlashcardsPracticeView(viewModel: FlashcardsPracticeViewModel(cards: editableLecture.flashcards))
+            case .quiz:
+                QuizView(viewModel: QuizViewModel(questions: editableLecture.quiz))
+            }
+            }
+        }
+        .alert("Edit Title", isPresented: $isRenameAlertPresented) {
+            TextField("Recording title", text: $draftTitle)
+            Button("Cancel", role: .cancel) {}
+            Button("Save") {
+                let trimmedTitle = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmedTitle.isEmpty else {
+                    return
+                }
+                editableLecture.title = trimmedTitle
+            }
+        } message: {
+            Text("Update the recording title.")
+        }
+        .alert("Delete Recording?", isPresented: $isDeleteAlertPresented) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                dismiss()
+            }
+        } message: {
+            Text("This action cannot be undone.")
+        }
+        .animation(.easeInOut(duration: 0.2), value: toastMessage != nil)
+    }
+
+    private var copyableText: String? {
+        switch selectedSection {
+        case .summary:
+            let text = editableLecture.summaryLong.isEmpty ? editableLecture.summaryShort : editableLecture.summaryLong
+            return text.isEmpty ? nil : text
+        case .transcript:
+            return editableLecture.transcript.isEmpty ? nil : editableLecture.transcript
+        case .flashcards, .quiz:
+            return nil
+        }
+    }
+
+    private func copyActiveSectionText() {
+        guard let copyableText else {
+            return
+        }
+
+        UIPasteboard.general.string = copyableText
+        let sectionName = selectedSection == .summary ? "Summary" : "Transcript"
+        showToast("\(sectionName) copied.")
+    }
+
+    private func showToast(_ message: String) {
+        toastMessage = message
+
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            await MainActor.run {
+                guard toastMessage == message else {
+                    return
+                }
+                toastMessage = nil
             }
         }
     }
@@ -99,11 +208,14 @@ private enum LectureDetailSection: String, CaseIterable, Identifiable {
 
 private enum LectureDetailDestination: Identifiable {
     case flashcards
+    case quiz
 
     var id: String {
         switch self {
         case .flashcards:
             "flashcards"
+        case .quiz:
+            "quiz"
         }
     }
 }
@@ -174,8 +286,22 @@ private struct LectureDetailSectionContentView: View {
             case .flashcards:
                 SummarySectionView(lecture: lecture)
             case .quiz:
-                QuizSectionView(lecture: lecture)
+                SummarySectionView(lecture: lecture)
             }
         }
+    }
+}
+
+private struct LectureDetailToastView: View {
+    let message: String
+
+    var body: some View {
+        Text(message)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.black.opacity(0.88))
+            .clipShape(.rect(cornerRadius: 14))
+            .shadow(radius: 10, y: 4)
     }
 }

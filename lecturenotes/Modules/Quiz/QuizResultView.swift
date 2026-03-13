@@ -3,27 +3,63 @@ import SwiftUI
 struct QuizResultView: View {
     let score: Int
     let total: Int
+    let onDone: () -> Void
 
     var body: some View {
-        VStack {
-            Text("Quiz Completed")
+        VStack(spacing: 0) {
+            Spacer()
+
+            Text("Well done!")
+                .font(.largeTitle)
                 .bold()
-            Text("Score: \(score) / \(total)")
-            Text(scoreText)
-                .foregroundStyle(.secondary)
+
+            HStack(spacing: 18) {
+                resultCard(value: score, title: "Correct")
+                resultCard(value: wrongCount, title: "Wrong")
+            }
+            .padding(.top, 48)
+
+            Spacer()
+
+            Button("Finish", action: onDone)
+                .font(.headline)
+                .foregroundStyle(.white)
+                .frame(maxWidth: 320)
+                .padding(.vertical, 18)
+                .background(
+                    LinearGradient(
+                        colors: [Color.black, Color(red: 0.18, green: 0.20, blue: 0.24)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .clipShape(.capsule)
+                .buttonStyle(.plain)
+                .padding(.bottom, 44)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 24)
     }
 
-    private var scoreText: String {
-        guard total > 0 else { return "No questions" }
-        let ratio = Double(score) / Double(total)
-        if ratio >= 0.8 {
-            return "Excellent"
+    private var wrongCount: Int {
+        max(total - score, 0)
+    }
+
+    private func resultCard(value: Int, title: String) -> some View {
+        VStack(spacing: 8) {
+            Text("\(value)")
+                .font(.largeTitle)
+                .bold()
+            Text(title)
+                .font(.title3)
         }
-        if ratio >= 0.5 {
-            return "Good progress"
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 28)
+        .background(.white)
+        .overlay {
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(.black.opacity(0.10), lineWidth: 1)
         }
-        return "Review notes and retry"
+        .clipShape(.rect(cornerRadius: 22))
     }
 }
