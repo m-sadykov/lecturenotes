@@ -4,6 +4,7 @@ struct LectureDetailView: View {
     let lecture: Lecture
     @State private var playerViewModel: LecturePlayerViewModel?
     @State private var selectedSection: LectureDetailSection = .summary
+    @State private var activeDestination: LectureDetailDestination?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -15,7 +16,17 @@ struct LectureDetailView: View {
             .padding(.horizontal)
             .padding(.top, 8)
 
-            LectureDetailSectionChipsView(selectedSection: $selectedSection)
+            LectureDetailSectionChipsView(
+                selectedSection: $selectedSection,
+                onSelectSection: { section in
+                    switch section {
+                    case .flashcards:
+                        activeDestination = .flashcards
+                    default:
+                        selectedSection = section
+                    }
+                }
+            )
                 .padding(.top, 16)
                 .padding(.bottom, 8)
 
@@ -37,6 +48,12 @@ struct LectureDetailView: View {
         }
         .onDisappear {
             playerViewModel?.cleanup()
+        }
+        .navigationDestination(item: $activeDestination) { destination in
+            switch destination {
+            case .flashcards:
+                FlashcardsPracticeView(viewModel: FlashcardsPracticeViewModel(cards: lecture.flashcards))
+            }
         }
     }
 }
@@ -80,8 +97,20 @@ private enum LectureDetailSection: String, CaseIterable, Identifiable {
     }
 }
 
+private enum LectureDetailDestination: Identifiable {
+    case flashcards
+
+    var id: String {
+        switch self {
+        case .flashcards:
+            "flashcards"
+        }
+    }
+}
+
 private struct LectureDetailSectionChipsView: View {
     @Binding var selectedSection: LectureDetailSection
+    let onSelectSection: (LectureDetailSection) -> Void
 
     var body: some View {
         ScrollView(.horizontal) {
@@ -92,7 +121,7 @@ private struct LectureDetailSectionChipsView: View {
                         emoji: section.emoji,
                         isSelected: selectedSection == section
                     ) {
-                        selectedSection = section
+                        onSelectSection(section)
                     }
                 }
             }
@@ -143,7 +172,7 @@ private struct LectureDetailSectionContentView: View {
             case .transcript:
                 TranscriptSectionView(lecture: lecture)
             case .flashcards:
-                FlashcardsSectionView(lecture: lecture)
+                SummarySectionView(lecture: lecture)
             case .quiz:
                 QuizSectionView(lecture: lecture)
             }
