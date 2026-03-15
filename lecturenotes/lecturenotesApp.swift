@@ -5,6 +5,7 @@ struct lecturenotesApp: App {
     var body: some Scene {
         WindowGroup {
             LectureNotesRootView()
+                .preferredColorScheme(.light)
         }
     }
 }
