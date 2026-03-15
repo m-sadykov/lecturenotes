@@ -12,7 +12,8 @@ struct FlashcardsPracticeView: View {
             if viewModel.hasCards {
                 VStack(spacing: 0) {
                     TabView(selection: $viewModel.currentIndex) {
-                        ForEach(viewModel.cards.enumerated(), id: \.element.id) { index, card in
+                        ForEach(viewModel.cards.indices, id: \.self) { index in
+                            let card = viewModel.cards[index]
                             FlashcardCarouselCardView(
                                 question: card.question,
                                 answer: card.answer,

@@ -11,6 +11,7 @@ struct LecturesListView: View {
     @State private var isImporterPresented = false
     @State private var isImportAlertPresented = false
     @State private var importAlertMessage = ""
+    @State private var pendingDeletionLecture: Lecture?
 
     var body: some View {
         NavigationStack {
@@ -99,7 +100,22 @@ struct LecturesListView: View {
             }
             .overlay(alignment: .bottom) {
                 if let recorderViewModel {
-                    MiniRecorderSheetView(viewModel: recorderViewModel) {
+                    MiniRecorderSheetView(
+                        viewModel: recorderViewModel,
+                        onSave: { recording in
+                            Task {
+                                let result = await viewModel.saveRecording(recording)
+                                await MainActor.run {
+                                    switch result {
+                                    case .saved(let savedLecture):
+                                        selectedLecture = savedLecture
+                                    case .rejected(let message):
+                                        showToast(message)
+                                    }
+                                }
+                            }
+                        }
+                    ) {
                         self.recorderViewModel = nil
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
@@ -138,6 +154,7 @@ struct LecturesListView: View {
                             onShare: {},
                             onDelete: {
                                 activeSheet = nil
+                                pendingDeletionLecture = lecture
                             }
                         )
                         .presentationDetents([.height(lecture.folderID == nil ? 290 : 340), .fraction(0.52)])
@@ -174,6 +191,26 @@ struct LecturesListView: View {
                 Button("OK") {}
             } message: {
                 Text(importAlertMessage)
+            }
+            .alert(
+                "Delete Recording?",
+                isPresented: Binding(
+                    get: { pendingDeletionLecture != nil },
+                    set: { isPresented in
+                        if !isPresented {
+                            pendingDeletionLecture = nil
+                        }
+                    }
+                ),
+                presenting: pendingDeletionLecture
+            ) { lecture in
+                Button("Cancel", role: .cancel) {}
+                Button("Delete", role: .destructive) {
+                    viewModel.deleteLecture(lecture.id)
+                    pendingDeletionLecture = nil
+                }
+            } message: { lecture in
+                Text("Delete \"\(lecture.title)\"? This action cannot be undone.")
             }
             .task {
                 await viewModel.load()

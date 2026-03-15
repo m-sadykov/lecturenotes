@@ -6,8 +6,12 @@ import Observation
 final class AppEnvironment {
     @ObservationIgnored var repository: LectureRepository
 
-    init(repository: LectureRepository = MockLectureRepository()) {
-        self.repository = repository
+    init(repository: LectureRepository? = nil) {
+        self.repository = repository ?? LocalLectureRepository()
+    }
+
+    static func preview(repository: LectureRepository? = nil) -> AppEnvironment {
+        AppEnvironment(repository: repository ?? MockLectureRepository())
     }
 }
 
@@ -15,4 +19,10 @@ final class AppEnvironment {
 @Observable
 final class AppState {
     var needsOnboarding = true
+
+    static func preview(needsOnboarding: Bool = false) -> AppState {
+        let state = AppState()
+        state.needsOnboarding = needsOnboarding
+        return state
+    }
 }

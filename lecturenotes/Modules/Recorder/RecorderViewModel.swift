@@ -4,6 +4,24 @@ import Observation
 @MainActor
 @Observable
 final class RecorderViewModel {
+    enum SaveValidationError: LocalizedError {
+        case tooShort(minimumDuration: Duration)
+
+        var errorDescription: String? {
+            switch self {
+            case .tooShort(let minimumDuration):
+                "Record at least \(Int(minimumDuration.components.seconds)) seconds to save."
+            }
+        }
+    }
+
+    struct RecordingDraft {
+        let audioURL: URL
+        let createdAt: Date
+        let duration: Duration
+        let courseName: String
+    }
+
     enum Mode {
         case idle
         case recording
@@ -82,11 +100,31 @@ final class RecorderViewModel {
         mode = .finished
         timerTask?.cancel()
         timerTask = nil
-        recordingManager.stopRecording()
+        _ = recordingManager.stopRecording()
+    }
+
+    func finishRecording() -> RecordingDraft? {
+        mode = .finished
+        timerTask?.cancel()
+        timerTask = nil
+
+        guard let recording = recordingManager.stopRecording() else {
+            return nil
+        }
+
+        return RecordingDraft(
+            audioURL: recording.url,
+            createdAt: recording.createdAt,
+            duration: max(.seconds(1), max(elapsed, recording.duration)),
+            courseName: courseName
+        )
     }
 
     func stopAndDiscard() {
-        stop()
+        mode = .finished
+        timerTask?.cancel()
+        timerTask = nil
+        recordingManager.discardRecording()
     }
 
     private func startTimerIfNeeded() {

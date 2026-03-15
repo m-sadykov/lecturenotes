@@ -30,7 +30,8 @@ struct QuizView: View {
                     .padding(.bottom, 22)
 
                     TabView(selection: $viewModel.currentIndex) {
-                        ForEach(viewModel.questions.enumerated(), id: \.element.id) { index, question in
+                        ForEach(viewModel.questions.indices, id: \.self) { index in
+                            let question = viewModel.questions[index]
                             QuizQuestionCardView(
                                 question: question,
                                 questionNumber: index + 1,
@@ -164,7 +165,8 @@ private struct QuizQuestionCardView: View {
                 .padding(.top, 28)
 
             VStack(spacing: 16) {
-                ForEach(question.options.enumerated(), id: \.offset) { index, option in
+                ForEach(question.options.indices, id: \.self) { index in
+                    let option = question.options[index]
                     QuizOptionButton(
                         text: option,
                         state: optionState(for: index)

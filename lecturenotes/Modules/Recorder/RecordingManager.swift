@@ -3,6 +3,12 @@ import Foundation
 
 @MainActor
 final class RecordingManager {
+    struct RecordingCapture {
+        let url: URL
+        let createdAt: Date
+        let duration: Duration
+    }
+
     enum RecordingError: LocalizedError {
         case microphoneAccessDenied
         case recorderUnavailable
@@ -19,11 +25,18 @@ final class RecordingManager {
 
     private var recorder: AVAudioRecorder?
     private let session = AVAudioSession.sharedInstance()
+    private var currentOutputURL: URL?
+    private var startedAt: Date?
 
     func startRecording() async throws {
         try await configureSessionIfNeeded()
 
         let outputURL = makeOutputURL()
+        try FileManager.default.createDirectory(
+            at: outputURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true,
+            attributes: nil
+        )
         let settings: [String: Any] = [
             AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
             AVSampleRateKey: 44_100,
@@ -39,6 +52,8 @@ final class RecordingManager {
             throw RecordingError.recorderUnavailable
         }
 
+        currentOutputURL = outputURL
+        startedAt = .now
         self.recorder = recorder
     }
 
@@ -50,21 +65,43 @@ final class RecordingManager {
         recorder?.record()
     }
 
-    func stopRecording() {
-        recorder?.stop()
-        recorder = nil
+    func stopRecording() -> RecordingCapture? {
+        guard let activeRecorder = recorder, let currentOutputURL else {
+            return nil
+        }
+
+        let duration = Duration.seconds(activeRecorder.currentTime)
+        let createdAt = startedAt ?? .now
+        activeRecorder.stop()
+        self.recorder = nil
+        self.currentOutputURL = nil
+        startedAt = nil
+        deactivateSession()
+        return RecordingCapture(url: currentOutputURL, createdAt: createdAt, duration: duration)
+    }
+
+    func discardRecording() {
+        guard let recorder, let currentOutputURL else {
+            return
+        }
+
+        recorder.stop()
+        self.recorder = nil
+        self.currentOutputURL = nil
+        startedAt = nil
+        try? FileManager.default.removeItem(at: currentOutputURL)
         deactivateSession()
     }
 
     private func configureSessionIfNeeded() async throws {
-        switch session.recordPermission {
+        switch AVAudioApplication.shared.recordPermission {
         case .granted:
             break
         case .undetermined:
             let isGranted = await withCheckedContinuation { continuation in
-                session.requestRecordPermission { isGranted in
+                AVAudioApplication.requestRecordPermission(completionHandler: { isGranted in
                     continuation.resume(returning: isGranted)
-                }
+                })
             }
             guard isGranted else {
                 throw RecordingError.microphoneAccessDenied
@@ -85,6 +122,7 @@ final class RecordingManager {
 
     private func makeOutputURL() -> URL {
         URL.documentsDirectory
+            .appending(path: "Recordings", directoryHint: .isDirectory)
             .appending(path: "recording-\(UUID().uuidString)")
             .appendingPathExtension("m4a")
     }

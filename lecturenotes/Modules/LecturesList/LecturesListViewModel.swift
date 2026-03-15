@@ -4,6 +4,11 @@ import Observation
 @MainActor
 @Observable
 final class LecturesListViewModel {
+    enum SaveRecordingResult {
+        case saved(Lecture)
+        case rejected(message: String)
+    }
+
     @ObservationIgnored private let repository: LectureRepository
 
     var lectures: [Lecture] = []
@@ -35,6 +40,7 @@ final class LecturesListViewModel {
         let uniqueName = makeUniqueFolderName(from: name)
         let folder = LectureFolder(name: uniqueName)
         folders.append(folder)
+        persistFolders()
     }
 
     func addLecture(_ lectureID: Lecture.ID, toFolder folderID: LectureFolder.ID) {
@@ -44,6 +50,7 @@ final class LecturesListViewModel {
 
         lectures[lectureIndex].folderID = folderID
         selectedFolderID = folderID
+        persistLecture(at: lectureIndex)
     }
 
     func removeLectureFromFolder(_ lectureID: Lecture.ID) -> String? {
@@ -59,6 +66,7 @@ final class LecturesListViewModel {
             selectedFolderID = nil
         }
 
+        persistLecture(at: lectureIndex)
         return folderName
     }
 
@@ -71,6 +79,51 @@ final class LecturesListViewModel {
 
         if selectedFolderID == folderID {
             selectedFolderID = nil
+        }
+
+        persistFolders()
+        persistAllLectures()
+    }
+
+    func saveRecording(_ recording: RecorderViewModel.RecordingDraft) async -> SaveRecordingResult {
+        let minimumDuration = Duration.seconds(3)
+        guard recording.duration >= minimumDuration else {
+            return .rejected(message: "Recording must be at least 3 seconds long.")
+        }
+
+        let lecture = Lecture(
+            title: "New Recording",
+            course: recording.courseName,
+            audioURL: recording.audioURL,
+            createdAt: recording.createdAt,
+            duration: recording.duration,
+            status: .ready,
+            transcript: "",
+            summaryShort: "",
+            summaryLong: "",
+            flashcards: [],
+            quiz: []
+        )
+
+        lectures.insert(lecture, at: 0)
+        do {
+            try await repository.saveLecture(lecture)
+            return .saved(lecture)
+        } catch {
+            lectures.removeAll { $0.id == lecture.id }
+            return .rejected(message: "Unable to save recording right now.")
+        }
+    }
+
+    func deleteLecture(_ lectureID: Lecture.ID) {
+        guard lecture(withID: lectureID) != nil else {
+            return
+        }
+
+        lectures.removeAll { $0.id == lectureID }
+
+        Task {
+            try? await repository.deleteLecture(id: lectureID)
         }
     }
 
@@ -92,5 +145,32 @@ final class LecturesListViewModel {
             index += 1
         }
         return "\(name) \(index)"
+    }
+
+    private func persistFolders() {
+        let folders = self.folders
+        Task {
+            try? await repository.saveFolders(folders)
+        }
+    }
+
+    private func persistLecture(at index: Int) {
+        guard lectures.indices.contains(index) else {
+            return
+        }
+
+        let lecture = lectures[index]
+        Task {
+            try? await repository.saveLecture(lecture)
+        }
+    }
+
+    private func persistAllLectures() {
+        let lectures = self.lectures
+        Task {
+            for lecture in lectures {
+                try? await repository.saveLecture(lecture)
+            }
+        }
     }
 }

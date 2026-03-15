@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MiniRecorderSheetView: View {
     @Bindable var viewModel: RecorderViewModel
+    let onSave: (RecorderViewModel.RecordingDraft) -> Void
     let onClose: () -> Void
     @State private var feedbackTrigger = 0
 
@@ -85,7 +86,9 @@ struct MiniRecorderSheetView: View {
 
             Button {
                 triggerFeedback()
-                viewModel.stopAndDiscard()
+                if let recording = viewModel.finishRecording() {
+                    onSave(recording)
+                }
                 onClose()
             } label: {
                 Image(systemName: "stop.fill")
@@ -155,6 +158,6 @@ struct MiniRecorderSheetView: View {
         Color.gray.opacity(0.2)
             .ignoresSafeArea()
 
-        MiniRecorderSheetView(viewModel: RecorderViewModel(), onClose: {})
+        MiniRecorderSheetView(viewModel: RecorderViewModel(), onSave: { _ in }, onClose: {})
     }
 }

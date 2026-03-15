@@ -23,7 +23,7 @@ struct LectureAudioPlayerView: View {
                         .font(.title3)
                         .foregroundStyle(.primary)
                         .frame(width: 52, height: 52)
-                        .background(Color.black.opacity(0.03))
+                        .background(Color.black.opacity(0.08))
                         .clipShape(.circle)
                 }
                 .buttonStyle(.plain)
@@ -52,17 +52,13 @@ struct LectureAudioPlayerView: View {
                 }
                 .padding(.top, 14)
 
-                Menu {
-                    speedButton(1)
-                    speedButton(1.25)
-                    speedButton(1.5)
-                    speedButton(2)
-                } label: {
+                Button(action: viewModel.cyclePlaybackRate) {
                     Text(rateText)
-                        .font(.headline)
+                        .font(.subheadline)
                         .foregroundStyle(.primary)
                         .frame(minWidth: 36)
                 }
+                .buttonStyle(.plain)
                 .disabled(!viewModel.canPlay)
                 .padding(.top, 18)
             }
@@ -82,13 +78,6 @@ struct LectureAudioPlayerView: View {
     private var metadataText: String {
         "\(lecture.createdAt.formatted(.dateTime.month(.abbreviated).day().year())) · \(LectureFormatters.clockText(lecture.duration)) · Voice Recording"
     }
-
-    @ViewBuilder
-    private func speedButton(_ rate: Float) -> some View {
-        Button(rate == floor(rate) ? "\(Int(rate))x" : "\(rate.formatted(.number.precision(.fractionLength(2))))x") {
-            viewModel.setPlaybackRate(rate)
-        }
-    }
 }
 
 private struct PlayerProgressBarView: View {
@@ -104,20 +93,21 @@ private struct PlayerProgressBarView: View {
 
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Color(red: 0.91, green: 0.91, blue: 0.94))
+                    .fill(.black.opacity(0.08))
                     .frame(height: 6)
 
                 Capsule()
-                    .fill(Color(red: 0.78, green: 0.82, blue: 1.0))
+                    .fill(.black)
                     .frame(width: max(thumbOffset, 6), height: 6)
 
                 Circle()
-                    .fill(Color(red: 0.34, green: 0.45, blue: 0.98))
+                    .fill(.black)
                     .frame(width: 18, height: 18)
-                    .shadow(color: .black.opacity(0.08), radius: 8, y: 2)
+                    .shadow(color: .black.opacity(0.12), radius: 8, y: 2)
                     .offset(x: min(max(thumbOffset - 9, 0), width - 18))
             }
             .frame(height: 24)
+            .animation(.linear(duration: 0.08), value: clampedProgress)
             .contentShape(.rect)
             .gesture(
                 DragGesture(minimumDistance: 0)

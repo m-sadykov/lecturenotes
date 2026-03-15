@@ -4,6 +4,9 @@ protocol LectureRepository {
     func fetchLectures() async -> [Lecture]
     func fetchFolders() async -> [LectureFolder]
     func fetchLecture(id: UUID) async -> Lecture?
+    func saveLecture(_ lecture: Lecture) async throws
+    func saveFolders(_ folders: [LectureFolder]) async throws
+    func deleteLecture(id: UUID) async throws
 }
 
 struct MockLectureRepository: LectureRepository {
@@ -29,6 +32,12 @@ struct MockLectureRepository: LectureRepository {
     func fetchLecture(id: UUID) async -> Lecture? {
         lectures.first(where: { $0.id == id })
     }
+
+    func saveLecture(_ lecture: Lecture) async throws {}
+
+    func saveFolders(_ folders: [LectureFolder]) async throws {}
+
+    func deleteLecture(id: UUID) async throws {}
 }
 
 enum MockLectures {

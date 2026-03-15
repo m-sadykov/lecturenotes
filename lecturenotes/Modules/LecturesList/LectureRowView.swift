@@ -36,10 +36,13 @@ struct LectureRowView: View {
                 }
                 .buttonStyle(.plain)
 
-                Button("Actions", systemImage: "ellipsis") {
+                Button {
                     onMore()
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .rotationEffect(.degrees(90))
                 }
-                .labelStyle(.iconOnly)
+                .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
             }
         }
