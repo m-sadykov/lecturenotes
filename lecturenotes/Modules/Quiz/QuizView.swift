@@ -59,7 +59,11 @@ struct QuizView: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Close", systemImage: "xmark") {
-                    isCloseAlertPresented = true
+                    if viewModel.questionsAnsweredCount > 0 {
+                        isCloseAlertPresented = true
+                    } else {
+                        dismiss()
+                    }
                 }
                 .labelStyle(.iconOnly)
                 .foregroundStyle(.primary)
