@@ -4,6 +4,8 @@ struct LectureRowView: View {
     let lecture: Lecture
     let onOpen: () -> Void
     let onMore: () -> Void
+    
+    @State private var menuTapFeedbackTrigger = 0
 
     var body: some View {
         VStack(alignment: .leading) {
@@ -37,6 +39,7 @@ struct LectureRowView: View {
                 .buttonStyle(.plain)
 
                 Button {
+                    menuTapFeedbackTrigger += 1
                     onMore()
                 } label: {
                     Image(systemName: "ellipsis")
@@ -49,6 +52,7 @@ struct LectureRowView: View {
         .padding()
         .background(.white)
         .clipShape(.rect(cornerRadius: 20))
+        .sensoryFeedback(.impact(weight: .light), trigger: menuTapFeedbackTrigger)
     }
 
     private var metadata: String {
