@@ -3,8 +3,12 @@ import UIKit
 
 struct LectureDetailView: View {
     let lecture: Lecture
+    let repository: LectureRepository
+    let processingService: FirebaseLectureProcessingService?
+    let onLectureUpdated: (Lecture) -> Void
     @State private var editableLecture: Lecture
     @State private var playerViewModel: LecturePlayerViewModel?
+    @State private var processingViewModel: LectureProcessingViewModel?
     @State private var selectedSection: LectureDetailSection = .summary
     @State private var activeDestination: LectureDetailDestination?
     @State private var isRenameAlertPresented = false
@@ -13,8 +17,16 @@ struct LectureDetailView: View {
     @State private var toastMessage: String?
     @Environment(\.dismiss) private var dismiss
 
-    init(lecture: Lecture) {
+    init(
+        lecture: Lecture,
+        repository: LectureRepository,
+        processingService: FirebaseLectureProcessingService? = nil,
+        onLectureUpdated: @escaping (Lecture) -> Void = { _ in }
+    ) {
         self.lecture = lecture
+        self.repository = repository
+        self.processingService = processingService
+        self.onLectureUpdated = onLectureUpdated
         _editableLecture = State(initialValue: lecture)
     }
 
@@ -28,27 +40,32 @@ struct LectureDetailView: View {
             .padding(.horizontal)
             .padding(.top, 8)
 
-            LectureDetailSectionChipsView(
-                selectedSection: $selectedSection,
-                onSelectSection: { section in
-                    switch section {
-                    case .flashcards:
-                        activeDestination = .flashcards
-                    case .quiz:
-                        activeDestination = .quiz
-                    default:
-                        selectedSection = section
+            if shouldShowProcessing, let processingLecture = processingLecture {
+                ProcessingView(lecture: processingLecture)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                LectureDetailSectionChipsView(
+                    selectedSection: $selectedSection,
+                    onSelectSection: { section in
+                        switch section {
+                        case .flashcards:
+                            activeDestination = .flashcards
+                        case .quiz:
+                            activeDestination = .quiz
+                        default:
+                            selectedSection = section
+                        }
                     }
-                }
-            )
+                )
                 .padding(.top, 16)
                 .padding(.bottom, 8)
 
-            LectureDetailSectionContentView(
-                lecture: editableLecture,
-                selectedSection: selectedSection
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                LectureDetailSectionContentView(
+                    lecture: editableLecture,
+                    selectedSection: selectedSection
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
         .background(Color(.systemGray6))
         .task {
@@ -61,8 +78,26 @@ struct LectureDetailView: View {
                 fallbackDuration: lecture.duration
             )
         }
+        .task {
+            guard processingViewModel == nil, let processingService else {
+                return
+            }
+
+            let viewModel = LectureProcessingViewModel(
+                lecture: editableLecture,
+                repository: repository,
+                processingService: processingService,
+                onLectureUpdated: { updatedLecture in
+                    editableLecture = updatedLecture
+                    onLectureUpdated(updatedLecture)
+                }
+            )
+            processingViewModel = viewModel
+            await viewModel.start()
+        }
         .onDisappear {
             playerViewModel?.cleanup()
+            processingViewModel?.stop()
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -115,6 +150,7 @@ struct LectureDetailView: View {
                     return
                 }
                 editableLecture.title = trimmedTitle
+                persistLectureChanges()
             }
         } message: {
             Text("Update the recording title.")
@@ -142,6 +178,14 @@ struct LectureDetailView: View {
         }
     }
 
+    private var processingLecture: Lecture? {
+        processingViewModel?.lecture ?? (editableLecture.status == .ready ? nil : editableLecture)
+    }
+
+    private var shouldShowProcessing: Bool {
+        processingViewModel?.shouldShowProcessing ?? (editableLecture.status != .ready)
+    }
+
     private func copyActiveSectionText() {
         guard let copyableText else {
             return
@@ -165,12 +209,24 @@ struct LectureDetailView: View {
             }
         }
     }
+
+    private func persistLectureChanges() {
+        let lectureToSave = editableLecture
+        onLectureUpdated(lectureToSave)
+
+        Task {
+            try? await repository.saveLecture(lectureToSave)
+        }
+    }
 }
 
 #Preview {
     NavigationStack {
         if let lecture = previewLecture {
-            LectureDetailView(lecture: lecture)
+            LectureDetailView(
+                lecture: lecture,
+                repository: MockLectureRepository()
+            )
         }
     }
 }

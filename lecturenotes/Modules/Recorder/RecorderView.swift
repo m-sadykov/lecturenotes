@@ -23,7 +23,20 @@ struct RecorderView: View {
             if viewModel.mode == .finished {
                 Section {
                     NavigationLink {
-                        ProcessingView(lectureTitle: "\(viewModel.courseName) lecture")
+                        ProcessingView(
+                            lecture: Lecture(
+                                title: "\(viewModel.courseName) lecture",
+                                course: viewModel.courseName,
+                                createdAt: .now,
+                                duration: viewModel.elapsed,
+                                status: .uploading,
+                                transcript: "",
+                                summaryShort: "",
+                                summaryLong: "",
+                                flashcards: [],
+                                quiz: []
+                            )
+                        )
                     } label: {
                         Label("Continue to Processing", systemImage: "arrow.right.circle")
                     }

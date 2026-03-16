@@ -78,6 +78,7 @@ struct Lecture: Identifiable, Hashable, Codable {
     var summaryLong: String
     var flashcards: [Flashcard]
     var quiz: [QuizQuestion]
+    var processingErrorMessage: String?
 
     init(
         id: UUID = UUID(),
@@ -92,7 +93,8 @@ struct Lecture: Identifiable, Hashable, Codable {
         summaryShort: String,
         summaryLong: String,
         flashcards: [Flashcard],
-        quiz: [QuizQuestion]
+        quiz: [QuizQuestion],
+        processingErrorMessage: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -107,5 +109,6 @@ struct Lecture: Identifiable, Hashable, Codable {
         self.summaryLong = summaryLong
         self.flashcards = flashcards
         self.quiz = quiz
+        self.processingErrorMessage = processingErrorMessage
     }
 }

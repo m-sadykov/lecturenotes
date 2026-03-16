@@ -3,6 +3,8 @@ import UniformTypeIdentifiers
 
 struct LecturesListView: View {
     @State var viewModel: LecturesListViewModel
+    let repository: LectureRepository
+    let processingService: FirebaseLectureProcessingService?
     @State private var selectedLecture: Lecture?
     @State private var activeSheet: ActiveSheet?
     @State private var recorderViewModel: RecorderViewModel?
@@ -75,7 +77,17 @@ struct LecturesListView: View {
             .background(Color(.systemGray6))
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(item: $selectedLecture) { lecture in
-                LectureDetailView(lecture: lecture)
+                LectureDetailView(
+                    lecture: lecture,
+                    repository: repository,
+                    processingService: processingService,
+                    onLectureUpdated: { updatedLecture in
+                        viewModel.replaceLecture(updatedLecture)
+                        if selectedLecture?.id == updatedLecture.id {
+                            selectedLecture = updatedLecture
+                        }
+                    }
+                )
             }
             .overlay(alignment: .bottomTrailing) {
                 if activeSheet == nil && recorderViewModel == nil {

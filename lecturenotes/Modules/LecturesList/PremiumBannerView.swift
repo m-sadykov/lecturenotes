@@ -38,7 +38,7 @@ struct PremiumBannerView: View {
         }
         .buttonStyle(.plain)
         .fullScreenCover(isPresented: $isPaywallPresented) {
-            PaywallView()
+            PaywallSheetView()
         }
     }
 }

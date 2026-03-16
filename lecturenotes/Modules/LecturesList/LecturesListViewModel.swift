@@ -10,6 +10,7 @@ final class LecturesListViewModel {
     }
 
     @ObservationIgnored private let repository: LectureRepository
+    @ObservationIgnored private let processingService: FirebaseLectureProcessingService?
 
     var lectures: [Lecture] = []
     var folders: [LectureFolder] = []
@@ -17,8 +18,12 @@ final class LecturesListViewModel {
     var selectedFolderID: LectureFolder.ID?
     var isLoading = false
 
-    init(repository: LectureRepository) {
+    init(
+        repository: LectureRepository,
+        processingService: FirebaseLectureProcessingService? = nil
+    ) {
         self.repository = repository
+        self.processingService = processingService
     }
 
     var filteredLectures: [Lecture] {
@@ -91,13 +96,14 @@ final class LecturesListViewModel {
             return .rejected(message: "Recording must be at least 3 seconds long.")
         }
 
-        let lecture = Lecture(
+        let lectureStatus: LectureStatus = processingService == nil ? .ready : .uploading
+        var lecture = Lecture(
             title: "New Recording",
             course: recording.courseName,
             audioURL: recording.audioURL,
             createdAt: recording.createdAt,
             duration: recording.duration,
-            status: .ready,
+            status: lectureStatus,
             transcript: "",
             summaryShort: "",
             summaryLong: "",
@@ -108,6 +114,18 @@ final class LecturesListViewModel {
         lectures.insert(lecture, at: 0)
         do {
             try await repository.saveLecture(lecture)
+            if let processingService {
+                do {
+                    lecture = try await processingService.startProcessing(for: lecture)
+                    replaceLecture(lecture)
+                    try await repository.saveLecture(lecture)
+                } catch {
+                    lecture.status = .failed
+                    lecture.processingErrorMessage = "Unable to start processing right now."
+                    replaceLecture(lecture)
+                    try await repository.saveLecture(lecture)
+                }
+            }
             return .saved(lecture)
         } catch {
             lectures.removeAll { $0.id == lecture.id }
@@ -132,6 +150,14 @@ final class LecturesListViewModel {
         folders = await repository.fetchFolders()
         lectures = await repository.fetchLectures()
         isLoading = false
+    }
+
+    func replaceLecture(_ lecture: Lecture) {
+        if let index = lectures.firstIndex(where: { $0.id == lecture.id }) {
+            lectures[index] = lecture
+        } else {
+            lectures.insert(lecture, at: 0)
+        }
     }
 
     private func makeUniqueFolderName(from name: String) -> String {

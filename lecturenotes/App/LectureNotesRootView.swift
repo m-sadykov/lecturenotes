@@ -18,7 +18,14 @@ struct LectureNotesRootView: View {
             if appState.needsOnboarding {
                 OnboardingView(appState: appState)
             } else {
-                LecturesListView(viewModel: LecturesListViewModel(repository: appEnvironment.repository))
+                LecturesListView(
+                    viewModel: LecturesListViewModel(
+                        repository: appEnvironment.repository,
+                        processingService: appEnvironment.processingService
+                    ),
+                    repository: appEnvironment.repository,
+                    processingService: appEnvironment.processingService
+                )
             }
         }
     }

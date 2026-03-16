@@ -5,13 +5,25 @@ import Observation
 @Observable
 final class AppEnvironment {
     @ObservationIgnored var repository: LectureRepository
+    @ObservationIgnored var authService: FirebaseAuthService
+    @ObservationIgnored var processingService: FirebaseLectureProcessingService?
 
-    init(repository: LectureRepository? = nil) {
+    init(
+        repository: LectureRepository? = nil,
+        authService: FirebaseAuthService? = nil,
+        processingService: FirebaseLectureProcessingService? = nil
+    ) {
+        let resolvedAuthService = authService ?? FirebaseAuthService()
+        self.authService = resolvedAuthService
         self.repository = repository ?? LocalLectureRepository()
+        self.processingService = processingService ?? FirebaseLectureProcessingService(authService: resolvedAuthService)
     }
 
     static func preview(repository: LectureRepository? = nil) -> AppEnvironment {
-        AppEnvironment(repository: repository ?? MockLectureRepository())
+        AppEnvironment(
+            repository: repository ?? MockLectureRepository(),
+            processingService: nil
+        )
     }
 }
 

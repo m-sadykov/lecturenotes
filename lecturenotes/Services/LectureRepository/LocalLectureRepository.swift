@@ -21,6 +21,7 @@ final class LocalLectureRepository: LectureRepository {
         var summaryLong: String
         var flashcards: [Flashcard]
         var quiz: [QuizQuestion]
+        var processingErrorMessage: String?
 
         init(lecture: Lecture, recordingsDirectory: URL) {
             id = lecture.id
@@ -41,6 +42,7 @@ final class LocalLectureRepository: LectureRepository {
             summaryLong = lecture.summaryLong
             flashcards = lecture.flashcards
             quiz = lecture.quiz
+            processingErrorMessage = lecture.processingErrorMessage
         }
 
         func lecture(recordingsDirectory: URL) -> Lecture {
@@ -57,7 +59,8 @@ final class LocalLectureRepository: LectureRepository {
                 summaryShort: summaryShort,
                 summaryLong: summaryLong,
                 flashcards: flashcards,
-                quiz: quiz
+                quiz: quiz,
+                processingErrorMessage: processingErrorMessage
             )
         }
     }
