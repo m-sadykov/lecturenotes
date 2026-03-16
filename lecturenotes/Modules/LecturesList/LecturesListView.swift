@@ -2,6 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct LecturesListView: View {
+    @AppStorage("hasConfirmedAIProcessingConsent") private var hasConfirmedAIProcessingConsent = false
     @State var viewModel: LecturesListViewModel
     let repository: LectureRepository
     let processingService: FirebaseLectureProcessingService?
@@ -14,6 +15,7 @@ struct LecturesListView: View {
     @State private var isImportAlertPresented = false
     @State private var importAlertMessage = ""
     @State private var pendingDeletionLecture: Lecture?
+    @State private var isAIConsentPresented = false
 
     var body: some View {
         NavigationStack {
@@ -92,7 +94,7 @@ struct LecturesListView: View {
             .overlay(alignment: .bottomTrailing) {
                 if activeSheet == nil && recorderViewModel == nil {
                     FloatingRecordButton {
-                        recorderViewModel = RecorderViewModel()
+                        presentRecorderFlow()
                     }
                         .padding(.trailing, 20)
                         .padding(.bottom, 20)
@@ -104,6 +106,17 @@ struct LecturesListView: View {
                         recorderViewModel = nil
                     } label: {
                         Color.black.opacity(0.18)
+                            .ignoresSafeArea()
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.opacity)
+                }
+
+                if isAIConsentPresented {
+                    Button {
+                        isAIConsentPresented = false
+                    } label: {
+                        Color.black.opacity(0.28)
                             .ignoresSafeArea()
                     }
                     .buttonStyle(.plain)
@@ -132,6 +145,22 @@ struct LecturesListView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                     .ignoresSafeArea(edges: .bottom)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+
+                if isAIConsentPresented {
+                    AIProcessingConsentCard(
+                        onCancel: {
+                            isAIConsentPresented = false
+                        },
+                        onContinue: {
+                            hasConfirmedAIProcessingConsent = true
+                            isAIConsentPresented = false
+                            recorderViewModel = RecorderViewModel()
+                        }
+                    )
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 56)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
@@ -257,6 +286,14 @@ struct LecturesListView: View {
         case .failure(let error):
             importAlertMessage = "Import failed: \(error.localizedDescription)"
             isImportAlertPresented = true
+        }
+    }
+
+    private func presentRecorderFlow() {
+        if hasConfirmedAIProcessingConsent {
+            recorderViewModel = RecorderViewModel()
+        } else {
+            isAIConsentPresented = true
         }
     }
 }

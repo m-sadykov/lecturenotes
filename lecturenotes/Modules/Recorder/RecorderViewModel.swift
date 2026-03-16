@@ -32,7 +32,7 @@ final class RecorderViewModel {
     var mode: Mode = .idle
     var courseName = "Biology 101"
     var elapsed: Duration = .zero
-    var limit: Duration = .seconds(600)
+    var limit: Duration = .seconds(300)
     var errorMessage: String?
 
     @ObservationIgnored private let recordingManager: RecordingManager

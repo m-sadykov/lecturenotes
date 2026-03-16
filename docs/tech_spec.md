@@ -522,7 +522,7 @@ LLM должен возвращать JSON.
 
 ```
 3 лекции в месяц
-10 минут максимум
+5 минут максимум
 summary
 ```
 
@@ -665,7 +665,7 @@ From the lecture transcript generate:
 2. Short summary
 3. Detailed summary
 4. 10 flashcards (question-answer)
-5. 5 quiz questions (multiple choice)
+5. 10 quiz questions (multiple choice)
 
 Return ONLY valid JSON.
 ```

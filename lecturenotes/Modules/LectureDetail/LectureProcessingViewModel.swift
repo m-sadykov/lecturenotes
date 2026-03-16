@@ -6,6 +6,7 @@ import Observation
 final class LectureProcessingViewModel {
     var lecture: Lecture
     var errorMessage: String?
+    var isRetrying = false
 
     @ObservationIgnored private let repository: LectureRepository
     @ObservationIgnored private let processingService: FirebaseLectureProcessingService
@@ -60,7 +61,36 @@ final class LectureProcessingViewModel {
         observationTask = nil
     }
 
+    func retryProcessing() async {
+        guard !isRetrying else {
+            return
+        }
+
+        isRetrying = true
+        errorMessage = nil
+        lecture.status = .uploading
+        lecture.processingErrorMessage = nil
+        onLectureUpdated(lecture)
+        try? await repository.saveLecture(lecture)
+
+        if observationTask == nil {
+            await start()
+        }
+
+        do {
+            let updatedLecture = try await processingService.startProcessing(for: lecture)
+            lecture = updatedLecture
+            onLectureUpdated(updatedLecture)
+            try? await repository.saveLecture(updatedLecture)
+        } catch {
+            handleObservationError(error)
+        }
+
+        isRetrying = false
+    }
+
     private func handleObservationError(_ error: Error) {
+        observationTask = nil
         errorMessage = error.localizedDescription
 
         guard lecture.status != .ready else {

@@ -201,7 +201,7 @@ async function generateStudyPack(
       model: "gpt-4.1-mini",
       instructions:
         "You create concise study materials for lecture recordings. " +
-        "Return valid JSON only with a helpful title, a short summary, a detailed summary, at least 10 flashcards, and at least 5 quiz questions.",
+        "Return valid JSON only with a helpful title, a short summary, a detailed summary, at least 10 flashcards, and at least 10 quiz questions.",
       input: `Transcript:\n${transcript}`,
       text: {
         format: {
@@ -230,7 +230,7 @@ async function generateStudyPack(
               },
               quiz: {
                 type: "array",
-                minItems: 5,
+                minItems: 10,
                 items: {
                   type: "object",
                   additionalProperties: false,
@@ -360,7 +360,7 @@ function ensureMinimumQuiz(
 ): StudyPack["quiz"] {
   const items = [...quiz];
 
-  while (items.length < 5) {
+  while (items.length < 10) {
     const summary = fallbackSummary(transcript, 120);
     items.push({
       question: `Which statement best matches the lecture content?`,
@@ -374,7 +374,7 @@ function ensureMinimumQuiz(
     });
   }
 
-  return items.slice(0, 8);
+  return items.slice(0, 12);
 }
 
 function fallbackTitle(transcript: string): string {

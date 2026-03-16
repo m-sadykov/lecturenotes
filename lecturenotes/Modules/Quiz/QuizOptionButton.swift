@@ -9,6 +9,8 @@ struct QuizOptionButton: View {
         Button(action: action) {
             HStack(alignment: .top) {
                 Text(text)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 22)

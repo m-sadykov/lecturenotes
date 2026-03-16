@@ -15,6 +15,8 @@ struct LectureDetailView: View {
     @State private var isDeleteAlertPresented = false
     @State private var draftTitle = ""
     @State private var toastMessage: String?
+    @State private var processingErrorFeedbackToken = 0
+    @State private var processingSuccessFeedbackToken = 0
     @Environment(\.dismiss) private var dismiss
 
     init(
@@ -40,31 +42,47 @@ struct LectureDetailView: View {
             .padding(.horizontal)
             .padding(.top, 8)
 
-            if shouldShowProcessing, let processingLecture = processingLecture {
-                ProcessingView(lecture: processingLecture)
+            ZStack {
+                if shouldShowProcessing, let processingLecture = processingLecture {
+                    ProcessingView(
+                        lecture: processingLecture,
+                        isRetrying: processingViewModel?.isRetrying == true,
+                        onRetry: processingLecture.status == .failed ? {
+                            Task {
+                                await processingViewModel?.retryProcessing()
+                            }
+                        } : nil
+                    )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                LectureDetailSectionChipsView(
-                    selectedSection: $selectedSection,
-                    onSelectSection: { section in
-                        switch section {
-                        case .flashcards:
-                            activeDestination = .flashcards
-                        case .quiz:
-                            activeDestination = .quiz
-                        default:
-                            selectedSection = section
-                        }
-                    }
-                )
-                .padding(.top, 16)
-                .padding(.bottom, 8)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
 
-                LectureDetailSectionContentView(
-                    lecture: editableLecture,
-                    selectedSection: selectedSection
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if !shouldShowProcessing {
+                    VStack(spacing: 0) {
+                        LectureDetailSectionChipsView(
+                            selectedSection: $selectedSection,
+                            onSelectSection: { section in
+                                switch section {
+                                case .flashcards:
+                                    activeDestination = .flashcards
+                                case .quiz:
+                                    activeDestination = .quiz
+                                default:
+                                    selectedSection = section
+                                }
+                            }
+                        )
+                        .padding(.top, 16)
+                        .padding(.bottom, 8)
+
+                        LectureDetailSectionContentView(
+                            lecture: editableLecture,
+                            selectedSection: selectedSection
+                        )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
             }
         }
         .background(Color(.systemGray6))
@@ -99,6 +117,16 @@ struct LectureDetailView: View {
             playerViewModel?.cleanup()
             processingViewModel?.stop()
         }
+        .onChange(of: processingLecture?.status) { oldValue, newValue in
+            guard oldValue != .failed, newValue == .failed else {
+                if oldValue != .ready, newValue == .ready {
+                    processingSuccessFeedbackToken += 1
+                }
+                return
+            }
+
+            processingErrorFeedbackToken += 1
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Copy", systemImage: "doc.on.doc") {
@@ -124,6 +152,8 @@ struct LectureDetailView: View {
                 }
             }
         }
+        .sensoryFeedback(.impact(weight: .light), trigger: processingErrorFeedbackToken)
+        .sensoryFeedback(.success, trigger: processingSuccessFeedbackToken)
         .overlay(alignment: .top) {
             if let toastMessage {
                 LectureDetailToastView(message: toastMessage)
@@ -164,6 +194,7 @@ struct LectureDetailView: View {
             Text("This action cannot be undone.")
         }
         .animation(.easeInOut(duration: 0.2), value: toastMessage != nil)
+        .animation(.easeInOut(duration: 0.32), value: shouldShowProcessing)
     }
 
     private var copyableText: String? {
@@ -231,6 +262,24 @@ struct LectureDetailView: View {
     }
 }
 
+#Preview("Processing") {
+    NavigationStack {
+        LectureDetailView(
+            lecture: processingPreviewLecture,
+            repository: MockLectureRepository()
+        )
+    }
+}
+
+#Preview("Processing Failed") {
+    NavigationStack {
+        LectureDetailView(
+            lecture: failedProcessingPreviewLecture,
+            repository: MockLectureRepository()
+        )
+    }
+}
+
 private let previewLecture: Lecture? = {
     guard var lecture = MockLectures.makeLectures().first else {
         return nil
@@ -239,6 +288,35 @@ private let previewLecture: Lecture? = {
     lecture.audioURL = nil
     return lecture
 }()
+
+private let processingPreviewLecture = Lecture(
+    title: "New Recording",
+    course: "Biology 101",
+    audioURL: nil,
+    createdAt: Date(timeIntervalSinceReferenceDate: 794_855_467),
+    duration: .seconds(3),
+    status: .transcribing,
+    transcript: "",
+    summaryShort: "",
+    summaryLong: "",
+    flashcards: [],
+    quiz: []
+)
+
+private let failedProcessingPreviewLecture = Lecture(
+    title: "New Recording",
+    course: "Biology 101",
+    audioURL: nil,
+    createdAt: Date(timeIntervalSinceReferenceDate: 794_855_467),
+    duration: .seconds(3),
+    status: .failed,
+    transcript: "",
+    summaryShort: "",
+    summaryLong: "",
+    flashcards: [],
+    quiz: [],
+    processingErrorMessage: "No speech detected. Try speaking louder or recording for longer."
+)
 
 private enum LectureDetailSection: String, CaseIterable, Identifiable {
     case summary = "Summary"

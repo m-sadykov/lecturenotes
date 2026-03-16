@@ -114,18 +114,7 @@ final class LecturesListViewModel {
         lectures.insert(lecture, at: 0)
         do {
             try await repository.saveLecture(lecture)
-            if let processingService {
-                do {
-                    lecture = try await processingService.startProcessing(for: lecture)
-                    replaceLecture(lecture)
-                    try await repository.saveLecture(lecture)
-                } catch {
-                    lecture.status = .failed
-                    lecture.processingErrorMessage = "Unable to start processing right now."
-                    replaceLecture(lecture)
-                    try await repository.saveLecture(lecture)
-                }
-            }
+            startProcessingIfNeeded(for: lecture)
             return .saved(lecture)
         } catch {
             lectures.removeAll { $0.id == lecture.id }
@@ -197,6 +186,26 @@ final class LecturesListViewModel {
             for lecture in lectures {
                 try? await repository.saveLecture(lecture)
             }
+        }
+    }
+
+    private func startProcessingIfNeeded(for lecture: Lecture) {
+        guard let processingService else {
+            return
+        }
+
+        Task {
+            var lectureToProcess = lecture
+
+            do {
+                lectureToProcess = try await processingService.startProcessing(for: lectureToProcess)
+            } catch {
+                lectureToProcess.status = .failed
+                lectureToProcess.processingErrorMessage = "Unable to start processing right now."
+            }
+
+            replaceLecture(lectureToProcess)
+            try? await repository.saveLecture(lectureToProcess)
         }
     }
 }
