@@ -76,7 +76,6 @@ enum MockLectures {
             Lecture(
                 id: lecture1ID,
                 title: "Plant Physiology Basics",
-                course: "Biology 101",
                 audioURL: nil,
                 folderID: nil,
                 createdAt: lecture1Date,
@@ -97,7 +96,6 @@ enum MockLectures {
             Lecture(
                 id: lecture2ID,
                 title: "Thermodynamics Intro",
-                course: "Physics",
                 audioURL: nil,
                 folderID: nil,
                 createdAt: lecture2Date,
@@ -112,7 +110,6 @@ enum MockLectures {
             Lecture(
                 id: lecture3ID,
                 title: "Linear Algebra: Matrices",
-                course: "Math",
                 audioURL: nil,
                 folderID: nil,
                 createdAt: lecture3Date,

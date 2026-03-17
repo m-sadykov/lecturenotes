@@ -5,10 +5,6 @@ struct RecorderView: View {
 
     var body: some View {
         Form {
-            Section("Lecture") {
-                TextField("Course", text: $viewModel.courseName)
-            }
-
             Section("Timer") {
                 Text(LectureFormatters.durationText(viewModel.elapsed))
                     .bold()
@@ -25,8 +21,7 @@ struct RecorderView: View {
                     NavigationLink {
                         ProcessingView(
                             lecture: Lecture(
-                                title: "\(viewModel.courseName) lecture",
-                                course: viewModel.courseName,
+                                title: "New Recording",
                                 createdAt: .now,
                                 duration: viewModel.elapsed,
                                 status: .uploading,

@@ -76,7 +76,7 @@ struct LectureAudioPlayerView: View {
     }
 
     private var metadataText: String {
-        "\(lecture.createdAt.formatted(.dateTime.month(.abbreviated).day().year())) · \(LectureFormatters.clockText(lecture.duration)) · Voice Recording"
+        "\(lecture.createdAt.formatted(.dateTime.month(.abbreviated).day().year())) · \(LectureFormatters.clockText(lecture.duration)) · Audio Recording"
     }
 }
 
@@ -151,7 +151,6 @@ private extension Double {
 
 private let previewLectureForPlayer = Lecture(
     title: "New Recording",
-    course: "Biology 101",
     createdAt: Date(timeIntervalSinceReferenceDate: 794_855_467),
     duration: .seconds(32),
     status: .ready,

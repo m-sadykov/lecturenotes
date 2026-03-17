@@ -14,7 +14,8 @@ admin.initializeApp();
 setGlobalOptions({ maxInstances: 10 });
 
 const openAIKey = defineSecret("OPENAI_API_KEY");
-const lectureAudioPath = /^audio\/([^/]+)\/([^/.]+)\.(m4a|mp3|wav|mpeg|mp4)$/i;
+const singleLectureAudioPath = /^audio\/([^/]+)\/([^/.]+)\.(m4a|mp3|wav|mpeg|mp4)$/i;
+const chunkLectureAudioPath = /^audio\/([^/]+)\/([^/]+)\/chunk_(\d+)\.m4a$/i;
 
 type TranscriptResponse = {
   text: string;
@@ -52,13 +53,13 @@ export const processLectureAudio = onObjectFinalized(
       return;
     }
 
-    const match = filePath.match(lectureAudioPath);
-    if (!match) {
+    const audioObject = parseAudioObject(filePath);
+    if (!audioObject) {
       logger.info("Skipping unrelated storage object", { filePath });
       return;
     }
 
-    const [, uid, lectureId] = match;
+    const { uid, lectureId } = audioObject;
     const documentReference = admin
       .firestore()
       .collection("users")
@@ -82,49 +83,50 @@ export const processLectureAudio = onObjectFinalized(
         destination: tempFilePath,
       });
 
-      const transcript = await transcribeLecture(
-        tempFilePath,
-        openAIKey.value(),
-      );
+      const transcript = await transcribeLecture(tempFilePath, openAIKey.value());
 
-      await documentReference.set(
-        {
-          status: "generating",
+      if (audioObject.kind === "chunk") {
+        const mergeResult = await mergeChunkTranscript({
+          documentReference,
+          chunkIndex: audioObject.chunkIndex,
           transcript: transcript.text,
-          languageDetected: transcript.language ?? null,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      );
+          language: transcript.language ?? null,
+        });
 
-      const studyPack = await generateStudyPack(
-        transcript.text,
-        openAIKey.value(),
-      );
+        if (!mergeResult.shouldGenerateStudyPack) {
+          logger.info("Chunk transcript saved", {
+            uid,
+            lectureId,
+            chunkIndex: audioObject.chunkIndex,
+            completedChunkCount: mergeResult.completedChunkCount,
+          });
+          return;
+        }
 
-      await documentReference.set(
-        {
-          status: "ready",
-          title: studyPack.title,
-          summaryShort: studyPack.summaryShort,
-          summaryLong: studyPack.summaryLong,
-          flashcards: studyPack.flashcards.map(card => ({
-            id: crypto.randomUUID(),
-            question: card.question,
-            answer: card.answer,
-          })),
-          quiz: studyPack.quiz.map(question => ({
-            id: crypto.randomUUID(),
-            question: question.question,
-            options: question.options,
-            correctIndex: question.correctIndex,
-          })),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          processedAt: admin.firestore.FieldValue.serverTimestamp(),
-          errorMessage: admin.firestore.FieldValue.delete(),
-        },
-        { merge: true },
-      );
+        const studyPack = await generateStudyPack(
+          mergeResult.mergedTranscript,
+          openAIKey.value(),
+        );
+
+        await saveStudyPack(documentReference, mergeResult.mergedTranscript, studyPack);
+      } else {
+        await documentReference.set(
+          {
+            status: "generating",
+            transcript: transcript.text,
+            languageDetected: transcript.language ?? null,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        );
+
+        const studyPack = await generateStudyPack(
+          transcript.text,
+          openAIKey.value(),
+        );
+
+        await saveStudyPack(documentReference, transcript.text, studyPack);
+      }
 
       logger.info("Lecture processed successfully", { uid, lectureId });
     } catch (error) {
@@ -151,28 +153,75 @@ export const processLectureAudio = onObjectFinalized(
   },
 );
 
+function parseAudioObject(filePath: string):
+  | { kind: "single"; uid: string; lectureId: string }
+  | { kind: "chunk"; uid: string; lectureId: string; chunkIndex: number }
+  | null {
+  const chunkMatch = filePath.match(chunkLectureAudioPath);
+  if (chunkMatch) {
+    return {
+      kind: "chunk",
+      uid: chunkMatch[1],
+      lectureId: chunkMatch[2],
+      chunkIndex: Number(chunkMatch[3]),
+    };
+  }
+
+  const singleMatch = filePath.match(singleLectureAudioPath);
+  if (singleMatch) {
+    return {
+      kind: "single",
+      uid: singleMatch[1],
+      lectureId: singleMatch[2],
+    };
+  }
+
+  return null;
+}
+
 async function transcribeLecture(
   filePath: string,
   apiKey: string,
 ): Promise<TranscriptResponse> {
   const audioBytes = await readFile(filePath);
-  const formData = new FormData();
-  const audioBlob = new Blob([audioBytes], { type: "audio/m4a" });
+  const mimeType = mimeTypeForAudioFile(filePath);
+  const fileName = basename(filePath);
+  return createTranscription({
+    audioBytes,
+    mimeType,
+    fileName,
+    apiKey,
+    model: "gpt-4o-mini-transcribe",
+  });
+}
 
-  formData.append("file", audioBlob, basename(filePath));
-  formData.append("model", "gpt-4o-mini-transcribe");
+async function createTranscription({
+  audioBytes,
+  mimeType,
+  fileName,
+  apiKey,
+  model,
+}: {
+  audioBytes: Buffer;
+  mimeType: string;
+  fileName: string;
+  apiKey: string;
+  model: string;
+}): Promise<TranscriptResponse> {
+  const formData = new FormData();
+  const audioBlob = new Blob([new Uint8Array(audioBytes)], { type: mimeType });
+
+  formData.append("file", audioBlob, fileName);
+  formData.append("model", model);
   formData.append("response_format", "json");
 
-  const response = await fetch(
-    "https://api.openai.com/v1/audio/transcriptions",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: formData,
+  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
     },
-  );
+    body: formData,
+  });
 
   if (!response.ok) {
     throw new Error(await openAIErrorMessage(response));
@@ -185,6 +234,139 @@ async function transcribeLecture(
   }
 
   return payload;
+}
+
+function mimeTypeForAudioFile(filePath: string): string {
+  const fileName = basename(filePath).toLowerCase();
+
+  if (fileName.endsWith(".mp3") || fileName.endsWith(".mpeg")) {
+    return "audio/mpeg";
+  }
+
+  if (fileName.endsWith(".wav")) {
+    return "audio/wav";
+  }
+
+  if (fileName.endsWith(".mp4") || fileName.endsWith(".m4a")) {
+    return "audio/mp4";
+  }
+
+  return "application/octet-stream";
+}
+
+async function mergeChunkTranscript({
+  documentReference,
+  chunkIndex,
+  transcript,
+  language,
+}: {
+  documentReference: admin.firestore.DocumentReference;
+  chunkIndex: number;
+  transcript: string;
+  language: string | null;
+}): Promise<{
+  completedChunkCount: number;
+  mergedTranscript: string;
+  shouldGenerateStudyPack: boolean;
+}> {
+  return admin.firestore().runTransaction(async transaction => {
+    const snapshot = await transaction.get(documentReference);
+    const data = snapshot.data() ?? {};
+    const chunkCount = numberValue(data.chunkCount);
+    const existingChunkTranscripts = stringMapValue(data.chunkTranscripts);
+    const chunkKey = String(chunkIndex);
+
+    existingChunkTranscripts[chunkKey] = transcript;
+
+    const sortedChunkIndexes = Object.keys(existingChunkTranscripts)
+      .map(value => Number(value))
+      .filter(value => Number.isFinite(value))
+      .sort((lhs, rhs) => lhs - rhs);
+
+    const mergedTranscript = sortedChunkIndexes
+      .map(index => existingChunkTranscripts[String(index)] ?? "")
+      .filter(value => value.trim().length > 0)
+      .join("\n\n")
+      .trim();
+
+    const completedChunkCount = sortedChunkIndexes.length;
+    const shouldGenerateStudyPack =
+      chunkCount > 0 &&
+      completedChunkCount >= chunkCount &&
+      data.status !== "generating" &&
+      data.status !== "ready";
+
+    transaction.set(
+      documentReference,
+      {
+        status: shouldGenerateStudyPack ? "generating" : "transcribing",
+        transcript: mergedTranscript,
+        languageDetected: language ?? data.languageDetected ?? null,
+        chunkTranscripts: existingChunkTranscripts,
+        completedChunkCount,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        errorMessage: admin.firestore.FieldValue.delete(),
+      },
+      { merge: true },
+    );
+
+    return {
+      completedChunkCount,
+      mergedTranscript,
+      shouldGenerateStudyPack,
+    };
+  });
+}
+
+async function saveStudyPack(
+  documentReference: admin.firestore.DocumentReference,
+  transcript: string,
+  studyPack: StudyPack,
+): Promise<void> {
+  await documentReference.set(
+    {
+      status: "ready",
+      transcript,
+      title: studyPack.title,
+      summaryShort: studyPack.summaryShort,
+      summaryLong: studyPack.summaryLong,
+      flashcards: studyPack.flashcards.map(card => ({
+        id: crypto.randomUUID(),
+        question: card.question,
+        answer: card.answer,
+      })),
+      quiz: studyPack.quiz.map(question => ({
+        id: crypto.randomUUID(),
+        question: question.question,
+        options: question.options,
+        correctIndex: question.correctIndex,
+      })),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      processedAt: admin.firestore.FieldValue.serverTimestamp(),
+      errorMessage: admin.firestore.FieldValue.delete(),
+    },
+    { merge: true },
+  );
+}
+
+function numberValue(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  return 0;
+}
+
+function stringMapValue(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(([, entryValue]) => typeof entryValue === "string")
+    .map(([entryKey, entryValue]) => [entryKey, entryValue as string]);
+
+  return Object.fromEntries(entries);
 }
 
 async function generateStudyPack(

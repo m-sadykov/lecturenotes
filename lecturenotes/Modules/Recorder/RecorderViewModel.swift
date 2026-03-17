@@ -19,7 +19,6 @@ final class RecorderViewModel {
         let audioURL: URL
         let createdAt: Date
         let duration: Duration
-        let courseName: String
     }
 
     enum Mode {
@@ -30,7 +29,6 @@ final class RecorderViewModel {
     }
 
     var mode: Mode = .idle
-    var courseName = "Biology 101"
     var elapsed: Duration = .zero
     var limit: Duration = .seconds(300)
     var errorMessage: String?
@@ -115,8 +113,7 @@ final class RecorderViewModel {
         return RecordingDraft(
             audioURL: recording.url,
             createdAt: recording.createdAt,
-            duration: max(.seconds(1), max(elapsed, recording.duration)),
-            courseName: courseName
+            duration: max(.seconds(1), max(elapsed, recording.duration))
         )
     }
 

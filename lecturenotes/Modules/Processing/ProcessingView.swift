@@ -228,7 +228,6 @@ private func processingPreviewLecture(
 ) -> Lecture {
     Lecture(
         title: "New Recording",
-        course: "Biology 101",
         createdAt: Date(timeIntervalSinceReferenceDate: 794_855_467),
         duration: .seconds(3),
         status: status,

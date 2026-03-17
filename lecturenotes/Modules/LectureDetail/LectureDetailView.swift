@@ -6,6 +6,7 @@ struct LectureDetailView: View {
     let repository: LectureRepository
     let processingService: FirebaseLectureProcessingService?
     let onLectureUpdated: (Lecture) -> Void
+    let onLectureDeleted: (Lecture.ID) async -> Bool
     @State private var editableLecture: Lecture
     @State private var playerViewModel: LecturePlayerViewModel?
     @State private var processingViewModel: LectureProcessingViewModel?
@@ -23,12 +24,14 @@ struct LectureDetailView: View {
         lecture: Lecture,
         repository: LectureRepository,
         processingService: FirebaseLectureProcessingService? = nil,
-        onLectureUpdated: @escaping (Lecture) -> Void = { _ in }
+        onLectureUpdated: @escaping (Lecture) -> Void = { _ in },
+        onLectureDeleted: @escaping (Lecture.ID) async -> Bool = { _ in true }
     ) {
         self.lecture = lecture
         self.repository = repository
         self.processingService = processingService
         self.onLectureUpdated = onLectureUpdated
+        self.onLectureDeleted = onLectureDeleted
         _editableLecture = State(initialValue: lecture)
     }
 
@@ -152,8 +155,6 @@ struct LectureDetailView: View {
                 }
             }
         }
-        .sensoryFeedback(.impact(weight: .light), trigger: processingErrorFeedbackToken)
-        .sensoryFeedback(.success, trigger: processingSuccessFeedbackToken)
         .overlay(alignment: .top) {
             if let toastMessage {
                 LectureDetailToastView(message: toastMessage)
@@ -188,7 +189,16 @@ struct LectureDetailView: View {
         .alert("Delete Recording?", isPresented: $isDeleteAlertPresented) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
-                dismiss()
+                Task {
+                    let wasDeleted = await onLectureDeleted(editableLecture.id)
+                    await MainActor.run {
+                        if wasDeleted {
+                            dismiss()
+                        } else {
+                            showToast("Unable to delete recording right now.")
+                        }
+                    }
+                }
             }
         } message: {
             Text("This action cannot be undone.")
@@ -291,7 +301,6 @@ private let previewLecture: Lecture? = {
 
 private let processingPreviewLecture = Lecture(
     title: "New Recording",
-    course: "Biology 101",
     audioURL: nil,
     createdAt: Date(timeIntervalSinceReferenceDate: 794_855_467),
     duration: .seconds(3),
@@ -305,7 +314,6 @@ private let processingPreviewLecture = Lecture(
 
 private let failedProcessingPreviewLecture = Lecture(
     title: "New Recording",
-    course: "Biology 101",
     audioURL: nil,
     createdAt: Date(timeIntervalSinceReferenceDate: 794_855_467),
     duration: .seconds(3),

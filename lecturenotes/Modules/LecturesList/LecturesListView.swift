@@ -11,11 +11,13 @@ struct LecturesListView: View {
     @State private var recorderViewModel: RecorderViewModel?
     @State private var toastMessage: String?
     @State private var removalFeedbackToken = 0
+    @State private var importFeedbackToken = 0
     @State private var isImporterPresented = false
     @State private var isImportAlertPresented = false
     @State private var importAlertMessage = ""
     @State private var pendingDeletionLecture: Lecture?
     @State private var isAIConsentPresented = false
+    @State private var pendingConsentAction: PendingConsentAction?
 
     var body: some View {
         NavigationStack {
@@ -30,7 +32,7 @@ struct LecturesListView: View {
                         PremiumBannerView()
                         
                         QuickActionsStripView {
-                            isImporterPresented = true
+                            presentImportFlow()
                         }
                         
                         RecordingsSectionHeaderView(
@@ -88,6 +90,24 @@ struct LecturesListView: View {
                         if selectedLecture?.id == updatedLecture.id {
                             selectedLecture = updatedLecture
                         }
+                    },
+                    onLectureDeleted: { lectureID in
+                        let result = await viewModel.deleteLecture(lectureID)
+
+                        switch result {
+                        case .deleted:
+                            await MainActor.run {
+                                if selectedLecture?.id == lectureID {
+                                    selectedLecture = nil
+                                }
+                            }
+                            return true
+                        case .rejected(let message):
+                            await MainActor.run {
+                                showToast(message)
+                            }
+                            return false
+                        }
                     }
                 )
             }
@@ -115,6 +135,7 @@ struct LecturesListView: View {
                 if isAIConsentPresented {
                     Button {
                         isAIConsentPresented = false
+                        pendingConsentAction = nil
                     } label: {
                         Color.black.opacity(0.28)
                             .ignoresSafeArea()
@@ -152,11 +173,20 @@ struct LecturesListView: View {
                     AIProcessingConsentCard(
                         onCancel: {
                             isAIConsentPresented = false
+                            pendingConsentAction = nil
                         },
                         onContinue: {
                             hasConfirmedAIProcessingConsent = true
                             isAIConsentPresented = false
-                            recorderViewModel = RecorderViewModel()
+                            switch pendingConsentAction {
+                            case .record:
+                                recorderViewModel = RecorderViewModel()
+                            case .importAudio:
+                                isImporterPresented = true
+                            case nil:
+                                recorderViewModel = RecorderViewModel()
+                            }
+                            pendingConsentAction = nil
                         }
                     )
                     .padding(.horizontal, 20)
@@ -174,6 +204,7 @@ struct LecturesListView: View {
             .animation(.easeInOut(duration: 0.2), value: toastMessage != nil)
             .animation(.spring(response: 0.32, dampingFraction: 0.88), value: recorderViewModel != nil)
             .sensoryFeedback(.success, trigger: removalFeedbackToken)
+            .sensoryFeedback(.impact(weight: .light), trigger: importFeedbackToken)
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
                 case .actions(let lectureID):
@@ -247,8 +278,17 @@ struct LecturesListView: View {
             ) { lecture in
                 Button("Cancel", role: .cancel) {}
                 Button("Delete", role: .destructive) {
-                    viewModel.deleteLecture(lecture.id)
-                    pendingDeletionLecture = nil
+                    Task {
+                        let result = await viewModel.deleteLecture(lecture.id)
+                        await MainActor.run {
+                            pendingDeletionLecture = nil
+
+                            if case .rejected(let message) = result {
+                                importAlertMessage = message
+                                isImportAlertPresented = true
+                            }
+                        }
+                    }
                 }
             } message: { lecture in
                 Text("Delete \"\(lecture.title)\"? This action cannot be undone.")
@@ -281,8 +321,21 @@ struct LecturesListView: View {
                 isImportAlertPresented = true
                 return
             }
-            importAlertMessage = "Selected: \(url.lastPathComponent)"
-            isImportAlertPresented = true
+
+            Task {
+                let importResult = await viewModel.importAudio(from: url)
+
+                await MainActor.run {
+                    switch importResult {
+                    case .saved(let lecture):
+                        importFeedbackToken += 1
+                        selectedLecture = lecture
+                    case .rejected(let message):
+                        importAlertMessage = message
+                        isImportAlertPresented = true
+                    }
+                }
+            }
         case .failure(let error):
             importAlertMessage = "Import failed: \(error.localizedDescription)"
             isImportAlertPresented = true
@@ -290,9 +343,29 @@ struct LecturesListView: View {
     }
 
     private func presentRecorderFlow() {
+        guard processingService != nil else {
+            recorderViewModel = RecorderViewModel()
+            return
+        }
+
         if hasConfirmedAIProcessingConsent {
             recorderViewModel = RecorderViewModel()
         } else {
+            pendingConsentAction = .record
+            isAIConsentPresented = true
+        }
+    }
+
+    private func presentImportFlow() {
+        guard processingService != nil else {
+            isImporterPresented = true
+            return
+        }
+
+        if hasConfirmedAIProcessingConsent {
+            isImporterPresented = true
+        } else {
+            pendingConsentAction = .importAudio
             isAIConsentPresented = true
         }
     }
@@ -344,6 +417,11 @@ private enum ActiveSheet: Identifiable {
             "folderPicker-\(lectureID)"
         }
     }
+}
+
+private enum PendingConsentAction {
+    case record
+    case importAudio
 }
 
 #Preview {

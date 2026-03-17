@@ -67,7 +67,6 @@ struct LectureFolder: Identifiable, Hashable, Codable {
 struct Lecture: Identifiable, Hashable, Codable {
     let id: UUID
     var title: String
-    var course: String
     var audioURL: URL?
     var folderID: LectureFolder.ID?
     var createdAt: Date
@@ -83,7 +82,6 @@ struct Lecture: Identifiable, Hashable, Codable {
     init(
         id: UUID = UUID(),
         title: String,
-        course: String,
         audioURL: URL? = nil,
         folderID: LectureFolder.ID? = nil,
         createdAt: Date,
@@ -98,7 +96,6 @@ struct Lecture: Identifiable, Hashable, Codable {
     ) {
         self.id = id
         self.title = title
-        self.course = course
         self.audioURL = audioURL
         self.folderID = folderID
         self.createdAt = createdAt

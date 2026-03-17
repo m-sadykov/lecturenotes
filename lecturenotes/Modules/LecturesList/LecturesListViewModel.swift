@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import Observation
 
@@ -6,6 +7,11 @@ import Observation
 final class LecturesListViewModel {
     enum SaveRecordingResult {
         case saved(Lecture)
+        case rejected(message: String)
+    }
+
+    enum DeleteLectureResult {
+        case deleted
         case rejected(message: String)
     }
 
@@ -31,8 +37,7 @@ final class LecturesListViewModel {
             let matchesFolder = selectedFolderID == nil || lecture.folderID == selectedFolderID
             let matchesQuery =
                 searchText.isEmpty ||
-                lecture.title.localizedStandardContains(searchText) ||
-                lecture.course.localizedStandardContains(searchText)
+                lecture.title.localizedStandardContains(searchText)
             return matchesFolder && matchesQuery
         }
     }
@@ -97,9 +102,8 @@ final class LecturesListViewModel {
         }
 
         let lectureStatus: LectureStatus = processingService == nil ? .ready : .uploading
-        var lecture = Lecture(
+        let lecture = Lecture(
             title: "New Recording",
-            course: recording.courseName,
             audioURL: recording.audioURL,
             createdAt: recording.createdAt,
             duration: recording.duration,
@@ -122,15 +126,57 @@ final class LecturesListViewModel {
         }
     }
 
-    func deleteLecture(_ lectureID: Lecture.ID) {
-        guard lecture(withID: lectureID) != nil else {
-            return
+    func importAudio(from sourceURL: URL) async -> SaveRecordingResult {
+        let lectureID = UUID()
+
+        do {
+            let importedAudio = try await importAudioFile(from: sourceURL, lectureID: lectureID)
+            let lectureStatus: LectureStatus = processingService == nil ? .ready : .uploading
+            let lecture = Lecture(
+                id: lectureID,
+                title: importedAudio.suggestedTitle,
+                audioURL: importedAudio.localURL,
+                createdAt: importedAudio.createdAt,
+                duration: importedAudio.duration,
+                status: lectureStatus,
+                transcript: "",
+                summaryShort: "",
+                summaryLong: "",
+                flashcards: [],
+                quiz: []
+            )
+
+            lectures.insert(lecture, at: 0)
+
+            do {
+                try await repository.saveLecture(lecture)
+                startProcessingIfNeeded(for: lecture)
+                return .saved(lecture)
+            } catch {
+                lectures.removeAll { $0.id == lecture.id }
+                try? FileManager.default.removeItem(at: importedAudio.localURL)
+                return .rejected(message: "Unable to save imported audio right now.")
+            }
+        } catch {
+            return .rejected(message: error.localizedDescription)
+        }
+    }
+
+    func deleteLecture(_ lectureID: Lecture.ID) async -> DeleteLectureResult {
+        guard let lecture = lecture(withID: lectureID) else {
+            return .deleted
         }
 
-        lectures.removeAll { $0.id == lectureID }
+        do {
+            if let processingService {
+                try await processingService.deleteLecture(lecture)
+            }
 
-        Task {
-            try? await repository.deleteLecture(id: lectureID)
+            try await repository.deleteLecture(id: lectureID)
+            lectures.removeAll { $0.id == lectureID }
+            return .deleted
+        } catch {
+            return .rejected(message: "Unable to delete recording right now.")
         }
     }
 
@@ -206,6 +252,83 @@ final class LecturesListViewModel {
 
             replaceLecture(lectureToProcess)
             try? await repository.saveLecture(lectureToProcess)
+        }
+    }
+
+    private func importAudioFile(from sourceURL: URL, lectureID: UUID) async throws -> ImportedAudio {
+        let didAccessSecurityScope = sourceURL.startAccessingSecurityScopedResource()
+        defer {
+            if didAccessSecurityScope {
+                sourceURL.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        let fileManager = FileManager.default
+        let recordingsDirectory = URL.documentsDirectory.appending(path: "Recordings", directoryHint: .isDirectory)
+        try fileManager.createDirectory(
+            at: recordingsDirectory,
+            withIntermediateDirectories: true,
+            attributes: nil
+        )
+
+        let pathExtension = sourceURL.pathExtension.isEmpty ? "m4a" : sourceURL.pathExtension.lowercased()
+        let destinationURL = recordingsDirectory
+            .appending(path: lectureID.uuidString)
+            .appendingPathExtension(pathExtension)
+
+        if fileManager.fileExists(atPath: destinationURL.path(percentEncoded: false)) {
+            try fileManager.removeItem(at: destinationURL)
+        }
+
+        do {
+            try fileManager.copyItem(at: sourceURL, to: destinationURL)
+        } catch {
+            throw ImportError.unableToImportAudio
+        }
+
+        let resourceValues = try? sourceURL.resourceValues(forKeys: [.contentModificationDateKey, .creationDateKey])
+        let createdAt = resourceValues?.contentModificationDate ?? resourceValues?.creationDate ?? .now
+        let duration = await loadDuration(for: destinationURL) ?? .seconds(1)
+        let suggestedTitle = sourceURL.deletingPathExtension().lastPathComponent
+
+        return ImportedAudio(
+            localURL: destinationURL,
+            createdAt: createdAt,
+            duration: duration,
+            suggestedTitle: suggestedTitle.isEmpty ? "Imported Recording" : suggestedTitle
+        )
+    }
+
+    private func loadDuration(for audioURL: URL) async -> Duration? {
+        let asset = AVURLAsset(url: audioURL)
+
+        do {
+            let duration = try await asset.load(.duration)
+            let seconds = duration.seconds
+            guard seconds.isFinite, seconds > 0 else {
+                return nil
+            }
+            return .seconds(seconds)
+        } catch {
+            return nil
+        }
+    }
+}
+
+private struct ImportedAudio {
+    let localURL: URL
+    let createdAt: Date
+    let duration: Duration
+    let suggestedTitle: String
+}
+
+private enum ImportError: LocalizedError {
+    case unableToImportAudio
+
+    var errorDescription: String? {
+        switch self {
+        case .unableToImportAudio:
+            "Unable to import this audio file."
         }
     }
 }

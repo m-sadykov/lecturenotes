@@ -10,7 +10,6 @@ final class LocalLectureRepository: LectureRepository {
     private struct StoredLecture: Codable {
         let id: UUID
         var title: String
-        var course: String
         var audioFileName: String?
         var folderID: LectureFolder.ID?
         var createdAt: Date
@@ -26,7 +25,6 @@ final class LocalLectureRepository: LectureRepository {
         init(lecture: Lecture, recordingsDirectory: URL) {
             id = lecture.id
             title = lecture.title
-            course = lecture.course
             audioFileName = lecture.audioURL.flatMap { url in
                 if url.deletingLastPathComponent() == recordingsDirectory {
                     return url.lastPathComponent
@@ -49,7 +47,6 @@ final class LocalLectureRepository: LectureRepository {
             Lecture(
                 id: id,
                 title: title,
-                course: course,
                 audioURL: audioFileName.map { recordingsDirectory.appending(path: $0) },
                 folderID: folderID,
                 createdAt: createdAt,
