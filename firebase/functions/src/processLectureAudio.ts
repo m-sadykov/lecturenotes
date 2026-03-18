@@ -3,11 +3,11 @@ import { basename, join } from "node:path";
 import { unlink } from "node:fs/promises";
 
 import * as admin from "firebase-admin";
-import * as logger from "firebase-functions/logger";
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 
 import { openAIKey } from "./config";
 import { parseAudioObject, mergeChunkTranscript } from "./audioProcessing";
+import { createProcessingLogger } from "./logging";
 import { generateStudyPack, saveStudyPack } from "./studyPack";
 import { transcribeLecture } from "./transcription";
 
@@ -21,19 +21,39 @@ export const processLectureAudio = onObjectFinalized(
     const object = event.data;
     const filePath = object.name;
     const bucketName = object.bucket;
+    const log = createProcessingLogger({
+      functionName: "processLectureAudio",
+      eventId: event.id,
+      eventType: event.type,
+      bucketName,
+      filePath,
+      contentType: object.contentType,
+      size: object.size,
+    });
 
     if (!filePath || !bucketName) {
-      logger.warn("Missing file path or bucket in finalize event", { event });
+      log.warn("Skipping storage event with missing file path or bucket");
       return;
     }
 
     const audioObject = parseAudioObject(filePath);
     if (!audioObject) {
-      logger.info("Skipping unrelated storage object", { filePath });
+      log.debug("Skipping unrelated storage object");
       return;
     }
 
     const { uid, lectureId } = audioObject;
+    const lectureLog = createProcessingLogger({
+      functionName: "processLectureAudio",
+      eventId: event.id,
+      eventType: event.type,
+      uid,
+      lectureId,
+      bucketName,
+      filePath,
+      audioKind: audioObject.kind,
+      chunkIndex: audioObject.kind === "chunk" ? audioObject.chunkIndex : null,
+    });
     const documentReference = admin
       .firestore()
       .collection("users")
@@ -44,6 +64,8 @@ export const processLectureAudio = onObjectFinalized(
     const tempFilePath = join(tmpdir(), basename(filePath));
 
     try {
+      lectureLog.info("Audio lecture processing started");
+
       await documentReference.set(
         {
           status: "transcribing",
@@ -52,14 +74,27 @@ export const processLectureAudio = onObjectFinalized(
         },
         { merge: true },
       );
+      lectureLog.info("Lecture status updated", { status: "transcribing" });
 
+      lectureLog.info("Downloading audio file from Cloud Storage", {
+        tempFilePath,
+      });
       await admin.storage().bucket(bucketName).file(filePath).download({
         destination: tempFilePath,
       });
+      lectureLog.info("Audio file downloaded", { tempFilePath });
 
+      lectureLog.info("Starting audio transcription");
       const transcript = await transcribeLecture(tempFilePath, openAIKey.value());
+      lectureLog.info("Audio transcription completed", {
+        languageDetected: transcript.language ?? null,
+        transcriptLength: transcript.text.length,
+      });
 
       if (audioObject.kind === "chunk") {
+        lectureLog.info("Merging chunk transcript", {
+          chunkIndex: audioObject.chunkIndex,
+        });
         const mergeResult = await mergeChunkTranscript({
           documentReference,
           chunkIndex: audioObject.chunkIndex,
@@ -68,15 +103,17 @@ export const processLectureAudio = onObjectFinalized(
         });
 
         if (!mergeResult.shouldGenerateStudyPack) {
-          logger.info("Chunk transcript saved", {
-            uid,
-            lectureId,
+          lectureLog.info("Chunk transcript saved", {
             chunkIndex: audioObject.chunkIndex,
             completedChunkCount: mergeResult.completedChunkCount,
           });
           return;
         }
 
+        lectureLog.info("All chunks are ready, generating study pack", {
+          completedChunkCount: mergeResult.completedChunkCount,
+          mergedTranscriptLength: mergeResult.mergedTranscript.length,
+        });
         const studyPack = await generateStudyPack(
           mergeResult.mergedTranscript,
           openAIKey.value(),
@@ -87,6 +124,10 @@ export const processLectureAudio = onObjectFinalized(
           mergeResult.mergedTranscript,
           studyPack,
         );
+        lectureLog.info("Study pack saved for merged chunk lecture", {
+          flashcardCount: studyPack.flashcards.length,
+          quizQuestionCount: studyPack.quiz.length,
+        });
       } else {
         await documentReference.set(
           {
@@ -97,21 +138,32 @@ export const processLectureAudio = onObjectFinalized(
           },
           { merge: true },
         );
+        lectureLog.info("Lecture status updated", {
+          status: "generating",
+          languageDetected: transcript.language ?? null,
+        });
 
+        lectureLog.info("Generating study pack from transcript", {
+          transcriptLength: transcript.text.length,
+        });
         const studyPack = await generateStudyPack(
           transcript.text,
           openAIKey.value(),
         );
 
         await saveStudyPack(documentReference, transcript.text, studyPack);
+        lectureLog.info("Study pack saved for audio lecture", {
+          flashcardCount: studyPack.flashcards.length,
+          quizQuestionCount: studyPack.quiz.length,
+        });
       }
 
-      logger.info("Lecture processed successfully", { uid, lectureId });
+      lectureLog.info("Audio lecture processed successfully");
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unknown processing error";
 
-      logger.error("Lecture processing failed", { uid, lectureId, message });
+      lectureLog.error("Audio lecture processing failed", error, { message });
 
       await documentReference.set(
         {
@@ -125,7 +177,7 @@ export const processLectureAudio = onObjectFinalized(
       try {
         await unlink(tempFilePath);
       } catch {
-        logger.debug("Temporary file cleanup skipped", { tempFilePath });
+        lectureLog.debug("Temporary file cleanup skipped", { tempFilePath });
       }
     }
   },

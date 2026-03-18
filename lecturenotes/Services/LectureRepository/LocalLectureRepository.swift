@@ -12,6 +12,8 @@ final class LocalLectureRepository: LectureRepository {
         var title: String
         var sourceType: LectureSourceType
         var audioFileName: String?
+        var sourceURL: URL?
+        var youtubeVideoID: String?
         var folderID: LectureFolder.ID?
         var createdAt: Date
         var durationSeconds: Double
@@ -28,6 +30,8 @@ final class LocalLectureRepository: LectureRepository {
             case title
             case sourceType
             case audioFileName
+            case sourceURL
+            case youtubeVideoID
             case folderID
             case createdAt
             case durationSeconds
@@ -50,6 +54,8 @@ final class LocalLectureRepository: LectureRepository {
                 }
                 return url.lastPathComponent
             }
+            sourceURL = lecture.sourceURL
+            youtubeVideoID = lecture.youtubeVideoID
             folderID = lecture.folderID
             createdAt = lecture.createdAt
             durationSeconds = lecture.duration.timeInterval
@@ -68,6 +74,8 @@ final class LocalLectureRepository: LectureRepository {
             title = try container.decode(String.self, forKey: .title)
             sourceType = try container.decodeIfPresent(LectureSourceType.self, forKey: .sourceType) ?? .audio
             audioFileName = try container.decodeIfPresent(String.self, forKey: .audioFileName)
+            sourceURL = try container.decodeIfPresent(URL.self, forKey: .sourceURL)
+            youtubeVideoID = try container.decodeIfPresent(String.self, forKey: .youtubeVideoID)
             folderID = try container.decodeIfPresent(LectureFolder.ID.self, forKey: .folderID)
             createdAt = try container.decode(Date.self, forKey: .createdAt)
             durationSeconds = try container.decode(Double.self, forKey: .durationSeconds)
@@ -86,6 +94,8 @@ final class LocalLectureRepository: LectureRepository {
             try container.encode(title, forKey: .title)
             try container.encode(sourceType, forKey: .sourceType)
             try container.encodeIfPresent(audioFileName, forKey: .audioFileName)
+            try container.encodeIfPresent(sourceURL, forKey: .sourceURL)
+            try container.encodeIfPresent(youtubeVideoID, forKey: .youtubeVideoID)
             try container.encodeIfPresent(folderID, forKey: .folderID)
             try container.encode(createdAt, forKey: .createdAt)
             try container.encode(durationSeconds, forKey: .durationSeconds)
@@ -104,6 +114,8 @@ final class LocalLectureRepository: LectureRepository {
                 title: title,
                 sourceType: sourceType,
                 audioURL: audioFileName.map { recordingsDirectory.appending(path: $0) },
+                sourceURL: sourceURL,
+                youtubeVideoID: youtubeVideoID,
                 folderID: folderID,
                 createdAt: createdAt,
                 duration: .seconds(durationSeconds),

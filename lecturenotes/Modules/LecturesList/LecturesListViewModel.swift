@@ -198,6 +198,79 @@ final class LecturesListViewModel {
         }
     }
 
+    func importYouTube(urlString: String) async -> SaveRecordingResult {
+        let trimmedURLString = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let sourceURL = URL(string: trimmedURLString), sourceURL.host() != nil else {
+            return .rejected(message: "Enter a valid YouTube link.")
+        }
+
+        guard let videoID = parseYouTubeVideoID(from: sourceURL) else {
+            return .rejected(message: "Enter a valid YouTube link.")
+        }
+
+        let lectureStatus: LectureStatus = if processingService == nil {
+            .failed
+        } else {
+            .transcribing
+        }
+        let lecture = Lecture(
+            id: UUID(),
+            title: "YouTube Import",
+            sourceType: .youtube,
+            audioURL: nil,
+            sourceURL: sourceURL,
+            youtubeVideoID: videoID,
+            createdAt: .now,
+            duration: .seconds(30),
+            status: lectureStatus,
+            transcript: "",
+            summaryShort: "",
+            summaryLong: "",
+            flashcards: [],
+            quiz: [],
+            processingErrorMessage: processingService == nil ? "YouTube import requires backend processing." : nil
+        )
+
+        lectures.insert(lecture, at: 0)
+
+        do {
+            try await repository.saveLecture(lecture)
+            startProcessingIfNeeded(for: lecture)
+            return .saved(lecture)
+        } catch {
+            lectures.removeAll { $0.id == lecture.id }
+            return .rejected(message: "Unable to save YouTube import right now.")
+        }
+    }
+
+    private func parseYouTubeVideoID(from url: URL) -> String? {
+        let host = url.host()?.lowercased() ?? ""
+
+        if host.contains("youtu.be") {
+            let candidate = url.pathComponents.dropFirst().first ?? ""
+            return candidate.count == 11 ? candidate : nil
+        }
+
+        if host.contains("youtube.com") {
+            if let queryVideoID = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?
+                .first(where: { $0.name == "v" })?
+                .value,
+               queryVideoID.count == 11 {
+                return queryVideoID
+            }
+
+            let pathComponents = url.pathComponents.filter { $0 != "/" }
+            if let embeddedVideoID = pathComponents.last,
+               ["embed", "shorts", "live"].contains(pathComponents.dropLast().last ?? ""),
+               embeddedVideoID.count == 11 {
+                return embeddedVideoID
+            }
+        }
+
+        return nil
+    }
+
     func deleteLecture(_ lectureID: Lecture.ID) async -> DeleteLectureResult {
         guard let lecture = lecture(withID: lectureID) else {
             return .deleted

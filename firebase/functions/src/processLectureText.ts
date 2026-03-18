@@ -1,8 +1,8 @@
 import * as admin from "firebase-admin";
-import * as logger from "firebase-functions/logger";
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 
 import { openAIKey } from "./config";
+import { createProcessingLogger } from "./logging";
 import { generateStudyPack, saveStudyPack } from "./studyPack";
 import { stringValue } from "./utils";
 
@@ -14,10 +14,18 @@ export const processLectureText = onDocumentWritten(
     memory: "1GiB",
   },
   async event => {
+    const baseLog = createProcessingLogger({
+      functionName: "processLectureText",
+      eventId: event.id,
+      eventType: event.type,
+      uid: event.params.uid,
+      lectureId: event.params.lectureId,
+    });
     const beforeSnapshot = event.data?.before;
     const afterSnapshot = event.data?.after;
 
     if (!afterSnapshot?.exists) {
+      baseLog.debug("Skipping text processing because document was deleted");
       return;
     }
 
@@ -33,13 +41,32 @@ export const processLectureText = onDocumentWritten(
       (previousStatus !== "generating" || previousTranscript !== transcript);
 
     if (sourceType !== "text" || !didEnterGenerating || !transcript) {
+      baseLog.debug("Skipping text processing because trigger conditions were not met", {
+        sourceType,
+        status,
+        previousStatus,
+        transcriptLength: transcript.length,
+        previousTranscriptLength: previousTranscript.length,
+      });
       return;
     }
 
     const { uid, lectureId } = event.params;
     const documentReference = afterSnapshot.ref;
+    const log = createProcessingLogger({
+      functionName: "processLectureText",
+      eventId: event.id,
+      eventType: event.type,
+      uid,
+      lectureId,
+      sourceType,
+      status,
+      transcriptLength: transcript.length,
+    });
 
     try {
+      log.info("Text lecture processing started");
+
       await documentReference.set(
         {
           errorMessage: admin.firestore.FieldValue.delete(),
@@ -47,16 +74,23 @@ export const processLectureText = onDocumentWritten(
         },
         { merge: true },
       );
+      log.info("Cleared previous processing error message");
 
+      log.info("Generating study pack from text transcript");
       const studyPack = await generateStudyPack(transcript, openAIKey.value());
+      log.info("Study pack generation completed", {
+        flashcardCount: studyPack.flashcards.length,
+        quizQuestionCount: studyPack.quiz.length,
+      });
       await saveStudyPack(documentReference, transcript, studyPack);
+      log.info("Study pack saved to Firestore");
 
-      logger.info("Text lecture processed successfully", { uid, lectureId });
+      log.info("Text lecture processed successfully");
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unknown processing error";
 
-      logger.error("Text lecture processing failed", { uid, lectureId, message });
+      log.error("Text lecture processing failed", error, { message });
 
       await documentReference.set(
         {

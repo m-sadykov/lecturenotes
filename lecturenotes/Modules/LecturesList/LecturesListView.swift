@@ -14,12 +14,14 @@ struct LecturesListView: View {
     @State private var importFeedbackToken = 0
     @State private var isImporterPresented = false
     @State private var isTextImportSheetPresented = false
+    @State private var isYouTubeImportSheetPresented = false
     @State private var isImportAlertPresented = false
     @State private var importAlertMessage = ""
     @State private var pendingDeletionLecture: Lecture?
     @State private var isAIConsentPresented = false
     @State private var pendingConsentAction: PendingConsentAction?
     @State private var pendingTextImportLecture: Lecture?
+    @State private var pendingYouTubeImportLecture: Lecture?
 
     var body: some View {
         NavigationStack {
@@ -37,6 +39,8 @@ struct LecturesListView: View {
                             presentImportFlow()
                         } onImportText: {
                             presentTextImportFlow()
+                        } onImportYouTube: {
+                            presentYouTubeImportFlow()
                         }
                         
                         RecordingsSectionHeaderView(
@@ -189,6 +193,8 @@ struct LecturesListView: View {
                                 isImporterPresented = true
                             case .importText:
                                 isTextImportSheetPresented = true
+                            case .importYouTube:
+                                isYouTubeImportSheetPresented = true
                             case nil:
                                 recorderViewModel = RecorderViewModel()
                             }
@@ -294,6 +300,38 @@ struct LecturesListView: View {
                         }
                     }
                 )
+            }
+            .sheet(
+                isPresented: $isYouTubeImportSheetPresented,
+                onDismiss: {
+                    if let lecture = pendingYouTubeImportLecture {
+                        pendingYouTubeImportLecture = nil
+                        selectedLecture = lecture
+                    }
+                }
+            ) {
+                YouTubeImportSheetView(
+                    onClose: {
+                        isYouTubeImportSheetPresented = false
+                    },
+                    onSubmit: { urlString in
+                        let result = await viewModel.importYouTube(urlString: urlString)
+
+                        switch result {
+                        case .saved(let lecture):
+                            await MainActor.run {
+                                importFeedbackToken += 1
+                                pendingYouTubeImportLecture = lecture
+                                isYouTubeImportSheetPresented = false
+                            }
+                            return nil
+                        case .rejected(let message):
+                            return message
+                        }
+                    }
+                )
+                .presentationDetents([.height(240), .medium])
+                .presentationDragIndicator(.visible)
             }
             .alert("Import", isPresented: $isImportAlertPresented) {
                 Button("OK") {}
@@ -419,6 +457,20 @@ struct LecturesListView: View {
             isAIConsentPresented = true
         }
     }
+
+    private func presentYouTubeImportFlow() {
+        guard processingService != nil else {
+            isYouTubeImportSheetPresented = true
+            return
+        }
+
+        if hasConfirmedAIProcessingConsent {
+            isYouTubeImportSheetPresented = true
+        } else {
+            pendingConsentAction = .importYouTube
+            isAIConsentPresented = true
+        }
+    }
 }
 
 private struct ToastBannerView: View {
@@ -473,6 +525,7 @@ private enum PendingConsentAction {
     case record
     case importAudio
     case importText
+    case importYouTube
 }
 
 #Preview {
@@ -493,7 +546,7 @@ private struct LecturesListPreviewCanvas: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     PremiumBannerView()
-                    QuickActionsStripView {} onImportText: {}
+                    QuickActionsStripView {} onImportText: {} onImportYouTube: {}
                     previewSectionHeader
                     previewFolderChips
 

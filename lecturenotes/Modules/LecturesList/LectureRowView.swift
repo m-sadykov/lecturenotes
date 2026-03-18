@@ -12,7 +12,7 @@ struct LectureRowView: View {
             HStack(alignment: .center) {
                 Button(action: onOpen) {
                     HStack(alignment: .center) {
-                        Image(systemName: lecture.sourceType == .audio ? "waveform" : "doc.text")
+                        Image(systemName: iconName)
                             .frame(width: 42, height: 42)
                             .background(.black.opacity(0.06))
                             .clipShape(.circle)
@@ -59,8 +59,19 @@ struct LectureRowView: View {
         switch lecture.sourceType {
         case .audio:
             "\(lecture.createdAt.formatted(LectureFormatters.dayMonthYear)) • \(LectureFormatters.clockText(lecture.duration))"
-        case .text:
+        case .text, .youtube:
             "\(lecture.createdAt.formatted(LectureFormatters.dayMonthYear)) • \(lecture.sourceType.title)"
+        }
+    }
+
+    private var iconName: String {
+        switch lecture.sourceType {
+        case .audio:
+            "waveform"
+        case .text:
+            "doc.text"
+        case .youtube:
+            "play.rectangle"
         }
     }
 

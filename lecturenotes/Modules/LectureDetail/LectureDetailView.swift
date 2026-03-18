@@ -38,7 +38,7 @@ struct LectureDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 18) {
-                if editableLecture.sourceType == .text {
+                if editableLecture.sourceType != .audio {
                     LectureTextHeaderView(lecture: editableLecture)
                 }
 

@@ -73,6 +73,20 @@ final class FirebaseLectureProcessingService {
                 at: documentReference
             )
             return processingLecture
+        case .youtube:
+            guard let sourceURL = lecture.sourceURL else {
+                throw FirebaseLectureProcessingError.missingSourceURL
+            }
+
+            processingLecture.status = lecture.processingStartStatus
+            processingLecture.sourceURL = sourceURL
+            processingLecture.transcript = lecture.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            try await setData(
+                makeDocumentData(for: processingLecture, uploadPlan: nil),
+                at: documentReference
+            )
+            return processingLecture
         }
     }
 
@@ -154,6 +168,14 @@ final class FirebaseLectureProcessingService {
             },
             "updatedAt": FieldValue.serverTimestamp()
         ]
+
+        if let sourceURL = lecture.sourceURL {
+            data["sourceURL"] = sourceURL.absoluteString
+        }
+
+        if let youtubeVideoID = lecture.youtubeVideoID {
+            data["youtubeVideoID"] = youtubeVideoID
+        }
 
         if let uploadPlan {
             data["isChunked"] = uploadPlan.isChunked
@@ -273,6 +295,8 @@ final class FirebaseLectureProcessingService {
         var mergedLecture = lecture
         mergedLecture.title = stringValue(for: "title", in: data) ?? lecture.title
         mergedLecture.sourceType = LectureSourceType(rawValue: stringValue(for: "sourceType", in: data) ?? "") ?? lecture.sourceType
+        mergedLecture.sourceURL = urlValue(for: "sourceURL", in: data) ?? lecture.sourceURL
+        mergedLecture.youtubeVideoID = stringValue(for: "youtubeVideoID", in: data) ?? lecture.youtubeVideoID
         mergedLecture.createdAt = dateValue(for: "createdAt", in: data) ?? lecture.createdAt
         mergedLecture.duration = .seconds(doubleValue(for: "durationSec", in: data) ?? lecture.duration.timeInterval)
         mergedLecture.status = LectureStatus(rawValue: stringValue(for: "status", in: data) ?? "") ?? lecture.status
@@ -309,6 +333,14 @@ final class FirebaseLectureProcessingService {
         return data[key] as? Date
     }
 
+    private static func urlValue(for key: String, in data: [String: Any]) -> URL? {
+        guard let string = data[key] as? String else {
+            return nil
+        }
+
+        return URL(string: string)
+    }
+
     private static func flashcardsValue(for key: String, in data: [String: Any]) -> [Flashcard] {
         let values = data[key] as? [[String: Any]] ?? []
 
@@ -338,6 +370,7 @@ final class FirebaseLectureProcessingService {
 enum FirebaseLectureProcessingError: LocalizedError {
     case missingAudioFile
     case missingTranscript
+    case missingSourceURL
     case missingLectureDocument
 
     var errorDescription: String? {
@@ -346,6 +379,8 @@ enum FirebaseLectureProcessingError: LocalizedError {
             "Recording file is unavailable."
         case .missingTranscript:
             "Text import is empty."
+        case .missingSourceURL:
+            "Source URL is unavailable."
         case .missingLectureDocument:
             "Lecture document is unavailable."
         }

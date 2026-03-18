@@ -31,6 +31,7 @@ enum LectureStatus: String, CaseIterable, Identifiable, Codable {
 enum LectureSourceType: String, CaseIterable, Identifiable, Codable {
     case audio
     case text
+    case youtube
 
     var id: Self { self }
 
@@ -40,6 +41,8 @@ enum LectureSourceType: String, CaseIterable, Identifiable, Codable {
             "Audio Recording"
         case .text:
             "Text Import"
+        case .youtube:
+            "YouTube Import"
         }
     }
 
@@ -49,6 +52,8 @@ enum LectureSourceType: String, CaseIterable, Identifiable, Codable {
             .uploading
         case .text:
             .generating
+        case .youtube:
+            .transcribing
         }
     }
 }
@@ -94,6 +99,8 @@ struct Lecture: Identifiable, Hashable, Codable {
     var title: String
     var sourceType: LectureSourceType
     var audioURL: URL?
+    var sourceURL: URL?
+    var youtubeVideoID: String?
     var folderID: LectureFolder.ID?
     var createdAt: Date
     var duration: Duration
@@ -110,6 +117,8 @@ struct Lecture: Identifiable, Hashable, Codable {
         title: String,
         sourceType: LectureSourceType = .audio,
         audioURL: URL? = nil,
+        sourceURL: URL? = nil,
+        youtubeVideoID: String? = nil,
         folderID: LectureFolder.ID? = nil,
         createdAt: Date,
         duration: Duration,
@@ -125,6 +134,8 @@ struct Lecture: Identifiable, Hashable, Codable {
         self.title = title
         self.sourceType = sourceType
         self.audioURL = audioURL
+        self.sourceURL = sourceURL
+        self.youtubeVideoID = youtubeVideoID
         self.folderID = folderID
         self.createdAt = createdAt
         self.duration = duration
@@ -138,6 +149,10 @@ struct Lecture: Identifiable, Hashable, Codable {
     }
 
     var processingStartStatus: LectureStatus {
-        sourceType.processingStartStatus
+        if sourceType == .youtube, !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return .generating
+        }
+
+        return sourceType.processingStartStatus
     }
 }

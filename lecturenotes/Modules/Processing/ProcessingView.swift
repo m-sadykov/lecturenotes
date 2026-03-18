@@ -67,17 +67,45 @@ struct ProcessingView: View {
     private var statusMessage: String {
         switch lecture.status {
         case .draft:
-            lecture.sourceType == .audio ? "Preparing your recording." : "Preparing your text import."
+            switch lecture.sourceType {
+            case .audio:
+                "Preparing your recording."
+            case .text:
+                "Preparing your text import."
+            case .youtube:
+                "Preparing your YouTube import."
+            }
         case .uploading:
-            lecture.sourceType == .audio ? "Uploading your recording." : "Saving your text for processing."
+            switch lecture.sourceType {
+            case .audio:
+                "Uploading your recording."
+            case .text:
+                "Saving your text for processing."
+            case .youtube:
+                "Checking your YouTube video."
+            }
         case .transcribing:
-            lecture.sourceType == .audio ? "Converting your speech to text. This may take a moment." : "Preparing your text for note generation."
+            switch lecture.sourceType {
+            case .audio:
+                "Converting your speech to text. This may take a moment."
+            case .text:
+                "Preparing your text for note generation."
+            case .youtube:
+                "Fetching captions for the YouTube video."
+            }
         case .generating:
             "Creating the summary, flashcards, and quiz."
         case .ready:
             "Your note is fully processed and ready to explore."
         case .failed:
-            lecture.sourceType == .audio ? "We couldn't finish processing this recording." : "We couldn't finish processing this text import."
+            switch lecture.sourceType {
+            case .audio:
+                "We couldn't finish processing this recording."
+            case .text:
+                "We couldn't finish processing this text import."
+            case .youtube:
+                "We couldn't finish processing this YouTube video."
+            }
         }
     }
 
@@ -86,7 +114,14 @@ struct ProcessingView: View {
         case .failed:
             lecture.sourceType == .audio ? "Transcription Failed" : "Processing Failed"
         case .ready:
-            lecture.sourceType == .audio ? "Your Recording Is Ready" : "Your Text Import Is Ready"
+            switch lecture.sourceType {
+            case .audio:
+                "Your Recording Is Ready"
+            case .text:
+                "Your Text Import Is Ready"
+            case .youtube:
+                "Your YouTube Import Is Ready"
+            }
         case .uploading:
             "Uploading..."
         case .transcribing:
@@ -101,9 +136,23 @@ struct ProcessingView: View {
     private var footerMessage: String {
         switch lecture.status {
         case .uploading:
-            lecture.sourceType == .audio ? "Uploading your recording so processing can begin." : "Saving your text so processing can begin."
+            switch lecture.sourceType {
+            case .audio:
+                "Uploading your recording so processing can begin."
+            case .text:
+                "Saving your text so processing can begin."
+            case .youtube:
+                "Saving your YouTube source so processing can begin."
+            }
         case .transcribing:
-            lecture.sourceType == .audio ? "Listening for the important concepts and turning them into text." : "Reviewing the imported text before creating study materials."
+            switch lecture.sourceType {
+            case .audio:
+                "Listening for the important concepts and turning them into text."
+            case .text:
+                "Reviewing the imported text before creating study materials."
+            case .youtube:
+                "Trying to convert YouTube captions into transcript text for your study materials."
+            }
         case .generating:
             "Transforming the transcript into a polished study note."
         case .ready:
