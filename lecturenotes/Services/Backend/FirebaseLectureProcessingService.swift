@@ -23,39 +23,56 @@ final class FirebaseLectureProcessingService {
     }
 
     func startProcessing(for lecture: Lecture) async throws -> Lecture {
-        guard lecture.audioURL != nil else {
-            throw FirebaseLectureProcessingError.missingAudioFile
-        }
-
         let user = try await authService.ensureSignedIn()
-        let uploadPlan = try await audioChunker.makeUploadPlan(for: lecture, userID: user.uid)
         let documentReference = lectureDocumentReference(userID: user.uid, lectureID: lecture.id)
-
         var processingLecture = lecture
-        processingLecture.status = .uploading
         processingLecture.processingErrorMessage = nil
 
-        try await setData(
-            makeDocumentData(for: processingLecture, uploadPlan: uploadPlan),
-            at: documentReference
-        )
+        switch lecture.sourceType {
+        case .audio:
+            guard lecture.audioURL != nil else {
+                throw FirebaseLectureProcessingError.missingAudioFile
+            }
 
-        do {
-            try await uploadAudioFiles(for: uploadPlan)
-            audioChunker.cleanup(plan: uploadPlan)
-            return processingLecture
-        } catch {
-            audioChunker.cleanup(plan: uploadPlan)
-            try? await setData(
-                [
-                    "status": LectureStatus.failed.rawValue,
-                    "errorMessage": error.localizedDescription,
-                    "updatedAt": FieldValue.serverTimestamp()
-                ],
-                at: documentReference,
-                merge: true
+            let uploadPlan = try await audioChunker.makeUploadPlan(for: lecture, userID: user.uid)
+            processingLecture.status = .uploading
+
+            try await setData(
+                makeDocumentData(for: processingLecture, uploadPlan: uploadPlan),
+                at: documentReference
             )
-            throw error
+
+            do {
+                try await uploadAudioFiles(for: uploadPlan)
+                audioChunker.cleanup(plan: uploadPlan)
+                return processingLecture
+            } catch {
+                audioChunker.cleanup(plan: uploadPlan)
+                try? await setData(
+                    [
+                        "status": LectureStatus.failed.rawValue,
+                        "errorMessage": error.localizedDescription,
+                        "updatedAt": FieldValue.serverTimestamp()
+                    ],
+                    at: documentReference,
+                    merge: true
+                )
+                throw error
+            }
+        case .text:
+            let trimmedTranscript = lecture.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedTranscript.isEmpty else {
+                throw FirebaseLectureProcessingError.missingTranscript
+            }
+
+            processingLecture.status = .generating
+            processingLecture.transcript = trimmedTranscript
+
+            try await setData(
+                makeDocumentData(for: processingLecture, uploadPlan: nil),
+                at: documentReference
+            )
+            return processingLecture
         }
     }
 
@@ -106,20 +123,20 @@ final class FirebaseLectureProcessingService {
             .document(lectureID.uuidString)
     }
 
-    private func makeDocumentData(for lecture: Lecture, uploadPlan: LectureAudioUploadPlan) -> [String: Any] {
+    private func makeDocumentData(
+        for lecture: Lecture,
+        uploadPlan: LectureAudioUploadPlan?
+    ) -> [String: Any] {
         var data: [String: Any] = [
             "id": lecture.id.uuidString,
             "title": lecture.title,
+            "sourceType": lecture.sourceType.rawValue,
             "createdAt": Timestamp(date: lecture.createdAt),
             "durationSec": lecture.duration.timeInterval,
             "status": lecture.status.rawValue,
             "transcript": lecture.transcript,
             "summaryShort": lecture.summaryShort,
             "summaryLong": lecture.summaryLong,
-            "isChunked": uploadPlan.isChunked,
-            "chunkCount": uploadPlan.items.count,
-            "chunkPaths": uploadPlan.chunkPaths,
-            "chunkTranscripts": [:] as [String: String],
             "flashcards": lecture.flashcards.map {
                 [
                     "id": $0.id.uuidString,
@@ -138,8 +155,15 @@ final class FirebaseLectureProcessingService {
             "updatedAt": FieldValue.serverTimestamp()
         ]
 
-        if let primaryAudioPath = uploadPlan.primaryAudioPath {
-            data["audioPath"] = primaryAudioPath
+        if let uploadPlan {
+            data["isChunked"] = uploadPlan.isChunked
+            data["chunkCount"] = uploadPlan.items.count
+            data["chunkPaths"] = uploadPlan.chunkPaths
+            data["chunkTranscripts"] = [:] as [String: String]
+
+            if let primaryAudioPath = uploadPlan.primaryAudioPath {
+                data["audioPath"] = primaryAudioPath
+            }
         }
 
         if let processingErrorMessage = lecture.processingErrorMessage {
@@ -248,6 +272,7 @@ final class FirebaseLectureProcessingService {
     private static func merge(lecture: Lecture, with data: [String: Any]) -> Lecture {
         var mergedLecture = lecture
         mergedLecture.title = stringValue(for: "title", in: data) ?? lecture.title
+        mergedLecture.sourceType = LectureSourceType(rawValue: stringValue(for: "sourceType", in: data) ?? "") ?? lecture.sourceType
         mergedLecture.createdAt = dateValue(for: "createdAt", in: data) ?? lecture.createdAt
         mergedLecture.duration = .seconds(doubleValue(for: "durationSec", in: data) ?? lecture.duration.timeInterval)
         mergedLecture.status = LectureStatus(rawValue: stringValue(for: "status", in: data) ?? "") ?? lecture.status
@@ -312,12 +337,15 @@ final class FirebaseLectureProcessingService {
 
 enum FirebaseLectureProcessingError: LocalizedError {
     case missingAudioFile
+    case missingTranscript
     case missingLectureDocument
 
     var errorDescription: String? {
         switch self {
         case .missingAudioFile:
             "Recording file is unavailable."
+        case .missingTranscript:
+            "Text import is empty."
         case .missingLectureDocument:
             "Lecture document is unavailable."
         }

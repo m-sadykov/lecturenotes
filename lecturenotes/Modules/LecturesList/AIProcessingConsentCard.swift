@@ -12,13 +12,13 @@ struct AIProcessingConsentCard: View {
                     .bold()
 
                 Text(
-                    "To create transcripts, summaries, flashcards, and quizzes, the app uploads your audio recording to Firebase and sends the recording and generated text to OpenAI for processing."
+                    "To create transcripts, summaries, flashcards, and quizzes, the app sends your imported text or audio recording to Firebase and OpenAI for processing."
                 )
                 .font(.body)
                 .foregroundStyle(.secondary)
 
                 Text(
-                    "By tapping Continue, you agree to share this data with these services so this recording can be processed."
+                    "By tapping Continue, you agree to share this content with these services so your lecture can be processed."
                 )
                 .font(.body)
                 .foregroundStyle(.secondary)

@@ -12,7 +12,7 @@ struct LectureRowView: View {
             HStack(alignment: .center) {
                 Button(action: onOpen) {
                     HStack(alignment: .center) {
-                        Image(systemName: "play.fill")
+                        Image(systemName: lecture.sourceType == .audio ? "waveform" : "doc.text")
                             .frame(width: 42, height: 42)
                             .background(.black.opacity(0.06))
                             .clipShape(.circle)
@@ -56,7 +56,12 @@ struct LectureRowView: View {
     }
 
     private var metadata: String {
-        "\(lecture.createdAt.formatted(LectureFormatters.dayMonthYear)) • \(LectureFormatters.clockText(lecture.duration))"
+        switch lecture.sourceType {
+        case .audio:
+            "\(lecture.createdAt.formatted(LectureFormatters.dayMonthYear)) • \(LectureFormatters.clockText(lecture.duration))"
+        case .text:
+            "\(lecture.createdAt.formatted(LectureFormatters.dayMonthYear)) • \(lecture.sourceType.title)"
+        }
     }
 
     private var previewText: String {

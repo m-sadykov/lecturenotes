@@ -68,7 +68,7 @@ final class LectureProcessingViewModel {
 
         isRetrying = true
         errorMessage = nil
-        lecture.status = .uploading
+        lecture.status = lecture.processingStartStatus
         lecture.processingErrorMessage = nil
         onLectureUpdated(lecture)
         try? await repository.saveLecture(lecture)

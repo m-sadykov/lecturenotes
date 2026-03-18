@@ -76,6 +76,7 @@ enum MockLectures {
             Lecture(
                 id: lecture1ID,
                 title: "Plant Physiology Basics",
+                sourceType: .audio,
                 audioURL: nil,
                 folderID: nil,
                 createdAt: lecture1Date,
@@ -96,12 +97,13 @@ enum MockLectures {
             Lecture(
                 id: lecture2ID,
                 title: "Thermodynamics Intro",
+                sourceType: .text,
                 audioURL: nil,
                 folderID: nil,
                 createdAt: lecture2Date,
                 duration: .seconds(1_860),
                 status: .generating,
-                transcript: "",
+                transcript: "The lecture compared closed and open systems, internal energy, and the first law of thermodynamics.",
                 summaryShort: "",
                 summaryLong: "",
                 flashcards: [],
@@ -110,6 +112,7 @@ enum MockLectures {
             Lecture(
                 id: lecture3ID,
                 title: "Linear Algebra: Matrices",
+                sourceType: .audio,
                 audioURL: nil,
                 folderID: nil,
                 createdAt: lecture3Date,

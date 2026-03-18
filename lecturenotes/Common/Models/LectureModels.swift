@@ -28,6 +28,31 @@ enum LectureStatus: String, CaseIterable, Identifiable, Codable {
     }
 }
 
+enum LectureSourceType: String, CaseIterable, Identifiable, Codable {
+    case audio
+    case text
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .audio:
+            "Audio Recording"
+        case .text:
+            "Text Import"
+        }
+    }
+
+    var processingStartStatus: LectureStatus {
+        switch self {
+        case .audio:
+            .uploading
+        case .text:
+            .generating
+        }
+    }
+}
+
 struct Flashcard: Identifiable, Hashable, Codable {
     let id: UUID
     var question: String
@@ -67,6 +92,7 @@ struct LectureFolder: Identifiable, Hashable, Codable {
 struct Lecture: Identifiable, Hashable, Codable {
     let id: UUID
     var title: String
+    var sourceType: LectureSourceType
     var audioURL: URL?
     var folderID: LectureFolder.ID?
     var createdAt: Date
@@ -82,6 +108,7 @@ struct Lecture: Identifiable, Hashable, Codable {
     init(
         id: UUID = UUID(),
         title: String,
+        sourceType: LectureSourceType = .audio,
         audioURL: URL? = nil,
         folderID: LectureFolder.ID? = nil,
         createdAt: Date,
@@ -96,6 +123,7 @@ struct Lecture: Identifiable, Hashable, Codable {
     ) {
         self.id = id
         self.title = title
+        self.sourceType = sourceType
         self.audioURL = audioURL
         self.folderID = folderID
         self.createdAt = createdAt
@@ -107,5 +135,9 @@ struct Lecture: Identifiable, Hashable, Codable {
         self.flashcards = flashcards
         self.quiz = quiz
         self.processingErrorMessage = processingErrorMessage
+    }
+
+    var processingStartStatus: LectureStatus {
+        sourceType.processingStartStatus
     }
 }

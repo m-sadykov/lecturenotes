@@ -67,30 +67,30 @@ struct ProcessingView: View {
     private var statusMessage: String {
         switch lecture.status {
         case .draft:
-            "Preparing your recording."
+            lecture.sourceType == .audio ? "Preparing your recording." : "Preparing your text import."
         case .uploading:
-            "Uploading your recording."
+            lecture.sourceType == .audio ? "Uploading your recording." : "Saving your text for processing."
         case .transcribing:
-            "Converting your speech to text. This may take a moment."
+            lecture.sourceType == .audio ? "Converting your speech to text. This may take a moment." : "Preparing your text for note generation."
         case .generating:
             "Creating the summary, flashcards, and quiz."
         case .ready:
             "Your note is fully processed and ready to explore."
         case .failed:
-            "We couldn't finish processing this recording."
+            lecture.sourceType == .audio ? "We couldn't finish processing this recording." : "We couldn't finish processing this text import."
         }
     }
 
     private var headlineTitle: String {
         switch lecture.status {
         case .failed:
-            "Transcription Failed"
+            lecture.sourceType == .audio ? "Transcription Failed" : "Processing Failed"
         case .ready:
-            "Your Recording Is Ready"
+            lecture.sourceType == .audio ? "Your Recording Is Ready" : "Your Text Import Is Ready"
         case .uploading:
             "Uploading..."
         case .transcribing:
-            "Transcribing..."
+            lecture.sourceType == .audio ? "Transcribing..." : "Preparing..."
         case .generating:
             "Generating Notes..."
         case .draft:
@@ -101,9 +101,9 @@ struct ProcessingView: View {
     private var footerMessage: String {
         switch lecture.status {
         case .uploading:
-            "Uploading your recording so processing can begin."
+            lecture.sourceType == .audio ? "Uploading your recording so processing can begin." : "Saving your text so processing can begin."
         case .transcribing:
-            "Listening for the important concepts and turning them into text."
+            lecture.sourceType == .audio ? "Listening for the important concepts and turning them into text." : "Reviewing the imported text before creating study materials."
         case .generating:
             "Transforming the transcript into a polished study note."
         case .ready:
@@ -228,6 +228,7 @@ private func processingPreviewLecture(
 ) -> Lecture {
     Lecture(
         title: "New Recording",
+        sourceType: .audio,
         createdAt: Date(timeIntervalSinceReferenceDate: 794_855_467),
         duration: .seconds(3),
         status: status,

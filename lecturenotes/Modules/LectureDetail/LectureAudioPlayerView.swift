@@ -151,6 +151,7 @@ private extension Double {
 
 private let previewLectureForPlayer = Lecture(
     title: "New Recording",
+    sourceType: .audio,
     createdAt: Date(timeIntervalSinceReferenceDate: 794_855_467),
     duration: .seconds(32),
     status: .ready,

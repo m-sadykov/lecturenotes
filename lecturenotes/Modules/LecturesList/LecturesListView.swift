@@ -13,11 +13,13 @@ struct LecturesListView: View {
     @State private var removalFeedbackToken = 0
     @State private var importFeedbackToken = 0
     @State private var isImporterPresented = false
+    @State private var isTextImportSheetPresented = false
     @State private var isImportAlertPresented = false
     @State private var importAlertMessage = ""
     @State private var pendingDeletionLecture: Lecture?
     @State private var isAIConsentPresented = false
     @State private var pendingConsentAction: PendingConsentAction?
+    @State private var pendingTextImportLecture: Lecture?
 
     var body: some View {
         NavigationStack {
@@ -33,6 +35,8 @@ struct LecturesListView: View {
                         
                         QuickActionsStripView {
                             presentImportFlow()
+                        } onImportText: {
+                            presentTextImportFlow()
                         }
                         
                         RecordingsSectionHeaderView(
@@ -183,6 +187,8 @@ struct LecturesListView: View {
                                 recorderViewModel = RecorderViewModel()
                             case .importAudio:
                                 isImporterPresented = true
+                            case .importText:
+                                isTextImportSheetPresented = true
                             case nil:
                                 recorderViewModel = RecorderViewModel()
                             }
@@ -259,13 +265,43 @@ struct LecturesListView: View {
             ) { result in
                 handleAudioImport(result)
             }
-            .alert("Import Recording", isPresented: $isImportAlertPresented) {
+            .fullScreenCover(
+                isPresented: $isTextImportSheetPresented,
+                onDismiss: {
+                    if let lecture = pendingTextImportLecture {
+                        pendingTextImportLecture = nil
+                        selectedLecture = lecture
+                    }
+                }
+            ) {
+                TextImportSheetView(
+                    onClose: {
+                        isTextImportSheetPresented = false
+                    },
+                    onSubmit: { text in
+                        let result = await viewModel.importText(text)
+
+                        switch result {
+                        case .saved(let lecture):
+                            await MainActor.run {
+                                importFeedbackToken += 1
+                                pendingTextImportLecture = lecture
+                                isTextImportSheetPresented = false
+                            }
+                            return nil
+                        case .rejected(let message):
+                            return message
+                        }
+                    }
+                )
+            }
+            .alert("Import", isPresented: $isImportAlertPresented) {
                 Button("OK") {}
             } message: {
                 Text(importAlertMessage)
             }
             .alert(
-                "Delete Recording?",
+                "Delete Lecture?",
                 isPresented: Binding(
                     get: { pendingDeletionLecture != nil },
                     set: { isPresented in
@@ -369,6 +405,20 @@ struct LecturesListView: View {
             isAIConsentPresented = true
         }
     }
+
+    private func presentTextImportFlow() {
+        guard processingService != nil else {
+            isTextImportSheetPresented = true
+            return
+        }
+
+        if hasConfirmedAIProcessingConsent {
+            isTextImportSheetPresented = true
+        } else {
+            pendingConsentAction = .importText
+            isAIConsentPresented = true
+        }
+    }
 }
 
 private struct ToastBannerView: View {
@@ -422,6 +472,7 @@ private enum ActiveSheet: Identifiable {
 private enum PendingConsentAction {
     case record
     case importAudio
+    case importText
 }
 
 #Preview {
@@ -442,7 +493,7 @@ private struct LecturesListPreviewCanvas: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     PremiumBannerView()
-                    QuickActionsStripView {}
+                    QuickActionsStripView {} onImportText: {}
                     previewSectionHeader
                     previewFolderChips
 

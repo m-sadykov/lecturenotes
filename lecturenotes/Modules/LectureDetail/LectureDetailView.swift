@@ -38,6 +38,10 @@ struct LectureDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 18) {
+                if editableLecture.sourceType == .text {
+                    LectureTextHeaderView(lecture: editableLecture)
+                }
+
                 if let playerViewModel {
                     LectureAudioPlayerView(lecture: editableLecture, viewModel: playerViewModel)
                 }
@@ -90,7 +94,7 @@ struct LectureDetailView: View {
         }
         .background(Color(.systemGray6))
         .task {
-            guard playerViewModel == nil else {
+            guard playerViewModel == nil, lecture.sourceType == .audio else {
                 return
             }
 
@@ -145,7 +149,7 @@ struct LectureDetailView: View {
                         isRenameAlertPresented = true
                     }
 
-                    Button("Delete Recording", systemImage: "trash", role: .destructive) {
+                    Button("Delete Lecture", systemImage: "trash", role: .destructive) {
                         isDeleteAlertPresented = true
                     }
                 } label: {
@@ -173,7 +177,7 @@ struct LectureDetailView: View {
             }
         }
         .alert("Edit Title", isPresented: $isRenameAlertPresented) {
-            TextField("Recording title", text: $draftTitle)
+            TextField("Lecture title", text: $draftTitle)
             Button("Cancel", role: .cancel) {}
             Button("Save") {
                 let trimmedTitle = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -184,9 +188,9 @@ struct LectureDetailView: View {
                 persistLectureChanges()
             }
         } message: {
-            Text("Update the recording title.")
+            Text("Update the lecture title.")
         }
-        .alert("Delete Recording?", isPresented: $isDeleteAlertPresented) {
+        .alert("Delete Lecture?", isPresented: $isDeleteAlertPresented) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
                 Task {
@@ -195,7 +199,7 @@ struct LectureDetailView: View {
                         if wasDeleted {
                             dismiss()
                         } else {
-                            showToast("Unable to delete recording right now.")
+                            showToast("Unable to delete lecture right now.")
                         }
                     }
                 }
@@ -301,6 +305,7 @@ private let previewLecture: Lecture? = {
 
 private let processingPreviewLecture = Lecture(
     title: "New Recording",
+    sourceType: .audio,
     audioURL: nil,
     createdAt: Date(timeIntervalSinceReferenceDate: 794_855_467),
     duration: .seconds(3),
@@ -314,6 +319,7 @@ private let processingPreviewLecture = Lecture(
 
 private let failedProcessingPreviewLecture = Lecture(
     title: "New Recording",
+    sourceType: .audio,
     audioURL: nil,
     createdAt: Date(timeIntervalSinceReferenceDate: 794_855_467),
     duration: .seconds(3),
@@ -445,5 +451,29 @@ private struct LectureDetailToastView: View {
             .background(.black.opacity(0.88))
             .clipShape(.rect(cornerRadius: 14))
             .shadow(radius: 10, y: 4)
+    }
+}
+
+private struct LectureTextHeaderView: View {
+    let lecture: Lecture
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(lecture.title)
+                .font(.title)
+                .bold()
+                .lineLimit(2)
+
+            Text(metadataText)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 6)
+    }
+
+    private var metadataText: String {
+        "\(lecture.createdAt.formatted(.dateTime.month(.abbreviated).day().year())) · \(lecture.sourceType.title)"
     }
 }

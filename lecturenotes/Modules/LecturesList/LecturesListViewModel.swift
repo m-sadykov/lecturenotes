@@ -101,9 +101,10 @@ final class LecturesListViewModel {
             return .rejected(message: "Recording must be at least 3 seconds long.")
         }
 
-        let lectureStatus: LectureStatus = processingService == nil ? .ready : .uploading
+        let lectureStatus: LectureStatus = processingService == nil ? .ready : LectureSourceType.audio.processingStartStatus
         let lecture = Lecture(
             title: "New Recording",
+            sourceType: .audio,
             audioURL: recording.audioURL,
             createdAt: recording.createdAt,
             duration: recording.duration,
@@ -131,10 +132,11 @@ final class LecturesListViewModel {
 
         do {
             let importedAudio = try await importAudioFile(from: sourceURL, lectureID: lectureID)
-            let lectureStatus: LectureStatus = processingService == nil ? .ready : .uploading
+            let lectureStatus: LectureStatus = processingService == nil ? .ready : LectureSourceType.audio.processingStartStatus
             let lecture = Lecture(
                 id: lectureID,
                 title: importedAudio.suggestedTitle,
+                sourceType: .audio,
                 audioURL: importedAudio.localURL,
                 createdAt: importedAudio.createdAt,
                 duration: importedAudio.duration,
@@ -162,6 +164,40 @@ final class LecturesListViewModel {
         }
     }
 
+    func importText(_ text: String) async -> SaveRecordingResult {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else {
+            return .rejected(message: "Enter some lecture text first.")
+        }
+
+        let lectureStatus: LectureStatus = processingService == nil ? .ready : LectureSourceType.text.processingStartStatus
+        let lecture = Lecture(
+            id: UUID(),
+            title: suggestedTitle(for: trimmedText),
+            sourceType: .text,
+            audioURL: nil,
+            createdAt: .now,
+            duration: estimateReadingDuration(for: trimmedText),
+            status: lectureStatus,
+            transcript: trimmedText,
+            summaryShort: "",
+            summaryLong: "",
+            flashcards: [],
+            quiz: []
+        )
+
+        lectures.insert(lecture, at: 0)
+
+        do {
+            try await repository.saveLecture(lecture)
+            startProcessingIfNeeded(for: lecture)
+            return .saved(lecture)
+        } catch {
+            lectures.removeAll { $0.id == lecture.id }
+            return .rejected(message: "Unable to save imported text right now.")
+        }
+    }
+
     func deleteLecture(_ lectureID: Lecture.ID) async -> DeleteLectureResult {
         guard let lecture = lecture(withID: lectureID) else {
             return .deleted
@@ -176,7 +212,7 @@ final class LecturesListViewModel {
             lectures.removeAll { $0.id == lectureID }
             return .deleted
         } catch {
-            return .rejected(message: "Unable to delete recording right now.")
+            return .rejected(message: "Unable to delete lecture right now.")
         }
     }
 
@@ -312,6 +348,24 @@ final class LecturesListViewModel {
         } catch {
             return nil
         }
+    }
+
+    private func estimateReadingDuration(for text: String) -> Duration {
+        let wordCount = text.split(whereSeparator: \.isWhitespace).count
+        let seconds = max(Double(wordCount) / 3, 30)
+        return .seconds(seconds)
+    }
+
+    private func suggestedTitle(for text: String) -> String {
+        let firstLine = text
+            .split(separator: "\n")
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first(where: { !$0.isEmpty })
+
+        let candidate = firstLine ?? text
+        let words = candidate.split(whereSeparator: \.isWhitespace)
+        let title = words.prefix(6).joined(separator: " ")
+        return title.isEmpty ? "Imported Text" : title
     }
 }
 
