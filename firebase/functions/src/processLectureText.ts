@@ -40,7 +40,7 @@ export const processLectureText = onDocumentWritten(
       status === "generating" &&
       (previousStatus !== "generating" || previousTranscript !== transcript);
 
-    if (sourceType !== "text" || !didEnterGenerating || !transcript) {
+    if (!["text", "pdf"].includes(sourceType) || !didEnterGenerating || !transcript) {
       baseLog.debug("Skipping text processing because trigger conditions were not met", {
         sourceType,
         status,
@@ -65,7 +65,7 @@ export const processLectureText = onDocumentWritten(
     });
 
     try {
-      log.info("Text lecture processing started");
+      log.info("Imported lecture processing started");
 
       await documentReference.set(
         {
@@ -85,7 +85,7 @@ export const processLectureText = onDocumentWritten(
       await saveStudyPack(documentReference, transcript, studyPack);
       log.info("Study pack saved to Firestore");
 
-      log.info("Text lecture processed successfully");
+      log.info("Imported lecture processed successfully");
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unknown processing error";

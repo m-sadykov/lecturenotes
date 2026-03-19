@@ -12,7 +12,7 @@ struct AIProcessingConsentCard: View {
                     .bold()
 
                 Text(
-                    "To create transcripts, summaries, flashcards, and quizzes, the app sends your imported text or audio recording to Firebase and OpenAI for processing."
+                    "To create transcripts, summaries, flashcards, and quizzes, the app sends your imported text, PDF, or audio recording to Firebase and OpenAI for processing."
                 )
                 .font(.body)
                 .foregroundStyle(.secondary)

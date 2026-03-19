@@ -59,7 +59,7 @@ final class FirebaseLectureProcessingService {
                 )
                 throw error
             }
-        case .text:
+        case .text, .pdf:
             let trimmedTranscript = lecture.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmedTranscript.isEmpty else {
                 throw FirebaseLectureProcessingError.missingTranscript
@@ -378,7 +378,7 @@ enum FirebaseLectureProcessingError: LocalizedError {
         case .missingAudioFile:
             "Recording file is unavailable."
         case .missingTranscript:
-            "Text import is empty."
+            "Imported content is empty."
         case .missingSourceURL:
             "Source URL is unavailable."
         case .missingLectureDocument:

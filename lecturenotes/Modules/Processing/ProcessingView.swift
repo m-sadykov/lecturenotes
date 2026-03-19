@@ -72,6 +72,8 @@ struct ProcessingView: View {
                 "Preparing your recording."
             case .text:
                 "Preparing your text import."
+            case .pdf:
+                "Preparing your PDF import."
             case .youtube:
                 "Preparing your YouTube import."
             }
@@ -81,6 +83,8 @@ struct ProcessingView: View {
                 "Uploading your recording."
             case .text:
                 "Saving your text for processing."
+            case .pdf:
+                "Saving your PDF for processing."
             case .youtube:
                 "Checking your YouTube video."
             }
@@ -90,6 +94,8 @@ struct ProcessingView: View {
                 "Converting your speech to text. This may take a moment."
             case .text:
                 "Preparing your text for note generation."
+            case .pdf:
+                "Extracting text from your PDF for note generation."
             case .youtube:
                 "Fetching captions for the YouTube video."
             }
@@ -103,6 +109,8 @@ struct ProcessingView: View {
                 "We couldn't finish processing this recording."
             case .text:
                 "We couldn't finish processing this text import."
+            case .pdf:
+                "We couldn't finish processing this PDF import."
             case .youtube:
                 "We couldn't finish processing this YouTube video."
             }
@@ -119,6 +127,8 @@ struct ProcessingView: View {
                 "Your Recording Is Ready"
             case .text:
                 "Your Text Import Is Ready"
+            case .pdf:
+                "Your PDF Import Is Ready"
             case .youtube:
                 "Your YouTube Import Is Ready"
             }
@@ -141,6 +151,8 @@ struct ProcessingView: View {
                 "Uploading your recording so processing can begin."
             case .text:
                 "Saving your text so processing can begin."
+            case .pdf:
+                "Extracting text from your PDF so processing can begin."
             case .youtube:
                 "Saving your YouTube source so processing can begin."
             }
@@ -150,6 +162,8 @@ struct ProcessingView: View {
                 "Listening for the important concepts and turning them into text."
             case .text:
                 "Reviewing the imported text before creating study materials."
+            case .pdf:
+                "Reviewing the imported PDF text before creating study materials."
             case .youtube:
                 "Trying to convert YouTube captions into transcript text for your study materials."
             }

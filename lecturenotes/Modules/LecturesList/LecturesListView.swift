@@ -4,15 +4,19 @@ import UniformTypeIdentifiers
 struct LecturesListView: View {
     @AppStorage("hasConfirmedAIProcessingConsent") private var hasConfirmedAIProcessingConsent = false
     @State var viewModel: LecturesListViewModel
+    
     let repository: LectureRepository
     let processingService: FirebaseLectureProcessingService?
+    
     @State private var selectedLecture: Lecture?
     @State private var activeSheet: ActiveSheet?
     @State private var recorderViewModel: RecorderViewModel?
     @State private var toastMessage: String?
     @State private var removalFeedbackToken = 0
     @State private var importFeedbackToken = 0
+    @State private var processingStartFeedbackToken = 0
     @State private var isImporterPresented = false
+    @State private var isPDFImporterPresented = false
     @State private var isTextImportSheetPresented = false
     @State private var isYouTubeImportSheetPresented = false
     @State private var isImportAlertPresented = false
@@ -41,6 +45,8 @@ struct LecturesListView: View {
                             presentTextImportFlow()
                         } onImportYouTube: {
                             presentYouTubeImportFlow()
+                        } onImportPDF: {
+                            presentPDFImportFlow()
                         }
                         
                         RecordingsSectionHeaderView(
@@ -193,6 +199,8 @@ struct LecturesListView: View {
                                 isImporterPresented = true
                             case .importText:
                                 isTextImportSheetPresented = true
+                            case .importPDF:
+                                isPDFImporterPresented = true
                             case .importYouTube:
                                 isYouTubeImportSheetPresented = true
                             case nil:
@@ -217,6 +225,7 @@ struct LecturesListView: View {
             .animation(.spring(response: 0.32, dampingFraction: 0.88), value: recorderViewModel != nil)
             .sensoryFeedback(.success, trigger: removalFeedbackToken)
             .sensoryFeedback(.impact(weight: .light), trigger: importFeedbackToken)
+            .sensoryFeedback(.impact(weight: .light), trigger: processingStartFeedbackToken)
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
                 case .actions(let lectureID):
@@ -270,6 +279,13 @@ struct LecturesListView: View {
                 allowsMultipleSelection: false
             ) { result in
                 handleAudioImport(result)
+            }
+            .fileImporter(
+                isPresented: $isPDFImporterPresented,
+                allowedContentTypes: [.pdf],
+                allowsMultipleSelection: false
+            ) { result in
+                handlePDFImport(result)
             }
             .fullScreenCover(
                 isPresented: $isTextImportSheetPresented,
@@ -416,6 +432,37 @@ struct LecturesListView: View {
         }
     }
 
+    private func handlePDFImport(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else {
+                importAlertMessage = "No PDF file was selected."
+                isImportAlertPresented = true
+                return
+            }
+
+            processingStartFeedbackToken += 1
+
+            Task {
+                let importResult = await viewModel.importPDF(from: url)
+
+                await MainActor.run {
+                    switch importResult {
+                    case .saved(let lecture):
+                        importFeedbackToken += 1
+                        selectedLecture = lecture
+                    case .rejected(let message):
+                        importAlertMessage = message
+                        isImportAlertPresented = true
+                    }
+                }
+            }
+        case .failure(let error):
+            importAlertMessage = "Import failed: \(error.localizedDescription)"
+            isImportAlertPresented = true
+        }
+    }
+
     private func presentRecorderFlow() {
         guard processingService != nil else {
             recorderViewModel = RecorderViewModel()
@@ -454,6 +501,20 @@ struct LecturesListView: View {
             isTextImportSheetPresented = true
         } else {
             pendingConsentAction = .importText
+            isAIConsentPresented = true
+        }
+    }
+
+    private func presentPDFImportFlow() {
+        guard processingService != nil else {
+            isPDFImporterPresented = true
+            return
+        }
+
+        if hasConfirmedAIProcessingConsent {
+            isPDFImporterPresented = true
+        } else {
+            pendingConsentAction = .importPDF
             isAIConsentPresented = true
         }
     }
@@ -525,6 +586,7 @@ private enum PendingConsentAction {
     case record
     case importAudio
     case importText
+    case importPDF
     case importYouTube
 }
 
@@ -546,7 +608,7 @@ private struct LecturesListPreviewCanvas: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     PremiumBannerView()
-                    QuickActionsStripView {} onImportText: {} onImportYouTube: {}
+                    QuickActionsStripView {} onImportText: {} onImportYouTube: {} onImportPDF: {}
                     previewSectionHeader
                     previewFolderChips
 

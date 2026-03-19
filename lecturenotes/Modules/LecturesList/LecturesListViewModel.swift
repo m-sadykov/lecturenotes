@@ -17,6 +17,7 @@ final class LecturesListViewModel {
 
     @ObservationIgnored private let repository: LectureRepository
     @ObservationIgnored private let processingService: FirebaseLectureProcessingService?
+    @ObservationIgnored private let pdfTextExtractor: LecturePDFTextExtractor
 
     var lectures: [Lecture] = []
     var folders: [LectureFolder] = []
@@ -30,6 +31,17 @@ final class LecturesListViewModel {
     ) {
         self.repository = repository
         self.processingService = processingService
+        pdfTextExtractor = LecturePDFTextExtractor()
+    }
+
+    init(
+        repository: LectureRepository,
+        processingService: FirebaseLectureProcessingService? = nil,
+        pdfTextExtractor: LecturePDFTextExtractor
+    ) {
+        self.repository = repository
+        self.processingService = processingService
+        self.pdfTextExtractor = pdfTextExtractor
     }
 
     var filteredLectures: [Lecture] {
@@ -170,16 +182,44 @@ final class LecturesListViewModel {
             return .rejected(message: "Enter some lecture text first.")
         }
 
-        let lectureStatus: LectureStatus = processingService == nil ? .ready : LectureSourceType.text.processingStartStatus
+        return await saveImportedTextLecture(
+            transcript: trimmedText,
+            title: suggestedTitle(for: trimmedText),
+            createdAt: .now,
+            sourceType: .text
+        )
+    }
+
+    func importPDF(from sourceURL: URL) async -> SaveRecordingResult {
+        do {
+            let importedPDF = try await pdfTextExtractor.extractText(from: sourceURL)
+            return await saveImportedTextLecture(
+                transcript: importedPDF.text,
+                title: importedPDF.suggestedTitle,
+                createdAt: importedPDF.createdAt,
+                sourceType: .pdf
+            )
+        } catch {
+            return .rejected(message: error.localizedDescription)
+        }
+    }
+
+    private func saveImportedTextLecture(
+        transcript: String,
+        title: String,
+        createdAt: Date,
+        sourceType: LectureSourceType
+    ) async -> SaveRecordingResult {
+        let lectureStatus: LectureStatus = processingService == nil ? .ready : sourceType.processingStartStatus
         let lecture = Lecture(
             id: UUID(),
-            title: suggestedTitle(for: trimmedText),
-            sourceType: .text,
+            title: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? suggestedTitle(for: transcript) : title,
+            sourceType: sourceType,
             audioURL: nil,
-            createdAt: .now,
-            duration: estimateReadingDuration(for: trimmedText),
+            createdAt: createdAt,
+            duration: estimateReadingDuration(for: transcript),
             status: lectureStatus,
-            transcript: trimmedText,
+            transcript: transcript,
             summaryShort: "",
             summaryLong: "",
             flashcards: [],
@@ -194,7 +234,8 @@ final class LecturesListViewModel {
             return .saved(lecture)
         } catch {
             lectures.removeAll { $0.id == lecture.id }
-            return .rejected(message: "Unable to save imported text right now.")
+            let importName = sourceType == .pdf ? "PDF" : "text"
+            return .rejected(message: "Unable to save imported \(importName) right now.")
         }
     }
 

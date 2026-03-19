@@ -31,6 +31,7 @@ enum LectureStatus: String, CaseIterable, Identifiable, Codable {
 enum LectureSourceType: String, CaseIterable, Identifiable, Codable {
     case audio
     case text
+    case pdf
     case youtube
 
     var id: Self { self }
@@ -41,6 +42,8 @@ enum LectureSourceType: String, CaseIterable, Identifiable, Codable {
             "Audio Recording"
         case .text:
             "Text Import"
+        case .pdf:
+            "PDF Import"
         case .youtube:
             "YouTube Import"
         }
@@ -51,6 +54,8 @@ enum LectureSourceType: String, CaseIterable, Identifiable, Codable {
         case .audio:
             .uploading
         case .text:
+            .generating
+        case .pdf:
             .generating
         case .youtube:
             .transcribing

@@ -59,7 +59,7 @@ struct LectureRowView: View {
         switch lecture.sourceType {
         case .audio:
             "\(lecture.createdAt.formatted(LectureFormatters.dayMonthYear)) • \(LectureFormatters.clockText(lecture.duration))"
-        case .text, .youtube:
+        case .text, .pdf, .youtube:
             "\(lecture.createdAt.formatted(LectureFormatters.dayMonthYear)) • \(lecture.sourceType.title)"
         }
     }
@@ -70,6 +70,8 @@ struct LectureRowView: View {
             "waveform"
         case .text:
             "doc.text"
+        case .pdf:
+            "doc.richtext"
         case .youtube:
             "play.rectangle"
         }
