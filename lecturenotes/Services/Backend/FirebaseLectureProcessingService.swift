@@ -6,23 +6,44 @@ import Foundation
 @MainActor
 final class FirebaseLectureProcessingService {
     private let authService: FirebaseAuthService
+    private let userProfileService: FirebaseUserProfileService
     private let firestore: Firestore
     private let storage: Storage
     private let audioChunker: LectureAudioChunker
 
     init(
         authService: FirebaseAuthService,
+        userProfileService: FirebaseUserProfileService,
         firestore: Firestore = Firestore.firestore(),
         storage: Storage = Storage.storage(),
         audioChunker: LectureAudioChunker? = nil
     ) {
         self.authService = authService
+        self.userProfileService = userProfileService
         self.firestore = firestore
         self.storage = storage
         self.audioChunker = audioChunker ?? LectureAudioChunker()
     }
 
     func startProcessing(for lecture: Lecture) async throws -> Lecture {
+        let userProfile = try await userProfileService.ensureCurrentUserProfile()
+        guard userProfile.canStartProcessing else {
+            throw FirebaseLectureProcessingError.processingLimitExceeded(
+                remainingCount: userProfile.processingQuota.remainingCount
+            )
+        }
+
+        switch lecture.sourceType {
+        case .audio:
+            guard lecture.duration <= userProfile.audioImportLimitDuration else {
+                throw FirebaseLectureProcessingError.audioLimitExceeded(
+                    limit: userProfile.audioImportLimitDuration
+                )
+            }
+        case .text, .pdf, .youtube:
+            break
+        }
+
         let user = try await authService.ensureSignedIn()
         let documentReference = lectureDocumentReference(userID: user.uid, lectureID: lecture.id)
         var processingLecture = lecture
@@ -127,6 +148,25 @@ final class FirebaseLectureProcessingService {
         }
 
         try await deleteDocument(at: documentReference)
+    }
+
+    func updateLectureTitle(_ title: String, for lecture: Lecture) async throws -> Lecture {
+        let user = try await authService.ensureSignedIn()
+        let documentReference = lectureDocumentReference(userID: user.uid, lectureID: lecture.id)
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        try await setData(
+            [
+                "title": trimmedTitle,
+                "updatedAt": FieldValue.serverTimestamp()
+            ],
+            at: documentReference,
+            merge: true
+        )
+
+        var updatedLecture = lecture
+        updatedLecture.title = trimmedTitle
+        return updatedLecture
     }
 
     private func lectureDocumentReference(userID: String, lectureID: UUID) -> DocumentReference {
@@ -372,17 +412,23 @@ enum FirebaseLectureProcessingError: LocalizedError {
     case missingTranscript
     case missingSourceURL
     case missingLectureDocument
+    case processingLimitExceeded(remainingCount: Int)
+    case audioLimitExceeded(limit: Duration)
 
     var errorDescription: String? {
         switch self {
         case .missingAudioFile:
-            "Recording file is unavailable."
+            return "Recording file is unavailable."
         case .missingTranscript:
-            "Imported content is empty."
+            return "Imported content is empty."
         case .missingSourceURL:
-            "Source URL is unavailable."
+            return "Source URL is unavailable."
         case .missingLectureDocument:
-            "Lecture document is unavailable."
+            return "Lecture document is unavailable."
+        case .processingLimitExceeded(let remainingCount):
+            return "Not enough processing attempts left. Remaining: \(max(remainingCount, 0))."
+        case .audioLimitExceeded(let limit):
+            return "Audio is too long for your current plan. Limit: \(LectureFormatters.durationText(limit))."
         }
     }
 }

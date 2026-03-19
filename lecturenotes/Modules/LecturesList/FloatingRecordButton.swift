@@ -13,9 +13,7 @@ struct FloatingRecordButton: View {
                 .font(.title2)
                 .foregroundStyle(.white)
                 .frame(width: 72, height: 72)
-                .background(
-                    LinearGradient(colors: [Color.blue, Color.cyan], startPoint: .topLeading, endPoint: .bottomTrailing)
-                )
+                .background(.black)
                 .clipShape(.circle)
                 .shadow(radius: 8)
         }

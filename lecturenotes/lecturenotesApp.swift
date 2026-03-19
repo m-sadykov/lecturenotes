@@ -13,19 +13,34 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 @main
 struct lecturenotesApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @StateObject private var subscriptionManager: SubscriptionManager
+    @State private var appEnvironment: AppEnvironment
     
     init() {
         #if DEBUG
         Purchases.logLevel = .debug
         #endif
         Purchases.configure(withAPIKey: "test_WiOttVRhcRMJqvByDuPjYzOGNOy")
+
+        let authService = FirebaseAuthService()
+        let userProfileService = FirebaseUserProfileService(authService: authService)
+        _subscriptionManager = StateObject(
+            wrappedValue: SubscriptionManager(userProfileService: userProfileService)
+        )
+        _appEnvironment = State(
+            initialValue: AppEnvironment(
+                authService: authService,
+                userProfileService: userProfileService
+            )
+        )
     }
     
     var body: some Scene {
         WindowGroup {
             NavigationView {
-                LectureNotesRootView()
+                LectureNotesRootView(appEnvironment: appEnvironment)
                     .preferredColorScheme(.light)
+                    .environmentObject(subscriptionManager)
             }
         }
     }

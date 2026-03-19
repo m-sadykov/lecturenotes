@@ -6,6 +6,7 @@ struct LecturePDFTextExtractor {
         let text: String
         let suggestedTitle: String
         let createdAt: Date
+        let pageCount: Int
     }
 
     enum ExtractionError: LocalizedError {
@@ -39,7 +40,9 @@ struct LecturePDFTextExtractor {
                 throw ExtractionError.unreadableDocument
             }
 
-            let extractedText = (0..<document.pageCount)
+            let pageCount = document.pageCount
+
+            let extractedText = (0..<pageCount)
                 .compactMap { document.page(at: $0)?.string?.trimmingCharacters(in: .whitespacesAndNewlines) }
                 .filter { !$0.isEmpty }
                 .joined(separator: "\n\n")
@@ -64,7 +67,8 @@ struct LecturePDFTextExtractor {
             return ExtractionResult(
                 text: extractedText,
                 suggestedTitle: suggestedTitle,
-                createdAt: createdAt
+                createdAt: createdAt,
+                pageCount: pageCount
             )
         }.value
     }

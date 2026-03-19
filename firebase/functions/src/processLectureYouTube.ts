@@ -5,6 +5,11 @@ import { openAIKey, transcriptAPIKey } from "./config";
 import { createProcessingLogger } from "./logging";
 import { generateStudyPack, saveStudyPack } from "./studyPack";
 import {
+  finalizeProcessingQuotaForLecture,
+  releaseProcessingQuotaForLecture,
+  reserveProcessingQuotaForLecture,
+} from "./userProfile";
+import {
   fetchYouTubeTranscript,
   mapYouTubeError,
   prepareYouTubeMetadata,
@@ -77,10 +82,16 @@ export const processLectureYouTube = onDocumentWritten(
       return;
     }
 
+    let didReserveQuota = false;
+
     try {
       const metadata = prepareYouTubeMetadata(sourceURL || storedVideoID);
 
       if (didEnterTranscribing) {
+        await reserveProcessingQuotaForLecture(documentReference);
+        didReserveQuota = true;
+        log.info("Processing quota reserved");
+
         log.info("YouTube transcript fetch started", metadata);
 
         const fetchedTranscript = await fetchYouTubeTranscript(
@@ -133,6 +144,7 @@ export const processLectureYouTube = onDocumentWritten(
       });
 
       await saveStudyPack(documentReference, transcript, studyPack);
+      await finalizeProcessingQuotaForLecture(documentReference);
       log.info("YouTube lecture processed successfully");
     } catch (error) {
       const mappedError = mapYouTubeError(error);
@@ -141,6 +153,10 @@ export const processLectureYouTube = onDocumentWritten(
         code: mappedError.code,
         message: mappedError.message,
       });
+
+      if (didReserveQuota || didEnterGenerating) {
+        await releaseProcessingQuotaForLecture(documentReference);
+      }
 
       await documentReference.set(
         {

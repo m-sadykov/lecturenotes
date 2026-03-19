@@ -2,6 +2,7 @@ import SwiftUI
 
 @MainActor
 struct LectureNotesRootView: View {
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @State private var appState: AppState
     @State private var appEnvironment: AppEnvironment
 
@@ -21,12 +22,17 @@ struct LectureNotesRootView: View {
                 LecturesListView(
                     viewModel: LecturesListViewModel(
                         repository: appEnvironment.repository,
-                        processingService: appEnvironment.processingService
+                        processingService: appEnvironment.processingService,
+                        userProfileService: appEnvironment.userProfileService
                     ),
                     repository: appEnvironment.repository,
                     processingService: appEnvironment.processingService
                 )
             }
+        }
+        .task {
+            subscriptionManager.start()
+            await appEnvironment.userProfileService.prepareCurrentUserProfile()
         }
     }
 }
@@ -36,4 +42,5 @@ struct LectureNotesRootView: View {
         appState: .preview(needsOnboarding: false),
         appEnvironment: .preview()
     )
+    .environmentObject(SubscriptionManager())
 }

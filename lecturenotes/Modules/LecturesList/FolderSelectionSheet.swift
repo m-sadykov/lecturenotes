@@ -14,6 +14,7 @@ struct FolderSelectionSheet: View {
             folders: folders,
             selectedFolderID: selectedFolderID,
             closeButton: CloseButton(title: "Close", systemImage: "xmark", action: onClose),
+            backgroundStyle: Color(uiColor: .systemBackground),
             onCreateFolder: onCreateFolder,
             onSelectFolder: onSelectFolder,
             onDeleteFolder: nil

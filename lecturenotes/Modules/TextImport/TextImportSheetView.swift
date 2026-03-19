@@ -8,7 +8,7 @@ struct TextImportSheetView: View {
     @State private var text = ""
     @State private var isSubmitting = false
     @State private var errorMessage: String?
-    @State private var isEditorFocused = false
+    @State private var autofocusTrigger = 0
     @State private var submitFeedbackToken = 0
     @State private var pasteTrigger = 0
     @State private var selectAllTrigger = 0
@@ -21,7 +21,7 @@ struct TextImportSheetView: View {
 
                 TextImportEditorView(
                     text: $text,
-                    isFocused: $isEditorFocused,
+                    autofocusTrigger: autofocusTrigger,
                     pasteTrigger: pasteTrigger,
                     selectAllTrigger: selectAllTrigger
                 )
@@ -92,8 +92,8 @@ struct TextImportSheetView: View {
                 .padding(.bottom, 12)
                 .background(.ultraThinMaterial)
             }
-            .task {
-                isEditorFocused = true
+            .onAppear {
+                autofocusTrigger += 1
             }
             .sensoryFeedback(.impact(weight: .light), trigger: submitFeedbackToken)
         }
@@ -126,12 +126,12 @@ struct TextImportSheetView: View {
 
 private struct TextImportEditorView: UIViewRepresentable {
     @Binding var text: String
-    @Binding var isFocused: Bool
+    let autofocusTrigger: Int
     let pasteTrigger: Int
     let selectAllTrigger: Int
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text, isFocused: $isFocused)
+        Coordinator(text: $text)
     }
 
     func makeUIView(context: Context) -> UITextView {
@@ -168,39 +168,25 @@ private struct TextImportEditorView: UIViewRepresentable {
 
         context.coordinator.attach(to: textView)
         context.coordinator.handleEditorActionTriggers(
+            autofocusTrigger: autofocusTrigger,
             pasteTrigger: pasteTrigger,
             selectAllTrigger: selectAllTrigger
         )
-
-        if isFocused, !textView.isFirstResponder {
-            textView.becomeFirstResponder()
-        } else if !isFocused, textView.isFirstResponder {
-            textView.resignFirstResponder()
-        }
     }
 
     final class Coordinator: NSObject, UITextViewDelegate {
         @Binding private var text: String
-        @Binding private var isFocused: Bool
         private weak var textView: UITextView?
+        private var lastAutofocusTrigger = 0
         private var lastPasteTrigger = 0
         private var lastSelectAllTrigger = 0
 
-        init(text: Binding<String>, isFocused: Binding<Bool>) {
+        init(text: Binding<String>) {
             _text = text
-            _isFocused = isFocused
         }
 
         func attach(to textView: UITextView) {
             self.textView = textView
-        }
-
-        func textViewDidBeginEditing(_ textView: UITextView) {
-            isFocused = true
-        }
-
-        func textViewDidEndEditing(_ textView: UITextView) {
-            isFocused = false
         }
 
         func textViewDidChange(_ textView: UITextView) {
@@ -208,11 +194,24 @@ private struct TextImportEditorView: UIViewRepresentable {
         }
 
         func handleEditorActionTriggers(
+            autofocusTrigger: Int,
             pasteTrigger: Int,
             selectAllTrigger: Int
         ) {
             guard let textView else {
                 return
+            }
+
+            if autofocusTrigger != lastAutofocusTrigger {
+                lastAutofocusTrigger = autofocusTrigger
+
+                Task { @MainActor [weak textView] in
+                    guard let textView, !textView.isFirstResponder else {
+                        return
+                    }
+
+                    textView.becomeFirstResponder()
+                }
             }
 
             if pasteTrigger != lastPasteTrigger {

@@ -15,17 +15,17 @@ struct RecordingsSectionHeaderView: View {
                     foldersDestination
                 } label: {
                     Image(systemName: "folder")
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(.primary)
                 }
                 .buttonStyle(.plain)
             } else {
                 Image(systemName: "folder")
-                    .foregroundStyle(.blue.opacity(0.5))
+                    .foregroundStyle(.primary.opacity(0.5))
             }
 
             Button("Search", systemImage: "magnifyingglass") {}
                 .labelStyle(.iconOnly)
-                .foregroundStyle(.blue)
+                .foregroundStyle(.primary)
                 .buttonStyle(.plain)
         }
     }

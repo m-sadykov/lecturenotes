@@ -5,6 +5,7 @@ struct FolderListContentView: View {
     let folders: [LectureFolder]
     let selectedFolderID: LectureFolder.ID?
     let closeButton: CloseButton?
+    let backgroundStyle: Color
     let onCreateFolder: (String) -> Void
     let onSelectFolder: (LectureFolder.ID) -> Void
     let onDeleteFolder: ((LectureFolder.ID) -> Void)?
@@ -15,7 +16,7 @@ struct FolderListContentView: View {
 
     var body: some View {
         ZStack {
-            Color(uiColor: .systemBackground)
+            backgroundStyle
                 .ignoresSafeArea()
 
             VStack(alignment: .leading, spacing: 0) {
@@ -29,7 +30,7 @@ struct FolderListContentView: View {
                     if let closeButton {
                         Button(closeButton.title, systemImage: closeButton.systemImage, action: closeButton.action)
                             .labelStyle(.iconOnly)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.primary)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -44,9 +45,9 @@ struct FolderListContentView: View {
                 } label: {
                     HStack {
                         Image(systemName: "plus")
-                            .foregroundStyle(.green)
+                            .foregroundStyle(.primary)
                             .frame(width: 44, height: 44)
-                            .background(.green.opacity(0.12))
+                            .background(.black.opacity(0.05))
                             .clipShape(.rect(cornerRadius: 12))
 
                         Text("Create new folder")
@@ -138,9 +139,9 @@ struct FolderRowButton: View {
             Button(action: action) {
                 HStack {
                     Image(systemName: "folder")
-                        .foregroundStyle(.indigo)
+                        .foregroundStyle(.primary)
                         .frame(width: 44, height: 44)
-                        .background(.indigo.opacity(0.10))
+                        .background(.black.opacity(0.05))
                         .clipShape(.rect(cornerRadius: 12))
 
                     Text(folder.name)
@@ -149,7 +150,7 @@ struct FolderRowButton: View {
 
                     if isSelected {
                         Image(systemName: "checkmark")
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(.primary)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -161,6 +162,7 @@ struct FolderRowButton: View {
             if let onDelete {
                 Button("Delete folder", systemImage: "trash", role: .destructive, action: onDelete)
                     .labelStyle(.iconOnly)
+                    .background(.black.opacity(0.05))
                     .padding(.trailing, 20)
             }
         }

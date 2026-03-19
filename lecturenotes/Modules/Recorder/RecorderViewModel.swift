@@ -36,11 +36,13 @@ final class RecorderViewModel {
     @ObservationIgnored private let recordingManager: RecordingManager
     @ObservationIgnored private var timerTask: Task<Void, Never>?
 
-    init() {
+    init(limit: Duration = .seconds(300)) {
+        self.limit = limit
         self.recordingManager = RecordingManager()
     }
 
-    init(recordingManager: RecordingManager) {
+    init(limit: Duration = .seconds(300), recordingManager: RecordingManager) {
+        self.limit = limit
         self.recordingManager = recordingManager
     }
 

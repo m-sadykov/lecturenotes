@@ -4,6 +4,11 @@ import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { openAIKey } from "./config";
 import { createProcessingLogger } from "./logging";
 import { generateStudyPack, saveStudyPack } from "./studyPack";
+import {
+  finalizeProcessingQuotaForLecture,
+  releaseProcessingQuotaForLecture,
+  reserveProcessingQuotaForLecture,
+} from "./userProfile";
 import { stringValue } from "./utils";
 
 export const processLectureText = onDocumentWritten(
@@ -64,7 +69,13 @@ export const processLectureText = onDocumentWritten(
       transcriptLength: transcript.length,
     });
 
+    let didReserveQuota = false;
+
     try {
+      await reserveProcessingQuotaForLecture(documentReference);
+      didReserveQuota = true;
+      log.info("Processing quota reserved");
+
       log.info("Imported lecture processing started");
 
       await documentReference.set(
@@ -83,6 +94,7 @@ export const processLectureText = onDocumentWritten(
         quizQuestionCount: studyPack.quiz.length,
       });
       await saveStudyPack(documentReference, transcript, studyPack);
+      await finalizeProcessingQuotaForLecture(documentReference);
       log.info("Study pack saved to Firestore");
 
       log.info("Imported lecture processed successfully");
@@ -91,6 +103,10 @@ export const processLectureText = onDocumentWritten(
         error instanceof Error ? error.message : "Unknown processing error";
 
       log.error("Text lecture processing failed", error, { message });
+
+      if (didReserveQuota) {
+        await releaseProcessingQuotaForLecture(documentReference);
+      }
 
       await documentReference.set(
         {

@@ -8,105 +8,111 @@ struct YouTubeImportSheetView: View {
     @State private var urlText = ""
     @State private var isSubmitting = false
     @State private var alertMessage: String?
-    @State private var isURLFieldFocused = false
+    @State private var autofocusTrigger = 0
     @State private var submitFeedbackToken = 0
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Color(.systemGray6)
-                .frame(height: 0)
+        NavigationStack {
+            ZStack(alignment: .topLeading) {
+                Color(.systemGray6)
+                    .ignoresSafeArea()
 
-            VStack(alignment: .leading, spacing: 18) {
-                YouTubeImportHeader(onClose: onClose)
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Paste a YouTube link")
-                        .font(.title3)
-                        .bold()
-
-                    Text("We'll try to fetch the transcript from YouTube captions and then generate the study pack.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-
-                YouTubeURLField(
-                    text: $urlText,
-                    isFocused: $isURLFieldFocused
-                )
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(.white)
-                .clipShape(.rect(cornerRadius: 20))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(.black.opacity(0.05), lineWidth: 1)
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("How it works")
-                        .font(.headline)
-
-                    Text("We save the YouTube source metadata, fetch captions, and then generate the summary, flashcards, and quiz.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer(minLength: 0)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(.horizontal, 20)
-        .padding(.top, 16)
-        .padding(.bottom, 16)
-        .background(Color(.systemGray6))
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            VStack(spacing: 10) {
-                Button {
-                    submitFeedbackToken += 1
-                    submit()
-                } label: {
-                    HStack(spacing: 10) {
-                        if isSubmitting {
-                            ProgressView()
-                                .tint(.white)
-                        }
-
-                        Text(isSubmitting ? "Sending..." : "Send")
+                VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Paste a YouTube link")
+                            .font(.title3)
                             .bold()
+
+                        Text("We'll try to fetch the transcript from YouTube captions and then generate the study pack.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
+
+                    YouTubeURLField(
+                        text: $urlText,
+                        autofocusTrigger: autofocusTrigger
+                    )
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
+                    .frame(height: 56)
+                    .background(.white)
+                    .clipShape(.rect(cornerRadius: 20))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(.black.opacity(0.05), lineWidth: 1)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("How it works")
+                            .font(.headline)
+
+                        Text("We save the YouTube source metadata, fetch captions, and then generate the summary, flashcards, and quiz.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer(minLength: 0)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.black)
-                .disabled(trimmedURL.isEmpty || isSubmitting)
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .padding(.bottom, 12)
-            .background(Color(.systemGray6))
-        }
-        .task {
-            isURLFieldFocused = true
-        }
-        .alert(
-            "YouTube Import",
-            isPresented: Binding(
-                get: { alertMessage != nil },
-                set: { isPresented in
-                    if !isPresented {
-                        alertMessage = nil
+            .navigationTitle("YouTube Import")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
                     }
                 }
-            )
-        ) {
-            Button("OK") {
-                alertMessage = nil
             }
-        } message: {
-            Text(alertMessage ?? "")
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                VStack(spacing: 10) {
+                    Button {
+                        submitFeedbackToken += 1
+                        submit()
+                    } label: {
+                        HStack(spacing: 10) {
+                            if isSubmitting {
+                                ProgressView()
+                                    .tint(.white)
+                            }
+
+                            Text(isSubmitting ? "Sending..." : "Send")
+                                .bold()
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.black)
+                    .disabled(trimmedURL.isEmpty || isSubmitting)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 12)
+                .background(.ultraThinMaterial)
+            }
+            .onAppear {
+                autofocusTrigger += 1
+            }
+            .alert(
+                "YouTube Import",
+                isPresented: Binding(
+                    get: { alertMessage != nil },
+                    set: { isPresented in
+                        if !isPresented {
+                            alertMessage = nil
+                        }
+                    }
+                )
+            ) {
+                Button("OK") {
+                    alertMessage = nil
+                }
+            } message: {
+                Text(alertMessage ?? "")
+            }
+            .sensoryFeedback(.impact(weight: .light), trigger: submitFeedbackToken)
         }
-        .sensoryFeedback(.impact(weight: .light), trigger: submitFeedbackToken)
     }
 
     private var trimmedURL: String {
@@ -115,22 +121,6 @@ struct YouTubeImportSheetView: View {
 
     private func submit() {
         guard !trimmedURL.isEmpty, !isSubmitting else {
-            return
-        }
-
-        guard let url = URL(string: trimmedURL), let host = url.host() else {
-            alertMessage = "Enter a valid YouTube link."
-            return
-        }
-
-        let lowercasedHost = host.lowercased()
-        guard lowercasedHost.contains("youtube.com") || lowercasedHost.contains("youtu.be") else {
-            alertMessage = "Enter a valid YouTube link."
-            return
-        }
-
-        if url.path().localizedStandardContains("/shorts/") {
-            alertMessage = "YouTube Shorts are not supported yet."
             return
         }
 
@@ -150,38 +140,12 @@ struct YouTubeImportSheetView: View {
     }
 }
 
-private struct YouTubeImportHeader: View {
-    let onClose: () -> Void
-
-    var body: some View {
-        ZStack {
-            Text("YouTube Import")
-                .font(.headline)
-
-            HStack {
-                Button(action: onClose) {
-                    Label("Close", systemImage: "xmark")
-                        .labelStyle(.iconOnly)
-                        .font(.title3)
-                        .frame(width: 44, height: 44)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.primary)
-
-                Spacer()
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
-
 private struct YouTubeURLField: UIViewRepresentable {
     @Binding var text: String
-    @Binding var isFocused: Bool
+    let autofocusTrigger: Int
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text, isFocused: $isFocused)
+        Coordinator(text: $text)
     }
 
     func makeUIView(context: Context) -> UITextField {
@@ -216,29 +180,37 @@ private struct YouTubeURLField: UIViewRepresentable {
         if textField.text != text {
             textField.text = text
         }
-
-        if isFocused, !textField.isFirstResponder {
-            textField.becomeFirstResponder()
-        } else if !isFocused, textField.isFirstResponder {
-            textField.resignFirstResponder()
-        }
+        context.coordinator.attach(to: textField)
+        context.coordinator.handleAutofocusTrigger(autofocusTrigger)
     }
 
     final class Coordinator: NSObject, UITextFieldDelegate {
         @Binding private var text: String
-        @Binding private var isFocused: Bool
+        private weak var textField: UITextField?
+        private var lastAutofocusTrigger = 0
 
-        init(text: Binding<String>, isFocused: Binding<Bool>) {
+        init(text: Binding<String>) {
             _text = text
-            _isFocused = isFocused
         }
 
-        func textFieldDidBeginEditing(_ textField: UITextField) {
-            isFocused = true
+        func attach(to textField: UITextField) {
+            self.textField = textField
         }
 
-        func textFieldDidEndEditing(_ textField: UITextField) {
-            isFocused = false
+        func handleAutofocusTrigger(_ autofocusTrigger: Int) {
+            guard autofocusTrigger != lastAutofocusTrigger else {
+                return
+            }
+
+            lastAutofocusTrigger = autofocusTrigger
+
+            Task { @MainActor [weak textField] in
+                guard let textField, !textField.isFirstResponder else {
+                    return
+                }
+
+                textField.becomeFirstResponder()
+            }
         }
 
         func textFieldDidChangeSelection(_ textField: UITextField) {

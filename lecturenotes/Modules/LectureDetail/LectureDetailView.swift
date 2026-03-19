@@ -1,23 +1,7 @@
 import SwiftUI
-import UIKit
 
 struct LectureDetailView: View {
-    let lecture: Lecture
-    let repository: LectureRepository
-    let processingService: FirebaseLectureProcessingService?
-    let onLectureUpdated: (Lecture) -> Void
-    let onLectureDeleted: (Lecture.ID) async -> Bool
-    @State private var editableLecture: Lecture
-    @State private var playerViewModel: LecturePlayerViewModel?
-    @State private var processingViewModel: LectureProcessingViewModel?
-    @State private var selectedSection: LectureDetailSection = .summary
-    @State private var activeDestination: LectureDetailDestination?
-    @State private var isRenameAlertPresented = false
-    @State private var isDeleteAlertPresented = false
-    @State private var draftTitle = ""
-    @State private var toastMessage: String?
-    @State private var processingErrorFeedbackToken = 0
-    @State private var processingSuccessFeedbackToken = 0
+    @State private var viewModel: LectureDetailViewModel
     @Environment(\.dismiss) private var dismiss
 
     init(
@@ -27,36 +11,41 @@ struct LectureDetailView: View {
         onLectureUpdated: @escaping (Lecture) -> Void = { _ in },
         onLectureDeleted: @escaping (Lecture.ID) async -> Bool = { _ in true }
     ) {
-        self.lecture = lecture
-        self.repository = repository
-        self.processingService = processingService
-        self.onLectureUpdated = onLectureUpdated
-        self.onLectureDeleted = onLectureDeleted
-        _editableLecture = State(initialValue: lecture)
+        _viewModel = State(
+            initialValue: LectureDetailViewModel(
+                lecture: lecture,
+                repository: repository,
+                processingService: processingService,
+                onLectureUpdated: onLectureUpdated,
+                onLectureDeleted: onLectureDeleted
+            )
+        )
     }
 
     var body: some View {
+        @Bindable var viewModel = viewModel
+
         VStack(spacing: 0) {
             VStack(spacing: 18) {
-                if editableLecture.sourceType != .audio {
-                    LectureTextHeaderView(lecture: editableLecture)
+                if viewModel.lecture.sourceType != .audio {
+                    LectureTextHeaderView(lecture: viewModel.lecture)
                 }
 
-                if let playerViewModel {
-                    LectureAudioPlayerView(lecture: editableLecture, viewModel: playerViewModel)
+                if let playerViewModel = viewModel.playerViewModel {
+                    LectureAudioPlayerView(lecture: viewModel.lecture, viewModel: playerViewModel)
                 }
             }
             .padding(.horizontal)
             .padding(.top, 8)
 
             ZStack {
-                if shouldShowProcessing, let processingLecture = processingLecture {
+                if viewModel.shouldShowProcessing, let processingLecture = viewModel.processingLecture {
                     ProcessingView(
                         lecture: processingLecture,
-                        isRetrying: processingViewModel?.isRetrying == true,
+                        isRetrying: viewModel.processingViewModel?.isRetrying == true,
                         onRetry: processingLecture.status == .failed ? {
                             Task {
-                                await processingViewModel?.retryProcessing()
+                                await viewModel.retryProcessing()
                             }
                         } : nil
                     )
@@ -64,27 +53,18 @@ struct LectureDetailView: View {
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
 
-                if !shouldShowProcessing {
+                if !viewModel.shouldShowProcessing {
                     VStack(spacing: 0) {
                         LectureDetailSectionChipsView(
-                            selectedSection: $selectedSection,
-                            onSelectSection: { section in
-                                switch section {
-                                case .flashcards:
-                                    activeDestination = .flashcards
-                                case .quiz:
-                                    activeDestination = .quiz
-                                default:
-                                    selectedSection = section
-                                }
-                            }
+                            selectedSection: $viewModel.selectedSection,
+                            onSelectSection: viewModel.selectSection
                         )
                         .padding(.top, 16)
                         .padding(.bottom, 8)
 
                         LectureDetailSectionContentView(
-                            lecture: editableLecture,
-                            selectedSection: selectedSection
+                            lecture: viewModel.lecture,
+                            selectedSection: viewModel.selectedSection
                         )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
@@ -94,63 +74,33 @@ struct LectureDetailView: View {
         }
         .background(Color(.systemGray6))
         .task {
-            guard playerViewModel == nil, lecture.sourceType == .audio else {
-                return
-            }
-
-            playerViewModel = LecturePlayerViewModel(
-                audioURL: lecture.audioURL,
-                fallbackDuration: lecture.duration
-            )
+            viewModel.prepareAudioPlayerIfNeeded()
         }
         .task {
-            guard processingViewModel == nil, let processingService else {
-                return
-            }
-
-            let viewModel = LectureProcessingViewModel(
-                lecture: editableLecture,
-                repository: repository,
-                processingService: processingService,
-                onLectureUpdated: { updatedLecture in
-                    editableLecture = updatedLecture
-                    onLectureUpdated(updatedLecture)
-                }
-            )
-            processingViewModel = viewModel
-            await viewModel.start()
+            await viewModel.startProcessingIfNeeded()
         }
         .onDisappear {
-            playerViewModel?.cleanup()
-            processingViewModel?.stop()
+            viewModel.cleanup()
         }
-        .onChange(of: processingLecture?.status) { oldValue, newValue in
-            guard oldValue != .failed, newValue == .failed else {
-                if oldValue != .ready, newValue == .ready {
-                    processingSuccessFeedbackToken += 1
-                }
-                return
-            }
-
-            processingErrorFeedbackToken += 1
+        .onChange(of: viewModel.processingLecture?.status) { oldValue, newValue in
+            viewModel.handleProcessingStatusChange(oldValue: oldValue, newValue: newValue)
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Copy", systemImage: "doc.on.doc") {
-                    copyActiveSectionText()
+                    viewModel.copyActiveSectionText()
                 }
-                .disabled(copyableText == nil)
+                .disabled(viewModel.copyableText == nil)
             }
 
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button("Edit Title", systemImage: "pencil") {
-                        draftTitle = editableLecture.title
-                        isRenameAlertPresented = true
+                        viewModel.presentRename()
                     }
 
                     Button("Delete Lecture", systemImage: "trash", role: .destructive) {
-                        isDeleteAlertPresented = true
+                        viewModel.requestDelete()
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -160,46 +110,40 @@ struct LectureDetailView: View {
             }
         }
         .overlay(alignment: .top) {
-            if let toastMessage {
+            if let toastMessage = viewModel.toastMessage {
                 LectureDetailToastView(message: toastMessage)
                     .padding(.top, 12)
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
-        .fullScreenCover(item: $activeDestination) { destination in
+        .fullScreenCover(item: $viewModel.activeDestination) { destination in
             NavigationStack {
-            switch destination {
-            case .flashcards:
-                FlashcardsPracticeView(viewModel: FlashcardsPracticeViewModel(cards: editableLecture.flashcards))
-            case .quiz:
-                QuizView(viewModel: QuizViewModel(questions: editableLecture.quiz))
-            }
+                switch destination {
+                case .flashcards:
+                    FlashcardsPracticeView(viewModel: FlashcardsPracticeViewModel(cards: viewModel.lecture.flashcards))
+                case .quiz:
+                    QuizView(viewModel: QuizViewModel(questions: viewModel.lecture.quiz))
+                }
             }
         }
-        .alert("Edit Title", isPresented: $isRenameAlertPresented) {
-            TextField("Lecture title", text: $draftTitle)
+        .alert("Edit Title", isPresented: $viewModel.isRenameAlertPresented) {
+            TextField("Lecture title", text: $viewModel.draftTitle)
             Button("Cancel", role: .cancel) {}
             Button("Save") {
-                let trimmedTitle = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmedTitle.isEmpty else {
-                    return
-                }
-                editableLecture.title = trimmedTitle
-                persistLectureChanges()
+                viewModel.saveRenamedLecture()
             }
+            .disabled(viewModel.draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isSavingTitle)
         } message: {
             Text("Update the lecture title.")
         }
-        .alert("Delete Lecture?", isPresented: $isDeleteAlertPresented) {
+        .alert("Delete Lecture?", isPresented: $viewModel.isDeleteAlertPresented) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
                 Task {
-                    let wasDeleted = await onLectureDeleted(editableLecture.id)
+                    let wasDeleted = await viewModel.confirmDelete()
                     await MainActor.run {
                         if wasDeleted {
                             dismiss()
-                        } else {
-                            showToast("Unable to delete lecture right now.")
                         }
                     }
                 }
@@ -207,61 +151,9 @@ struct LectureDetailView: View {
         } message: {
             Text("This action cannot be undone.")
         }
-        .animation(.easeInOut(duration: 0.2), value: toastMessage != nil)
-        .animation(.easeInOut(duration: 0.32), value: shouldShowProcessing)
-    }
-
-    private var copyableText: String? {
-        switch selectedSection {
-        case .summary:
-            let text = editableLecture.summaryLong.isEmpty ? editableLecture.summaryShort : editableLecture.summaryLong
-            return text.isEmpty ? nil : text
-        case .transcript:
-            return editableLecture.transcript.isEmpty ? nil : editableLecture.transcript
-        case .flashcards, .quiz:
-            return nil
-        }
-    }
-
-    private var processingLecture: Lecture? {
-        processingViewModel?.lecture ?? (editableLecture.status == .ready ? nil : editableLecture)
-    }
-
-    private var shouldShowProcessing: Bool {
-        processingViewModel?.shouldShowProcessing ?? (editableLecture.status != .ready)
-    }
-
-    private func copyActiveSectionText() {
-        guard let copyableText else {
-            return
-        }
-
-        UIPasteboard.general.string = copyableText
-        let sectionName = selectedSection == .summary ? "Summary" : "Transcript"
-        showToast("\(sectionName) copied.")
-    }
-
-    private func showToast(_ message: String) {
-        toastMessage = message
-
-        Task {
-            try? await Task.sleep(for: .seconds(2))
-            await MainActor.run {
-                guard toastMessage == message else {
-                    return
-                }
-                toastMessage = nil
-            }
-        }
-    }
-
-    private func persistLectureChanges() {
-        let lectureToSave = editableLecture
-        onLectureUpdated(lectureToSave)
-
-        Task {
-            try? await repository.saveLecture(lectureToSave)
-        }
+        .sensoryFeedback(.impact(weight: .light), trigger: viewModel.processingSuccessFeedbackToken)
+        .animation(.easeInOut(duration: 0.2), value: viewModel.toastMessage != nil)
+        .animation(.easeInOut(duration: 0.32), value: viewModel.shouldShowProcessing)
     }
 }
 
@@ -331,42 +223,6 @@ private let failedProcessingPreviewLecture = Lecture(
     quiz: [],
     processingErrorMessage: "No speech detected. Try speaking louder or recording for longer."
 )
-
-private enum LectureDetailSection: String, CaseIterable, Identifiable {
-    case summary = "Summary"
-    case transcript = "Transcript"
-    case flashcards = "Flashcards"
-    case quiz = "Quiz"
-
-    var id: String { rawValue }
-
-    var emoji: String {
-        switch self {
-        case .summary:
-            "📝"
-        case .transcript:
-            "📄"
-        case .flashcards:
-            "🔄"
-        case .quiz:
-            "⁉️"
-        }
-    }
-}
-
-private enum LectureDetailDestination: Identifiable {
-    case flashcards
-    case quiz
-
-    var id: String {
-        switch self {
-        case .flashcards:
-            "flashcards"
-        case .quiz:
-            "quiz"
-        }
-    }
-}
 
 private struct LectureDetailSectionChipsView: View {
     @Binding var selectedSection: LectureDetailSection

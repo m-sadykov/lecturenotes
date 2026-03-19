@@ -11,6 +11,7 @@ struct FoldersScreen: View {
             folders: viewModel.folders,
             selectedFolderID: viewModel.selectedFolderID,
             closeButton: nil,
+            backgroundStyle: Color(.systemGray6),
             onCreateFolder: { folderName in
                 viewModel.createFolder(named: folderName)
             },
@@ -22,7 +23,6 @@ struct FoldersScreen: View {
                 viewModel.deleteFolder(folderID)
             }
         )
-        .background(Color(.systemGray6))
         .navigationTitle("Folders")
         .navigationBarTitleDisplayMode(.inline)
     }

@@ -10,6 +10,11 @@ import { parseAudioObject, mergeChunkTranscript } from "./audioProcessing";
 import { createProcessingLogger } from "./logging";
 import { generateStudyPack, saveStudyPack } from "./studyPack";
 import { transcribeLecture } from "./transcription";
+import {
+  finalizeProcessingQuotaForLecture,
+  releaseProcessingQuotaForLecture,
+  reserveProcessingQuotaForLecture,
+} from "./userProfile";
 
 export const processLectureAudio = onObjectFinalized(
   {
@@ -62,8 +67,13 @@ export const processLectureAudio = onObjectFinalized(
       .doc(lectureId);
 
     const tempFilePath = join(tmpdir(), basename(filePath));
+    let didReserveQuota = false;
 
     try {
+      await reserveProcessingQuotaForLecture(documentReference);
+      didReserveQuota = true;
+      lectureLog.info("Processing quota reserved");
+
       lectureLog.info("Audio lecture processing started");
 
       await documentReference.set(
@@ -124,6 +134,7 @@ export const processLectureAudio = onObjectFinalized(
           mergeResult.mergedTranscript,
           studyPack,
         );
+        await finalizeProcessingQuotaForLecture(documentReference);
         lectureLog.info("Study pack saved for merged chunk lecture", {
           flashcardCount: studyPack.flashcards.length,
           quizQuestionCount: studyPack.quiz.length,
@@ -152,6 +163,7 @@ export const processLectureAudio = onObjectFinalized(
         );
 
         await saveStudyPack(documentReference, transcript.text, studyPack);
+        await finalizeProcessingQuotaForLecture(documentReference);
         lectureLog.info("Study pack saved for audio lecture", {
           flashcardCount: studyPack.flashcards.length,
           quizQuestionCount: studyPack.quiz.length,
@@ -164,6 +176,10 @@ export const processLectureAudio = onObjectFinalized(
         error instanceof Error ? error.message : "Unknown processing error";
 
       lectureLog.error("Audio lecture processing failed", error, { message });
+
+      if (didReserveQuota) {
+        await releaseProcessingQuotaForLecture(documentReference);
+      }
 
       await documentReference.set(
         {

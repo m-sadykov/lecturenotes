@@ -4,30 +4,15 @@ import UniformTypeIdentifiers
 struct LecturesListView: View {
     @AppStorage("hasConfirmedAIProcessingConsent") private var hasConfirmedAIProcessingConsent = false
     @State var viewModel: LecturesListViewModel
-    
     let repository: LectureRepository
     let processingService: FirebaseLectureProcessingService?
-    
-    @State private var selectedLecture: Lecture?
-    @State private var activeSheet: ActiveSheet?
-    @State private var recorderViewModel: RecorderViewModel?
-    @State private var toastMessage: String?
-    @State private var removalFeedbackToken = 0
-    @State private var importFeedbackToken = 0
-    @State private var processingStartFeedbackToken = 0
-    @State private var isImporterPresented = false
-    @State private var isPDFImporterPresented = false
-    @State private var isTextImportSheetPresented = false
-    @State private var isYouTubeImportSheetPresented = false
-    @State private var isImportAlertPresented = false
-    @State private var importAlertMessage = ""
-    @State private var pendingDeletionLecture: Lecture?
-    @State private var isAIConsentPresented = false
-    @State private var pendingConsentAction: PendingConsentAction?
-    @State private var pendingTextImportLecture: Lecture?
-    @State private var pendingYouTubeImportLecture: Lecture?
+    @State private var activeFileImport: LocalFileImport = .importAudio
+    @State private var isFileImporterPresented = false
+    @State private var pendingLocalConsentAction: LocalFileImport?
 
     var body: some View {
+        @Bindable var viewModel = viewModel
+
         NavigationStack {
             VStack(spacing: 0) {
                 HomeHeaderView()
@@ -38,17 +23,17 @@ struct LecturesListView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         PremiumBannerView()
-                        
+
                         QuickActionsStripView {
-                            presentImportFlow()
+                            presentAudioImportFlow()
                         } onImportText: {
-                            presentTextImportFlow()
+                            viewModel.requestFlow(.importText, hasConfirmedAIProcessingConsent: hasConfirmedAIProcessingConsent)
                         } onImportYouTube: {
-                            presentYouTubeImportFlow()
+                            viewModel.requestFlow(.importYouTube, hasConfirmedAIProcessingConsent: hasConfirmedAIProcessingConsent)
                         } onImportPDF: {
                             presentPDFImportFlow()
                         }
-                        
+
                         RecordingsSectionHeaderView(
                             foldersDestination: FoldersScreen(viewModel: viewModel),
                             showsFoldersNavigation: true
@@ -78,10 +63,10 @@ struct LecturesListView: View {
                                     LectureRowView(
                                         lecture: lecture,
                                         onOpen: {
-                                            selectedLecture = lecture
+                                            viewModel.openLecture(lecture)
                                         },
                                         onMore: {
-                                            activeSheet = .actions(lecture.id)
+                                            viewModel.presentActionSheet(for: lecture.id)
                                         }
                                     )
                                 }
@@ -94,16 +79,13 @@ struct LecturesListView: View {
             }
             .background(Color(.systemGray6))
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(item: $selectedLecture) { lecture in
+            .navigationDestination(item: $viewModel.selectedLecture) { lecture in
                 LectureDetailView(
                     lecture: lecture,
                     repository: repository,
                     processingService: processingService,
                     onLectureUpdated: { updatedLecture in
-                        viewModel.replaceLecture(updatedLecture)
-                        if selectedLecture?.id == updatedLecture.id {
-                            selectedLecture = updatedLecture
-                        }
+                        viewModel.handleLectureUpdated(updatedLecture)
                     },
                     onLectureDeleted: { lectureID in
                         let result = await viewModel.deleteLecture(lectureID)
@@ -111,14 +93,12 @@ struct LecturesListView: View {
                         switch result {
                         case .deleted:
                             await MainActor.run {
-                                if selectedLecture?.id == lectureID {
-                                    selectedLecture = nil
-                                }
+                                viewModel.handleLectureDeletedNavigation(lectureID)
                             }
                             return true
                         case .rejected(let message):
                             await MainActor.run {
-                                showToast(message)
+                                viewModel.showToast(message)
                             }
                             return false
                         }
@@ -126,18 +106,18 @@ struct LecturesListView: View {
                 )
             }
             .overlay(alignment: .bottomTrailing) {
-                if activeSheet == nil && recorderViewModel == nil {
+                if viewModel.activeSheet == nil && viewModel.recorderViewModel == nil {
                     FloatingRecordButton {
-                        presentRecorderFlow()
+                        viewModel.requestFlow(.record, hasConfirmedAIProcessingConsent: hasConfirmedAIProcessingConsent)
                     }
                         .padding(.trailing, 20)
                         .padding(.bottom, 20)
                 }
             }
             .overlay {
-                if recorderViewModel != nil {
+                if viewModel.recorderViewModel != nil {
                     Button {
-                        recorderViewModel = nil
+                        viewModel.recorderViewModel = nil
                     } label: {
                         Color.black.opacity(0.18)
                             .ignoresSafeArea()
@@ -146,10 +126,9 @@ struct LecturesListView: View {
                     .transition(.opacity)
                 }
 
-                if isAIConsentPresented {
+                if viewModel.isAIConsentPresented {
                     Button {
-                        isAIConsentPresented = false
-                        pendingConsentAction = nil
+                        viewModel.dismissAIConsent()
                     } label: {
                         Color.black.opacity(0.28)
                             .ignoresSafeArea()
@@ -159,54 +138,43 @@ struct LecturesListView: View {
                 }
             }
             .overlay(alignment: .bottom) {
-                if let recorderViewModel {
+                if let recorderViewModel = viewModel.recorderViewModel {
                     MiniRecorderSheetView(
                         viewModel: recorderViewModel,
                         onSave: { recording in
                             Task {
-                                let result = await viewModel.saveRecording(recording)
-                                await MainActor.run {
-                                    switch result {
-                                    case .saved(let savedLecture):
-                                        selectedLecture = savedLecture
-                                    case .rejected(let message):
-                                        showToast(message)
-                                    }
-                                }
+                                await viewModel.saveRecordingDraft(recording)
                             }
                         }
                     ) {
-                        self.recorderViewModel = nil
+                        viewModel.recorderViewModel = nil
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                     .ignoresSafeArea(edges: .bottom)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
 
-                if isAIConsentPresented {
+                if viewModel.isAIConsentPresented {
                     AIProcessingConsentCard(
                         onCancel: {
-                            isAIConsentPresented = false
-                            pendingConsentAction = nil
+                            pendingLocalConsentAction = nil
+                            viewModel.dismissAIConsent()
                         },
                         onContinue: {
                             hasConfirmedAIProcessingConsent = true
-                            isAIConsentPresented = false
-                            switch pendingConsentAction {
-                            case .record:
-                                recorderViewModel = RecorderViewModel()
-                            case .importAudio:
-                                isImporterPresented = true
-                            case .importText:
-                                isTextImportSheetPresented = true
-                            case .importPDF:
-                                isPDFImporterPresented = true
-                            case .importYouTube:
-                                isYouTubeImportSheetPresented = true
-                            case nil:
-                                recorderViewModel = RecorderViewModel()
+                            if let pendingLocalConsentAction {
+                                self.pendingLocalConsentAction = nil
+                                viewModel.dismissAIConsent()
+
+                                switch pendingLocalConsentAction {
+                                case .importAudio:
+                                    presentFileImport(.importAudio)
+                                case .importPDF:
+                                    presentFileImport(.importPDF)
+                                }
+                            } else {
+                                viewModel.continuePendingConsentAction()
                             }
-                            pendingConsentAction = nil
                         }
                     )
                     .padding(.horizontal, 20)
@@ -215,39 +183,38 @@ struct LecturesListView: View {
                 }
             }
             .overlay(alignment: .top) {
-                if let toastMessage {
+                if let toastMessage = viewModel.toastMessage {
                     ToastBannerView(message: toastMessage)
                         .padding(.top, 12)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
-            .animation(.easeInOut(duration: 0.2), value: toastMessage != nil)
-            .animation(.spring(response: 0.32, dampingFraction: 0.88), value: recorderViewModel != nil)
-            .sensoryFeedback(.success, trigger: removalFeedbackToken)
-            .sensoryFeedback(.impact(weight: .light), trigger: importFeedbackToken)
-            .sensoryFeedback(.impact(weight: .light), trigger: processingStartFeedbackToken)
-            .sheet(item: $activeSheet) { sheet in
+            .animation(.easeInOut(duration: 0.2), value: viewModel.toastMessage != nil)
+            .animation(.spring(response: 0.32, dampingFraction: 0.88), value: viewModel.recorderViewModel != nil)
+            .sensoryFeedback(.success, trigger: viewModel.removalFeedbackToken)
+            .sensoryFeedback(.impact(weight: .light), trigger: viewModel.importFeedbackToken)
+            .sensoryFeedback(.impact(weight: .light), trigger: viewModel.processingStartFeedbackToken)
+            .sheet(item: $viewModel.activeSheet) { sheet in
                 switch sheet {
                 case .actions(let lectureID):
                     if let lecture = viewModel.lecture(withID: lectureID) {
                         RecordingActionsSheet(
                             lecture: lecture,
                             onAddToFolder: {
-                                activeSheet = .folderPicker(lectureID)
+                                viewModel.presentFolderPicker(for: lectureID)
                             },
                             onRemoveFromFolder: lecture.folderID == nil ? nil : {
                                 let folderName = viewModel.removeLectureFromFolder(lectureID)
-                                activeSheet = nil
-                                removalFeedbackToken += 1
-                                showToast(
+                                viewModel.closeActiveSheet()
+                                viewModel.removalFeedbackToken += 1
+                                viewModel.showToast(
                                     folderName.map { "Removed from \($0)." } ?? "Removed from folder."
                                 )
                             },
                             onEditTitle: {},
                             onShare: {},
                             onDelete: {
-                                activeSheet = nil
-                                pendingDeletionLecture = lecture
+                                viewModel.requestDelete(lecture)
                             }
                         )
                         .presentationDetents([.height(lecture.folderID == nil ? 290 : 340), .fraction(0.52)])
@@ -263,10 +230,9 @@ struct LecturesListView: View {
                             },
                             onSelectFolder: { folderID in
                                 viewModel.addLecture(lectureID, toFolder: folderID)
-                                activeSheet = nil
                             },
                             onClose: {
-                                activeSheet = nil
+                                viewModel.closeActiveSheet()
                             }
                         )
                         .presentationDetents([.fraction(0.52), .large])
@@ -274,110 +240,72 @@ struct LecturesListView: View {
                 }
             }
             .fileImporter(
-                isPresented: $isImporterPresented,
-                allowedContentTypes: [.audio],
+                isPresented: $isFileImporterPresented,
+                allowedContentTypes: activeFileImport.allowedContentTypes,
                 allowsMultipleSelection: false
             ) { result in
-                handleAudioImport(result)
-            }
-            .fileImporter(
-                isPresented: $isPDFImporterPresented,
-                allowedContentTypes: [.pdf],
-                allowsMultipleSelection: false
-            ) { result in
-                handlePDFImport(result)
+                Task {
+                    switch activeFileImport {
+                    case .importAudio:
+                        await viewModel.handleAudioImportResult(result)
+                    case .importPDF:
+                        await viewModel.handlePDFImportResult(result)
+                    }
+                }
             }
             .fullScreenCover(
-                isPresented: $isTextImportSheetPresented,
+                isPresented: $viewModel.isTextImportSheetPresented,
                 onDismiss: {
-                    if let lecture = pendingTextImportLecture {
-                        pendingTextImportLecture = nil
-                        selectedLecture = lecture
-                    }
+                    viewModel.finishTextImportDismissal()
                 }
             ) {
                 TextImportSheetView(
                     onClose: {
-                        isTextImportSheetPresented = false
+                        viewModel.dismissTextImportSheet()
                     },
                     onSubmit: { text in
-                        let result = await viewModel.importText(text)
-
-                        switch result {
-                        case .saved(let lecture):
-                            await MainActor.run {
-                                importFeedbackToken += 1
-                                pendingTextImportLecture = lecture
-                                isTextImportSheetPresented = false
-                            }
-                            return nil
-                        case .rejected(let message):
-                            return message
-                        }
+                        await viewModel.submitTextImport(text)
                     }
                 )
             }
-            .sheet(
-                isPresented: $isYouTubeImportSheetPresented,
+            .fullScreenCover(
+                isPresented: $viewModel.isYouTubeImportSheetPresented,
                 onDismiss: {
-                    if let lecture = pendingYouTubeImportLecture {
-                        pendingYouTubeImportLecture = nil
-                        selectedLecture = lecture
-                    }
+                    viewModel.finishYouTubeImportDismissal()
                 }
             ) {
                 YouTubeImportSheetView(
                     onClose: {
-                        isYouTubeImportSheetPresented = false
+                        viewModel.dismissYouTubeImportSheet()
                     },
                     onSubmit: { urlString in
-                        let result = await viewModel.importYouTube(urlString: urlString)
-
-                        switch result {
-                        case .saved(let lecture):
-                            await MainActor.run {
-                                importFeedbackToken += 1
-                                pendingYouTubeImportLecture = lecture
-                                isYouTubeImportSheetPresented = false
-                            }
-                            return nil
-                        case .rejected(let message):
-                            return message
-                        }
+                        await viewModel.submitYouTubeImport(urlString)
                     }
                 )
-                .presentationDetents([.height(240), .medium])
-                .presentationDragIndicator(.visible)
             }
-            .alert("Import", isPresented: $isImportAlertPresented) {
-                Button("OK") {}
+            .alert("Import", isPresented: $viewModel.isImportAlertPresented) {
+                Button("OK") {
+                    viewModel.dismissImportAlert()
+                }
             } message: {
-                Text(importAlertMessage)
+                Text(viewModel.importAlertMessage)
             }
             .alert(
                 "Delete Lecture?",
                 isPresented: Binding(
-                    get: { pendingDeletionLecture != nil },
+                    get: { viewModel.pendingDeletionLecture != nil },
                     set: { isPresented in
                         if !isPresented {
-                            pendingDeletionLecture = nil
+                            viewModel.dismissDeletionAlert()
                         }
                     }
                 ),
-                presenting: pendingDeletionLecture
-            ) { lecture in
+                presenting: viewModel.pendingDeletionLecture
+            ) { _ in
                 Button("Cancel", role: .cancel) {}
                 Button("Delete", role: .destructive) {
                     Task {
-                        let result = await viewModel.deleteLecture(lecture.id)
-                        await MainActor.run {
-                            pendingDeletionLecture = nil
-
-                            if case .rejected(let message) = result {
-                                importAlertMessage = message
-                                isImportAlertPresented = true
-                            }
-                        }
+                        await viewModel.confirmPendingDeletion()
                     }
                 }
             } message: { lecture in
@@ -389,148 +317,37 @@ struct LecturesListView: View {
         }
     }
 
-    private func showToast(_ message: String) {
-        toastMessage = message
-
-        Task {
-            try? await Task.sleep(for: .seconds(2))
-            await MainActor.run {
-                guard toastMessage == message else {
-                    return
-                }
-                toastMessage = nil
-            }
-        }
-    }
-
-    private func handleAudioImport(_ result: Result<[URL], Error>) {
-        switch result {
-        case .success(let urls):
-            guard let url = urls.first else {
-                importAlertMessage = "No audio file was selected."
-                isImportAlertPresented = true
-                return
-            }
-
-            Task {
-                let importResult = await viewModel.importAudio(from: url)
-
-                await MainActor.run {
-                    switch importResult {
-                    case .saved(let lecture):
-                        importFeedbackToken += 1
-                        selectedLecture = lecture
-                    case .rejected(let message):
-                        importAlertMessage = message
-                        isImportAlertPresented = true
-                    }
-                }
-            }
-        case .failure(let error):
-            importAlertMessage = "Import failed: \(error.localizedDescription)"
-            isImportAlertPresented = true
-        }
-    }
-
-    private func handlePDFImport(_ result: Result<[URL], Error>) {
-        switch result {
-        case .success(let urls):
-            guard let url = urls.first else {
-                importAlertMessage = "No PDF file was selected."
-                isImportAlertPresented = true
-                return
-            }
-
-            processingStartFeedbackToken += 1
-
-            Task {
-                let importResult = await viewModel.importPDF(from: url)
-
-                await MainActor.run {
-                    switch importResult {
-                    case .saved(let lecture):
-                        importFeedbackToken += 1
-                        selectedLecture = lecture
-                    case .rejected(let message):
-                        importAlertMessage = message
-                        isImportAlertPresented = true
-                    }
-                }
-            }
-        case .failure(let error):
-            importAlertMessage = "Import failed: \(error.localizedDescription)"
-            isImportAlertPresented = true
-        }
-    }
-
-    private func presentRecorderFlow() {
+    private func presentAudioImportFlow() {
         guard processingService != nil else {
-            recorderViewModel = RecorderViewModel()
+            presentFileImport(.importAudio)
             return
         }
 
         if hasConfirmedAIProcessingConsent {
-            recorderViewModel = RecorderViewModel()
+            presentFileImport(.importAudio)
         } else {
-            pendingConsentAction = .record
-            isAIConsentPresented = true
-        }
-    }
-
-    private func presentImportFlow() {
-        guard processingService != nil else {
-            isImporterPresented = true
-            return
-        }
-
-        if hasConfirmedAIProcessingConsent {
-            isImporterPresented = true
-        } else {
-            pendingConsentAction = .importAudio
-            isAIConsentPresented = true
-        }
-    }
-
-    private func presentTextImportFlow() {
-        guard processingService != nil else {
-            isTextImportSheetPresented = true
-            return
-        }
-
-        if hasConfirmedAIProcessingConsent {
-            isTextImportSheetPresented = true
-        } else {
-            pendingConsentAction = .importText
-            isAIConsentPresented = true
+            pendingLocalConsentAction = .importAudio
+            viewModel.isAIConsentPresented = true
         }
     }
 
     private func presentPDFImportFlow() {
         guard processingService != nil else {
-            isPDFImporterPresented = true
+            presentFileImport(.importPDF)
             return
         }
 
         if hasConfirmedAIProcessingConsent {
-            isPDFImporterPresented = true
+            presentFileImport(.importPDF)
         } else {
-            pendingConsentAction = .importPDF
-            isAIConsentPresented = true
+            pendingLocalConsentAction = .importPDF
+            viewModel.isAIConsentPresented = true
         }
     }
 
-    private func presentYouTubeImportFlow() {
-        guard processingService != nil else {
-            isYouTubeImportSheetPresented = true
-            return
-        }
-
-        if hasConfirmedAIProcessingConsent {
-            isYouTubeImportSheetPresented = true
-        } else {
-            pendingConsentAction = .importYouTube
-            isAIConsentPresented = true
-        }
+    private func presentFileImport(_ fileImport: LocalFileImport) {
+        activeFileImport = fileImport
+        isFileImporterPresented = true
     }
 }
 
@@ -568,26 +385,18 @@ private struct EmptyFolderPlaceholderView: View {
     }
 }
 
-private enum ActiveSheet: Identifiable {
-    case actions(Lecture.ID)
-    case folderPicker(Lecture.ID)
+private enum LocalFileImport {
+    case importAudio
+    case importPDF
 
-    var id: String {
+    var allowedContentTypes: [UTType] {
         switch self {
-        case .actions(let lectureID):
-            "actions-\(lectureID)"
-        case .folderPicker(let lectureID):
-            "folderPicker-\(lectureID)"
+        case .importAudio:
+            [.audio]
+        case .importPDF:
+            [.pdf]
         }
     }
-}
-
-private enum PendingConsentAction {
-    case record
-    case importAudio
-    case importText
-    case importPDF
-    case importYouTube
 }
 
 #Preview {

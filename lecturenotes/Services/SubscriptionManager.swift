@@ -10,15 +10,23 @@ import Combine
 import RevenueCat
 import UIKit
 
+@MainActor
 final class SubscriptionManager: NSObject, ObservableObject {
-    static let premiumEntitlementIdentifier = "Lectra: Lecture Notes AI Pro"
+    static let premiumEntitlementIdentifier = "Lectra: Lecture Notes AI Premium"
+    static let proEntitlementIdentifier = "Lectra: Lecture Notes AI Pro"
 
     @Published private(set) var customerInfo: CustomerInfo?
+    @Published private(set) var currentPlan: AppUserPlan = .freemium
     @Published private(set) var isPremium: Bool = false
 
+    private let userProfileService: FirebaseUserProfileService
     private var started = false
     private var cancellables = Set<AnyCancellable>()
-//    private let userService = UserService.shared
+
+    init(userProfileService: FirebaseUserProfileService? = nil) {
+        self.userProfileService = userProfileService ?? FirebaseUserProfileService(authService: FirebaseAuthService())
+        super.init()
+    }
 
     func start() {
         guard !started else { return }
@@ -79,8 +87,26 @@ final class SubscriptionManager: NSObject, ObservableObject {
     @MainActor
     private func apply(customerInfo: CustomerInfo) {
         self.customerInfo = customerInfo
-        self.isPremium = customerInfo.entitlements[Self.premiumEntitlementIdentifier]?.isActive == true
-//        userService.updateSubscriptionStatus(isSubscribed: isPremium)
+        let resolvedPlan = resolvePlan(from: customerInfo)
+        self.currentPlan = resolvedPlan
+        self.isPremium = resolvedPlan != .freemium
+
+        let currentPlan = self.currentPlan
+        Task {
+            await userProfileService.syncSubscriptionPlan(currentPlan)
+        }
+    }
+
+    private func resolvePlan(from customerInfo: CustomerInfo) -> AppUserPlan {
+        if customerInfo.entitlements[Self.proEntitlementIdentifier]?.isActive == true {
+            return .pro
+        }
+
+        if customerInfo.entitlements[Self.premiumEntitlementIdentifier]?.isActive == true {
+            return .premium
+        }
+
+        return .freemium
     }
 }
 
