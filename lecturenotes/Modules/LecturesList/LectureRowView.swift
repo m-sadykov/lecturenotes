@@ -8,50 +8,47 @@ struct LectureRowView: View {
     @State private var menuTapFeedbackTrigger = 0
 
     var body: some View {
-        VStack(alignment: .leading) {
-            HStack(alignment: .center) {
-                Button(action: onOpen) {
-                    HStack(alignment: .center) {
-                        Image(systemName: iconName)
-                            .frame(width: 42, height: 42)
-                            .background(.black.opacity(0.06))
-                            .clipShape(.circle)
+        HStack(alignment: .center, spacing: 12) {
+            Button(action: onOpen) {
+                HStack(alignment: .center, spacing: 12) {
+                    Image(systemName: iconName)
+                        .frame(width: 40, height: 40)
+                        .foregroundStyle(.secondary)
+                        .background(.primary.opacity(0.05), in: .circle)
 
-                        VStack(alignment: .leading) {
-                            Text(lecture.title)
-                                .bold()
-                                .lineLimit(1)
-                            Text(metadata)
-                                .font(.subheadline)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(lecture.title)
+                            .bold()
+                            .lineLimit(1)
+                        Text(metadata)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        if !previewText.isEmpty {
+                            Text(previewText)
+                                .font(.footnote)
                                 .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                            if !previewText.isEmpty {
-                                Text(previewText)
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2)
-                            }
+                                .lineLimit(2)
                         }
-
-                        Spacer()
                     }
-                }
-                .buttonStyle(.plain)
 
-                Button {
-                    menuTapFeedbackTrigger += 1
-                    onMore()
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .rotationEffect(.degrees(90))
+                    Spacer(minLength: 0)
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
             }
+            .buttonStyle(.plain)
+
+            Button {
+                menuTapFeedbackTrigger += 1
+                onMore()
+            } label: {
+                Image(systemName: "ellipsis")
+                    .rotationEffect(.degrees(90))
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
         }
-        .padding()
-        .background(.white)
-        .clipShape(.rect(cornerRadius: 20))
+        .padding(.vertical, 14)
         .sensoryFeedback(.impact(weight: .light), trigger: menuTapFeedbackTrigger)
     }
 

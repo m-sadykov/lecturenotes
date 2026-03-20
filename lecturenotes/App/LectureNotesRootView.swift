@@ -32,7 +32,7 @@ struct LectureNotesRootView: View {
         }
         .task {
             subscriptionManager.start()
-            await appEnvironment.userProfileService.prepareCurrentUserProfile()
+            await appEnvironment.userProfileService?.prepareCurrentUserProfile()
         }
     }
 }

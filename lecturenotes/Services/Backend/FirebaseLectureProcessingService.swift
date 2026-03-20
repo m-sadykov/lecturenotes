@@ -14,14 +14,14 @@ final class FirebaseLectureProcessingService {
     init(
         authService: FirebaseAuthService,
         userProfileService: FirebaseUserProfileService,
-        firestore: Firestore = Firestore.firestore(),
-        storage: Storage = Storage.storage(),
+        firestore: Firestore? = nil,
+        storage: Storage? = nil,
         audioChunker: LectureAudioChunker? = nil
     ) {
         self.authService = authService
         self.userProfileService = userProfileService
-        self.firestore = firestore
-        self.storage = storage
+        self.firestore = firestore ?? Firestore.firestore()
+        self.storage = storage ?? Storage.storage()
         self.audioChunker = audioChunker ?? LectureAudioChunker()
     }
 

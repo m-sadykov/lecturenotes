@@ -6,8 +6,8 @@ import Observation
 final class FirebaseAuthService {
     @ObservationIgnored private let auth: Auth
 
-    init(auth: Auth = Auth.auth()) {
-        self.auth = auth
+    init(auth: Auth? = nil) {
+        self.auth = auth ?? Auth.auth()
     }
 
     var currentUserID: String? {

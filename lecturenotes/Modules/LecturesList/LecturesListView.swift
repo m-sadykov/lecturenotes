@@ -58,7 +58,7 @@ struct LecturesListView: View {
                                 .frame(maxWidth: .infinity)
                                 .padding(.top, 40)
                         } else {
-                            VStack(spacing: 12) {
+                            LazyVStack(spacing: 0) {
                                 ForEach(viewModel.filteredLectures) { lecture in
                                     LectureRowView(
                                         lecture: lecture,
@@ -69,6 +69,11 @@ struct LecturesListView: View {
                                             viewModel.presentActionSheet(for: lecture.id)
                                         }
                                     )
+
+                                    if lecture.id != viewModel.filteredLectures.last?.id {
+                                        Divider()
+                                            .padding(.leading, 58)
+                                    }
                                 }
                             }
                         }

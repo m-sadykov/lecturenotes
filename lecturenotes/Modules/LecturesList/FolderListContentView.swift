@@ -162,7 +162,9 @@ struct FolderRowButton: View {
             if let onDelete {
                 Button("Delete folder", systemImage: "trash", role: .destructive, action: onDelete)
                     .labelStyle(.iconOnly)
-                    .background(.black.opacity(0.05))
+                    .frame(width: 35, height: 35)
+                    .background(.red.opacity(0.05), in: .rect)
+                    .clipShape(.rect(cornerRadius: 12))
                     .padding(.trailing, 20)
             }
         }

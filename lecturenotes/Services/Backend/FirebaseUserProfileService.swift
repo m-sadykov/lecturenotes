@@ -12,10 +12,10 @@ final class FirebaseUserProfileService {
 
     init(
         authService: FirebaseAuthService,
-        firestore: Firestore = Firestore.firestore()
+        firestore: Firestore? = nil
     ) {
         self.authService = authService
-        self.firestore = firestore
+        self.firestore = firestore ?? Firestore.firestore()
     }
 
     func prepareCurrentUserProfile() async {

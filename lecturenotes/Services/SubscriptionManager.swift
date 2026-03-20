@@ -19,12 +19,12 @@ final class SubscriptionManager: NSObject, ObservableObject {
     @Published private(set) var currentPlan: AppUserPlan = .freemium
     @Published private(set) var isPremium: Bool = false
 
-    private let userProfileService: FirebaseUserProfileService
+    private let userProfileService: FirebaseUserProfileService?
     private var started = false
     private var cancellables = Set<AnyCancellable>()
 
     init(userProfileService: FirebaseUserProfileService? = nil) {
-        self.userProfileService = userProfileService ?? FirebaseUserProfileService(authService: FirebaseAuthService())
+        self.userProfileService = userProfileService
         super.init()
     }
 
@@ -93,7 +93,7 @@ final class SubscriptionManager: NSObject, ObservableObject {
 
         let currentPlan = self.currentPlan
         Task {
-            await userProfileService.syncSubscriptionPlan(currentPlan)
+            await userProfileService?.syncSubscriptionPlan(currentPlan)
         }
     }
 
