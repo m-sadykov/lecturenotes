@@ -10,7 +10,6 @@ final class LectureProcessingViewModel {
 
     @ObservationIgnored private let repository: LectureRepository
     @ObservationIgnored private let processingService: FirebaseLectureProcessingService
-    @ObservationIgnored private var observationTask: Task<Void, Never>?
     @ObservationIgnored private let onLectureUpdated: @MainActor (Lecture) -> Void
 
     init(
@@ -30,35 +29,14 @@ final class LectureProcessingViewModel {
     }
 
     func start() async {
-        guard observationTask == nil else {
-            return
-        }
-
-        do {
-            let updates = try await processingService.lectureUpdates(for: lecture)
-            observationTask = Task { @MainActor [weak self] in
-                guard let self else {
-                    return
-                }
-
-                do {
-                    for try await updatedLecture in updates {
-                        lecture = updatedLecture
-                        onLectureUpdated(updatedLecture)
-                        try? await repository.saveLecture(updatedLecture)
-                    }
-                } catch {
-                    handleObservationError(error)
-                }
-            }
-        } catch {
-            handleObservationError(error)
-        }
+        await repository.start()
     }
 
-    func stop() {
-        observationTask?.cancel()
-        observationTask = nil
+    func stop() {}
+
+    func applyCachedLecture(_ updatedLecture: Lecture) {
+        lecture = updatedLecture
+        errorMessage = nil
     }
 
     func retryProcessing() async {
@@ -71,17 +49,11 @@ final class LectureProcessingViewModel {
         lecture.status = lecture.processingStartStatus
         lecture.processingErrorMessage = nil
         onLectureUpdated(lecture)
-        try? await repository.saveLecture(lecture)
-
-        if observationTask == nil {
-            await start()
-        }
 
         do {
             let updatedLecture = try await processingService.startProcessing(for: lecture)
             lecture = updatedLecture
             onLectureUpdated(updatedLecture)
-            try? await repository.saveLecture(updatedLecture)
         } catch {
             handleObservationError(error)
         }
@@ -90,7 +62,6 @@ final class LectureProcessingViewModel {
     }
 
     private func handleObservationError(_ error: Error) {
-        observationTask = nil
         errorMessage = error.localizedDescription
 
         guard lecture.status != .ready else {
@@ -100,9 +71,5 @@ final class LectureProcessingViewModel {
         lecture.status = .failed
         lecture.processingErrorMessage = error.localizedDescription
         onLectureUpdated(lecture)
-
-        Task {
-            try? await repository.saveLecture(lecture)
-        }
     }
 }

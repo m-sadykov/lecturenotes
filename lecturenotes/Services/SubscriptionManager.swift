@@ -12,8 +12,8 @@ import UIKit
 
 @MainActor
 final class SubscriptionManager: NSObject, ObservableObject {
-    static let premiumEntitlementIdentifier = "Lectra: Lecture Notes AI Premium"
-    static let proEntitlementIdentifier = "Lectra: Lecture Notes AI Pro"
+    static let premiumEntitlementIdentifier = "com.marat.lecturenotesai_premium"
+    static let proEntitlementIdentifier = "com.marat.lecturenotesai_pro"
 
     @Published private(set) var customerInfo: CustomerInfo?
     @Published private(set) var currentPlan: AppUserPlan = .freemium

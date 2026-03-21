@@ -126,6 +126,7 @@ final class FirebaseUserProfileService {
         includeSubscriptionUpdatedAt: Bool = false
     ) -> [String: Any] {
         var data: [String: Any] = [
+            "id": profile.id,
             "plan": profile.plan.rawValue,
             "processingLimitTotalCount": profile.processingQuota.totalCount,
             "processingLimitUsedCount": profile.processingQuota.usedCount,

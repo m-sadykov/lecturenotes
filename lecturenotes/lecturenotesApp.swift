@@ -1,18 +1,41 @@
 import SwiftUI
 import RevenueCat
+import FirebaseCore
+
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        if FirebaseApp.app() == nil {
+            FirebaseApp.configure()
+        }
+
+        return true
+    }
+}
 
 @main
 struct lecturenotesApp: App {
+    private let firebaseConfigured: Void = {
+        if FirebaseApp.app() == nil {
+            FirebaseApp.configure()
+        }
+    }()
+
     @StateObject private var subscriptionManager: SubscriptionManager
     @State private var appEnvironment: AppEnvironment
-    
+
+    // register app delegate for Firebase setup
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+
     init() {
-        FirebaseBootstrapper.configureIfNeeded()
+        _ = firebaseConfigured
 
         #if DEBUG
         Purchases.logLevel = .debug
         #endif
-        Purchases.configure(withAPIKey: "test_WiOttVRhcRMJqvByDuPjYzOGNOy")
+        Purchases.configure(withAPIKey: "appl_gocyBRrDByBgmJWEJvORYtfBjUX")
 
         let authService = FirebaseAuthService()
         let userProfileService = FirebaseUserProfileService(authService: authService)
@@ -26,14 +49,12 @@ struct lecturenotesApp: App {
             )
         )
     }
-    
+
     var body: some Scene {
         WindowGroup {
-            NavigationView {
-                LectureNotesRootView(appEnvironment: appEnvironment)
-                    .preferredColorScheme(.light)
-                    .environmentObject(subscriptionManager)
-            }
+            LectureNotesRootView(appEnvironment: appEnvironment)
+                .preferredColorScheme(.light)
+                .environmentObject(subscriptionManager)
         }
     }
 }

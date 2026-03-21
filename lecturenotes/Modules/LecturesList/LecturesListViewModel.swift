@@ -18,6 +18,7 @@ final class LecturesListViewModel {
     @ObservationIgnored private let processingService: FirebaseLectureProcessingService?
     @ObservationIgnored private let importManager: LectureImportManager
     @ObservationIgnored private let userProfileService: FirebaseUserProfileService?
+    @ObservationIgnored private var repositoryObservationTask: Task<Void, Never>?
 
     var lectures: [Lecture] = []
     var folders: [LectureFolder] = []
@@ -64,6 +65,10 @@ final class LecturesListViewModel {
         self.processingService = processingService
         self.importManager = importManager
         self.userProfileService = userProfileService
+    }
+
+    deinit {
+        repositoryObservationTask?.cancel()
     }
 
     var filteredLectures: [Lecture] {
@@ -488,15 +493,11 @@ final class LecturesListViewModel {
     }
 
     func deleteLecture(_ lectureID: Lecture.ID) async -> DeleteLectureResult {
-        guard let lecture = lecture(withID: lectureID) else {
+        guard lecture(withID: lectureID) != nil else {
             return .deleted
         }
 
         do {
-            if let processingService {
-                try await processingService.deleteLecture(lecture)
-            }
-
             try await repository.deleteLecture(id: lectureID)
             lectures.removeAll { $0.id == lectureID }
             return .deleted
@@ -551,9 +552,10 @@ final class LecturesListViewModel {
     }
 
     func load() async {
+        startObservingRepositoryIfNeeded()
         isLoading = true
-        folders = await repository.fetchFolders()
-        lectures = await repository.fetchLectures()
+        await repository.start()
+        await reloadRepositoryData()
         isLoading = false
     }
 
@@ -615,13 +617,40 @@ final class LecturesListViewModel {
 
             do {
                 lectureToProcess = try await processingService.startProcessing(for: lectureToProcess)
+                replaceLecture(lectureToProcess)
             } catch {
                 lectureToProcess.status = .failed
                 lectureToProcess.processingErrorMessage = error.localizedDescription
+                replaceLecture(lectureToProcess)
+            }
+        }
+    }
+
+    private func startObservingRepositoryIfNeeded() {
+        guard repositoryObservationTask == nil else {
+            return
+        }
+
+        repositoryObservationTask = Task { @MainActor [weak self] in
+            guard let self else {
+                return
             }
 
-            replaceLecture(lectureToProcess)
-            try? await repository.saveLecture(lectureToProcess)
+            for await _ in repository.observeChanges() {
+                await reloadRepositoryData()
+            }
+        }
+    }
+
+    private func reloadRepositoryData() async {
+        async let fetchedFolders = repository.fetchFolders()
+        async let fetchedLectures = repository.fetchLectures()
+
+        folders = await fetchedFolders
+        lectures = await fetchedLectures
+
+        if let selectedLectureID = selectedLecture?.id {
+            selectedLecture = lectures.first(where: { $0.id == selectedLectureID })
         }
     }
     

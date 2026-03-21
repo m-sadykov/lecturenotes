@@ -77,6 +77,9 @@ struct LectureDetailView: View {
             viewModel.prepareAudioPlayerIfNeeded()
         }
         .task {
+            await viewModel.startObservingLecture()
+        }
+        .task {
             await viewModel.startProcessingIfNeeded()
         }
         .onDisappear {

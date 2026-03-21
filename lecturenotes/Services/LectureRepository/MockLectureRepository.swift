@@ -1,12 +1,24 @@
 import Foundation
 
 protocol LectureRepository {
+    func start() async
+    func observeChanges() -> AsyncStream<Void>
     func fetchLectures() async -> [Lecture]
     func fetchFolders() async -> [LectureFolder]
     func fetchLecture(id: UUID) async -> Lecture?
     func saveLecture(_ lecture: Lecture) async throws
     func saveFolders(_ folders: [LectureFolder]) async throws
     func deleteLecture(id: UUID) async throws
+}
+
+extension LectureRepository {
+    func start() async {}
+
+    func observeChanges() -> AsyncStream<Void> {
+        AsyncStream { continuation in
+            continuation.finish()
+        }
+    }
 }
 
 struct MockLectureRepository: LectureRepository {

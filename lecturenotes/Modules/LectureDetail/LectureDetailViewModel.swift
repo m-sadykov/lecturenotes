@@ -58,6 +58,7 @@ final class LectureDetailViewModel {
     @ObservationIgnored private let processingService: FirebaseLectureProcessingService?
     @ObservationIgnored private let onLectureUpdated: (Lecture) -> Void
     @ObservationIgnored private let onLectureDeleted: (Lecture.ID) async -> Bool
+    @ObservationIgnored private var repositoryObservationTask: Task<Void, Never>?
 
     init(
         lecture: Lecture,
@@ -126,7 +127,28 @@ final class LectureDetailViewModel {
         await viewModel.start()
     }
 
+    func startObservingLecture() async {
+        guard repositoryObservationTask == nil else {
+            return
+        }
+
+        await repository.start()
+        await reloadLectureFromRepository()
+
+        repositoryObservationTask = Task { @MainActor [weak self] in
+            guard let self else {
+                return
+            }
+
+            for await _ in repository.observeChanges() {
+                await reloadLectureFromRepository()
+            }
+        }
+    }
+
     func cleanup() {
+        repositoryObservationTask?.cancel()
+        repositoryObservationTask = nil
         playerViewModel?.cleanup()
         processingViewModel?.stop()
     }
@@ -183,14 +205,6 @@ final class LectureDetailViewModel {
         Task {
             do {
                 try await repository.saveLecture(renamedLecture)
-
-                if let processingService {
-                    renamedLecture = try await processingService.updateLectureTitle(trimmedTitle, for: renamedLecture)
-                    lecture = renamedLecture
-                    onLectureUpdated(renamedLecture)
-                    try await repository.saveLecture(renamedLecture)
-                }
-
                 showToast("Title updated.")
             } catch {
                 lecture = previousLecture
@@ -237,5 +251,15 @@ final class LectureDetailViewModel {
                 toastMessage = nil
             }
         }
+    }
+
+    private func reloadLectureFromRepository() async {
+        guard let updatedLecture = await repository.fetchLecture(id: lecture.id) else {
+            return
+        }
+
+        lecture = updatedLecture
+        processingViewModel?.applyCachedLecture(updatedLecture)
+        onLectureUpdated(updatedLecture)
     }
 }

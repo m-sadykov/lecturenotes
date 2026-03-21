@@ -1,18 +1,65 @@
-rules_version='2'
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidPlan(plan) {
+      return plan in ['freemium', 'premium', 'pro'];
+    }
+
+    function isValidLectureStatus(status) {
+      return status in ['draft', 'uploading', 'transcribing', 'generating', 'ready', 'failed'];
+    }
+
+    function isValidSourceType(sourceType) {
+      return sourceType in ['audio', 'text', 'pdf', 'youtube'];
+    }
+
+    function isValidUserProfile(userId) {
+      return request.resource.data.id == userId
+        && isValidPlan(request.resource.data.plan)
+        && request.resource.data.processingLimitTotalCount is int
+        && request.resource.data.processingLimitUsedCount is int
+        && request.resource.data.processingLimitRemainingCount is int
+        && request.resource.data.processingLimitIsUnlimited is bool
+        && request.resource.data.recordingLimitSec is number
+        && request.resource.data.audioImportLimitSec is number
+        && request.resource.data.pdfPageLimit is int;
+    }
+
+    function isValidFolder(folderId) {
+      return request.resource.data.id == folderId
+        && request.resource.data.name is string;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUserProfile(userId);
+      allow update: if isOwner(userId) && isValidUserProfile(userId);
+      allow delete: if isOwner(userId);
+
+      match /lectures/{lectureId} {
+        allow read: if isOwner(userId);
+        allow create, update, delete: if false;
+      }
+
+      match /folders/{folderId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidFolder(folderId);
+        allow update: if isOwner(userId) && isValidFolder(folderId);
+        allow delete: if isOwner(userId);
+      }
+    }
+
     match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2026, 4, 15);
+      allow read, write: if false;
     }
   }
 }

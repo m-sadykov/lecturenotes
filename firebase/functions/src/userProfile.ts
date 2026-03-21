@@ -98,10 +98,11 @@ function normalizedQuota(data: admin.firestore.DocumentData | undefined): {
   };
 }
 
-function defaultUserProfileData(): admin.firestore.DocumentData {
+function defaultUserProfileData(userId: string): admin.firestore.DocumentData {
   const plan: UserPlan = "freemium";
   const totalCount = totalCountForPlan(plan) ?? -1;
   return {
+    id: userId,
     plan,
     processingLimitTotalCount: totalCount,
     processingLimitUsedCount: 0,
@@ -156,7 +157,7 @@ export async function reserveProcessingQuotaForLecture(
     }
 
     if (!userSnapshot.exists) {
-      transaction.set(userReference, defaultUserProfileData(), { merge: true });
+      transaction.set(userReference, defaultUserProfileData(userReference.id), { merge: true });
     }
 
     const quota = normalizedQuota(userSnapshot.data());

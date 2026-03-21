@@ -10,6 +10,7 @@ final class FirebaseLectureProcessingService {
     private let firestore: Firestore
     private let storage: Storage
     private let audioChunker: LectureAudioChunker
+    private let commandService: FirebaseLectureCommandService
 
     init(
         authService: FirebaseAuthService,
@@ -23,91 +24,74 @@ final class FirebaseLectureProcessingService {
         self.firestore = firestore ?? Firestore.firestore()
         self.storage = storage ?? Storage.storage()
         self.audioChunker = audioChunker ?? LectureAudioChunker()
+        self.commandService = FirebaseLectureCommandService(authService: authService)
     }
 
     func startProcessing(for lecture: Lecture) async throws -> Lecture {
-        let userProfile = try await userProfileService.ensureCurrentUserProfile()
-        guard userProfile.canStartProcessing else {
-            throw FirebaseLectureProcessingError.processingLimitExceeded(
-                remainingCount: userProfile.processingQuota.remainingCount
-            )
-        }
-
-        switch lecture.sourceType {
-        case .audio:
-            guard lecture.duration <= userProfile.audioImportLimitDuration else {
-                throw FirebaseLectureProcessingError.audioLimitExceeded(
-                    limit: userProfile.audioImportLimitDuration
-                )
-            }
-        case .text, .pdf, .youtube:
-            break
-        }
-
-        let user = try await authService.ensureSignedIn()
-        let documentReference = lectureDocumentReference(userID: user.uid, lectureID: lecture.id)
         var processingLecture = lecture
         processingLecture.processingErrorMessage = nil
 
-        switch lecture.sourceType {
-        case .audio:
-            guard lecture.audioURL != nil else {
-                throw FirebaseLectureProcessingError.missingAudioFile
-            }
-
-            let uploadPlan = try await audioChunker.makeUploadPlan(for: lecture, userID: user.uid)
-            processingLecture.status = .uploading
-
-            try await setData(
-                makeDocumentData(for: processingLecture, uploadPlan: uploadPlan),
-                at: documentReference
-            )
-
-            do {
-                try await uploadAudioFiles(for: uploadPlan)
-                audioChunker.cleanup(plan: uploadPlan)
-                return processingLecture
-            } catch {
-                audioChunker.cleanup(plan: uploadPlan)
-                try? await setData(
-                    [
-                        "status": LectureStatus.failed.rawValue,
-                        "errorMessage": error.localizedDescription,
-                        "updatedAt": FieldValue.serverTimestamp()
-                    ],
-                    at: documentReference,
-                    merge: true
+        do {
+            let userProfile = try await userProfileService.ensureCurrentUserProfile()
+            guard userProfile.canStartProcessing else {
+                throw FirebaseLectureProcessingError.processingLimitExceeded(
+                    remainingCount: userProfile.processingQuota.remainingCount
                 )
-                throw error
-            }
-        case .text, .pdf:
-            let trimmedTranscript = lecture.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmedTranscript.isEmpty else {
-                throw FirebaseLectureProcessingError.missingTranscript
             }
 
-            processingLecture.status = .generating
-            processingLecture.transcript = trimmedTranscript
+            switch lecture.sourceType {
+            case .audio:
+                guard lecture.duration <= userProfile.audioImportLimitDuration else {
+                    throw FirebaseLectureProcessingError.audioLimitExceeded(
+                        limit: userProfile.audioImportLimitDuration
+                    )
+                }
 
-            try await setData(
-                makeDocumentData(for: processingLecture, uploadPlan: nil),
-                at: documentReference
-            )
-            return processingLecture
-        case .youtube:
-            guard let sourceURL = lecture.sourceURL else {
-                throw FirebaseLectureProcessingError.missingSourceURL
+                guard lecture.audioURL != nil else {
+                    throw FirebaseLectureProcessingError.missingAudioFile
+                }
+
+                let user = try await authService.ensureSignedIn()
+                let uploadPlan = try await audioChunker.makeUploadPlan(for: lecture, userID: user.uid)
+                processingLecture.status = .uploading
+
+                try await commandService.startProcessing(
+                    lectureID: lecture.id,
+                    uploadPlan: uploadPlan
+                )
+
+                do {
+                    try await uploadAudioFiles(for: uploadPlan)
+                    audioChunker.cleanup(plan: uploadPlan)
+                    return processingLecture
+                } catch {
+                    audioChunker.cleanup(plan: uploadPlan)
+                    throw error
+                }
+            case .text, .pdf:
+                let trimmedTranscript = lecture.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmedTranscript.isEmpty else {
+                    throw FirebaseLectureProcessingError.missingTranscript
+                }
+
+                processingLecture.status = .generating
+                processingLecture.transcript = trimmedTranscript
+                try await commandService.startProcessing(lectureID: lecture.id)
+                return processingLecture
+            case .youtube:
+                guard let sourceURL = lecture.sourceURL else {
+                    throw FirebaseLectureProcessingError.missingSourceURL
+                }
+
+                processingLecture.status = lecture.processingStartStatus
+                processingLecture.sourceURL = sourceURL
+                processingLecture.transcript = lecture.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                try await commandService.startProcessing(lectureID: lecture.id)
+                return processingLecture
             }
-
-            processingLecture.status = lecture.processingStartStatus
-            processingLecture.sourceURL = sourceURL
-            processingLecture.transcript = lecture.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-
-            try await setData(
-                makeDocumentData(for: processingLecture, uploadPlan: nil),
-                at: documentReference
-            )
-            return processingLecture
+        } catch {
+            await commandService.markLectureFailed(lecture.id, message: error.localizedDescription)
+            throw error
         }
     }
 
@@ -126,7 +110,11 @@ final class FirebaseLectureProcessingService {
                     return
                 }
 
-                let updatedLecture = Self.merge(lecture: lecture, with: data)
+                let updatedLecture = FirestoreLectureMapper.lecture(
+                    from: data,
+                    fallbackDocumentID: snapshot.documentID,
+                    preservedLocalAudioURL: lecture.audioURL
+                ) ?? lecture
                 continuation.yield(updatedLecture)
             }
 
@@ -137,35 +125,15 @@ final class FirebaseLectureProcessingService {
     }
 
     func deleteLecture(_ lecture: Lecture) async throws {
-        let user = try await authService.ensureSignedIn()
-        let documentReference = lectureDocumentReference(userID: user.uid, lectureID: lecture.id)
-        let snapshot = try await getDocument(at: documentReference)
-        let data = snapshot.data() ?? [:]
-        let storedPaths = storagePaths(for: lecture, userID: user.uid, data: data)
-
-        for path in storedPaths {
-            try? await deleteStorageObject(at: storage.reference(withPath: path))
-        }
-
-        try await deleteDocument(at: documentReference)
+        try await commandService.deleteLecture(lecture.id)
     }
 
     func updateLectureTitle(_ title: String, for lecture: Lecture) async throws -> Lecture {
-        let user = try await authService.ensureSignedIn()
-        let documentReference = lectureDocumentReference(userID: user.uid, lectureID: lecture.id)
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        try await setData(
-            [
-                "title": trimmedTitle,
-                "updatedAt": FieldValue.serverTimestamp()
-            ],
-            at: documentReference,
-            merge: true
-        )
 
         var updatedLecture = lecture
         updatedLecture.title = trimmedTitle
+        try await commandService.upsertLecture(updatedLecture)
         return updatedLecture
     }
 
@@ -177,80 +145,6 @@ final class FirebaseLectureProcessingService {
             .document(lectureID.uuidString)
     }
 
-    private func makeDocumentData(
-        for lecture: Lecture,
-        uploadPlan: LectureAudioUploadPlan?
-    ) -> [String: Any] {
-        var data: [String: Any] = [
-            "id": lecture.id.uuidString,
-            "title": lecture.title,
-            "sourceType": lecture.sourceType.rawValue,
-            "createdAt": Timestamp(date: lecture.createdAt),
-            "durationSec": lecture.duration.timeInterval,
-            "status": lecture.status.rawValue,
-            "transcript": lecture.transcript,
-            "summaryShort": lecture.summaryShort,
-            "summaryLong": lecture.summaryLong,
-            "flashcards": lecture.flashcards.map {
-                [
-                    "id": $0.id.uuidString,
-                    "question": $0.question,
-                    "answer": $0.answer
-                ]
-            },
-            "quiz": lecture.quiz.map {
-                [
-                    "id": $0.id.uuidString,
-                    "question": $0.question,
-                    "options": $0.options,
-                    "correctIndex": $0.correctIndex
-                ]
-            },
-            "updatedAt": FieldValue.serverTimestamp()
-        ]
-
-        if let sourceURL = lecture.sourceURL {
-            data["sourceURL"] = sourceURL.absoluteString
-        }
-
-        if let youtubeVideoID = lecture.youtubeVideoID {
-            data["youtubeVideoID"] = youtubeVideoID
-        }
-
-        if let uploadPlan {
-            data["isChunked"] = uploadPlan.isChunked
-            data["chunkCount"] = uploadPlan.items.count
-            data["chunkPaths"] = uploadPlan.chunkPaths
-            data["chunkTranscripts"] = [:] as [String: String]
-
-            if let primaryAudioPath = uploadPlan.primaryAudioPath {
-                data["audioPath"] = primaryAudioPath
-            }
-        }
-
-        if let processingErrorMessage = lecture.processingErrorMessage {
-            data["errorMessage"] = processingErrorMessage
-        }
-
-        return data
-    }
-
-    private func setData(
-        _ data: [String: Any],
-        at documentReference: DocumentReference,
-        merge: Bool = false
-    ) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            documentReference.setData(data, merge: merge) { error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: ())
-                }
-            }
-        }
-    }
-
     private func getDocument(at documentReference: DocumentReference) async throws -> DocumentSnapshot {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<DocumentSnapshot, Error>) in
             documentReference.getDocument { snapshot, error in
@@ -260,18 +154,6 @@ final class FirebaseLectureProcessingService {
                     continuation.resume(returning: snapshot)
                 } else {
                     continuation.resume(throwing: FirebaseLectureProcessingError.missingLectureDocument)
-                }
-            }
-        }
-    }
-
-    private func deleteDocument(at documentReference: DocumentReference) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            documentReference.delete { error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: ())
                 }
             }
         }
@@ -302,109 +184,6 @@ final class FirebaseLectureProcessingService {
         }
     }
 
-    private func deleteStorageObject(at reference: StorageReference) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            reference.delete { error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: ())
-                }
-            }
-        }
-    }
-
-    private func storagePaths(for lecture: Lecture, userID: String, data: [String: Any]) -> [String] {
-        if let chunkPaths = data["chunkPaths"] as? [String], !chunkPaths.isEmpty {
-            return chunkPaths
-        }
-
-        if let audioPath = data["audioPath"] as? String, !audioPath.isEmpty {
-            return [audioPath]
-        }
-
-        guard let audioURL = lecture.audioURL else {
-            return []
-        }
-
-        let fileFormat = LectureAudioFormat(url: audioURL)
-        return ["audio/\(userID)/\(lecture.id.uuidString).\(fileFormat.fileExtension)"]
-    }
-
-    private static func merge(lecture: Lecture, with data: [String: Any]) -> Lecture {
-        var mergedLecture = lecture
-        mergedLecture.title = stringValue(for: "title", in: data) ?? lecture.title
-        mergedLecture.sourceType = LectureSourceType(rawValue: stringValue(for: "sourceType", in: data) ?? "") ?? lecture.sourceType
-        mergedLecture.sourceURL = urlValue(for: "sourceURL", in: data) ?? lecture.sourceURL
-        mergedLecture.youtubeVideoID = stringValue(for: "youtubeVideoID", in: data) ?? lecture.youtubeVideoID
-        mergedLecture.createdAt = dateValue(for: "createdAt", in: data) ?? lecture.createdAt
-        mergedLecture.duration = .seconds(doubleValue(for: "durationSec", in: data) ?? lecture.duration.timeInterval)
-        mergedLecture.status = LectureStatus(rawValue: stringValue(for: "status", in: data) ?? "") ?? lecture.status
-        mergedLecture.transcript = stringValue(for: "transcript", in: data) ?? ""
-        mergedLecture.summaryShort = stringValue(for: "summaryShort", in: data) ?? ""
-        mergedLecture.summaryLong = stringValue(for: "summaryLong", in: data) ?? ""
-        mergedLecture.flashcards = flashcardsValue(for: "flashcards", in: data)
-        mergedLecture.quiz = quizValue(for: "quiz", in: data)
-        mergedLecture.processingErrorMessage = stringValue(for: "errorMessage", in: data)
-        return mergedLecture
-    }
-
-    private static func stringValue(for key: String, in data: [String: Any]) -> String? {
-        data[key] as? String
-    }
-
-    private static func doubleValue(for key: String, in data: [String: Any]) -> Double? {
-        if let value = data[key] as? Double {
-            return value
-        }
-
-        if let value = data[key] as? Int {
-            return Double(value)
-        }
-
-        return nil
-    }
-
-    private static func dateValue(for key: String, in data: [String: Any]) -> Date? {
-        if let timestamp = data[key] as? Timestamp {
-            return timestamp.dateValue()
-        }
-
-        return data[key] as? Date
-    }
-
-    private static func urlValue(for key: String, in data: [String: Any]) -> URL? {
-        guard let string = data[key] as? String else {
-            return nil
-        }
-
-        return URL(string: string)
-    }
-
-    private static func flashcardsValue(for key: String, in data: [String: Any]) -> [Flashcard] {
-        let values = data[key] as? [[String: Any]] ?? []
-
-        return values.map { item in
-            Flashcard(
-                id: UUID(uuidString: item["id"] as? String ?? "") ?? UUID(),
-                question: item["question"] as? String ?? "",
-                answer: item["answer"] as? String ?? ""
-            )
-        }
-    }
-
-    private static func quizValue(for key: String, in data: [String: Any]) -> [QuizQuestion] {
-        let values = data[key] as? [[String: Any]] ?? []
-
-        return values.map { item in
-            QuizQuestion(
-                id: UUID(uuidString: item["id"] as? String ?? "") ?? UUID(),
-                question: item["question"] as? String ?? "",
-                options: item["options"] as? [String] ?? [],
-                correctIndex: item["correctIndex"] as? Int ?? 0
-            )
-        }
-    }
 }
 
 enum FirebaseLectureProcessingError: LocalizedError {

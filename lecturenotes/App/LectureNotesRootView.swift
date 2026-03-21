@@ -32,6 +32,7 @@ struct LectureNotesRootView: View {
         }
         .task {
             subscriptionManager.start()
+            await appEnvironment.repository.start()
             await appEnvironment.userProfileService?.prepareCurrentUserProfile()
         }
     }
