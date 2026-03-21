@@ -2,6 +2,9 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct LecturesListView: View {
+    private let searchBarReservedHeight: CGFloat = 56
+    private let stickySearchTopInset: CGFloat = 70
+
     @AppStorage("hasConfirmedAIProcessingConsent") private var hasConfirmedAIProcessingConsent = false
     @State var viewModel: LecturesListViewModel
     let repository: LectureRepository
@@ -9,9 +12,12 @@ struct LecturesListView: View {
     @State private var activeFileImport: LocalFileImport = .importAudio
     @State private var isFileImporterPresented = false
     @State private var pendingLocalConsentAction: LocalFileImport?
+    @State private var currentScrollOffset: CGFloat = 0
 
     var body: some View {
         @Bindable var viewModel = viewModel
+        let showsInlineSearchBar = (viewModel.isSearchPresented || viewModel.hasActiveSearchQuery) && currentScrollOffset < 140
+        let showsFloatingSearchBar = viewModel.isSearchAutoPresented || ((viewModel.isSearchPresented || viewModel.hasActiveSearchQuery) && currentScrollOffset >= 140)
 
         NavigationStack {
             VStack(spacing: 0) {
@@ -22,6 +28,8 @@ struct LecturesListView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
+                        LecturesListScrollOffsetReader()
+
                         PremiumBannerView()
 
                         QuickActionsStripView {
@@ -36,8 +44,25 @@ struct LecturesListView: View {
 
                         RecordingsSectionHeaderView(
                             foldersDestination: FoldersScreen(viewModel: viewModel),
-                            showsFoldersNavigation: true
+                            showsFoldersNavigation: true,
+                            onSearchTap: {
+                                viewModel.presentSearch()
+                            }
                         )
+
+                        if showsInlineSearchBar {
+                            LecturesSearchBarView(
+                                text: $viewModel.searchText,
+                                isSearching: viewModel.isSearching,
+                                onClear: {
+                                    viewModel.clearSearch()
+                                },
+                                onCancel: {
+                                    viewModel.dismissSearch()
+                                }
+                            )
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                        }
                         
                         if !viewModel.folders.isEmpty {
                             FolderFilterChipsView(
@@ -51,6 +76,10 @@ struct LecturesListView: View {
                                 .frame(maxWidth: .infinity)
                         } else if viewModel.lectures.isEmpty {
                             EmptyLecturesPlaceholderView()
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 40)
+                        } else if viewModel.filteredLectures.isEmpty, viewModel.hasActiveSearchQuery {
+                            EmptySearchResultsPlaceholderView(query: viewModel.searchText)
                                 .frame(maxWidth: .infinity)
                                 .padding(.top, 40)
                         } else if viewModel.filteredLectures.isEmpty, viewModel.selectedFolderID != nil {
@@ -79,8 +108,23 @@ struct LecturesListView: View {
                         }
                     }
                     .padding(.horizontal, 20)
+                    .padding(.top, showsFloatingSearchBar ? searchBarReservedHeight + 8 : 0)
                     .padding(.bottom, 100)
                 }
+                .coordinateSpace(name: LecturesListContainerSpace.name)
+                .onPreferenceChange(LecturesListScrollOffsetPreferenceKey.self) { newOffset in
+                    handleScrollOffsetChange(currentOffset: newOffset, viewModel: viewModel)
+                    currentScrollOffset = newOffset
+                }
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 8)
+                        .onChanged { value in
+                            handleScrollDragChange(
+                                translationHeight: value.translation.height,
+                                viewModel: viewModel
+                            )
+                        }
+                )
             }
             .background(Color(.systemGray6))
             .toolbar(.hidden, for: .navigationBar)
@@ -188,6 +232,23 @@ struct LecturesListView: View {
                 }
             }
             .overlay(alignment: .top) {
+                if showsFloatingSearchBar {
+                    LecturesSearchBarView(
+                        text: $viewModel.searchText,
+                        isSearching: viewModel.isSearching,
+                        onClear: {
+                            viewModel.clearSearch()
+                        },
+                        onCancel: {
+                            viewModel.dismissSearch()
+                        }
+                    )
+                    .padding(.horizontal, 20)
+                    .padding(.top, stickySearchTopInset)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .overlay(alignment: .top) {
                 if let toastMessage = viewModel.toastMessage {
                     ToastBannerView(message: toastMessage)
                         .padding(.top, 12)
@@ -196,6 +257,8 @@ struct LecturesListView: View {
             }
             .animation(.easeInOut(duration: 0.2), value: viewModel.toastMessage != nil)
             .animation(.spring(response: 0.32, dampingFraction: 0.88), value: viewModel.recorderViewModel != nil)
+            .animation(.spring(response: 0.28, dampingFraction: 0.88), value: showsInlineSearchBar)
+            .animation(.spring(response: 0.28, dampingFraction: 0.88), value: showsFloatingSearchBar)
             .sensoryFeedback(.success, trigger: viewModel.removalFeedbackToken)
             .sensoryFeedback(.impact(weight: .light), trigger: viewModel.importFeedbackToken)
             .sensoryFeedback(.impact(weight: .light), trigger: viewModel.processingStartFeedbackToken)
@@ -354,6 +417,52 @@ struct LecturesListView: View {
         activeFileImport = fileImport
         isFileImporterPresented = true
     }
+
+    private func handleScrollOffsetChange(currentOffset: CGFloat, viewModel: LecturesListViewModel) {
+        if currentOffset < 40 {
+            viewModel.hideSearchForScrollIfNeeded()
+        }
+    }
+
+    private func handleScrollDragChange(
+        translationHeight: CGFloat,
+        viewModel: LecturesListViewModel
+    ) {
+        guard currentScrollOffset > 140 else {
+            return
+        }
+
+        if translationHeight > 18 {
+            viewModel.presentSearchFromScroll()
+        } else if translationHeight < -24 {
+            viewModel.hideSearchForScrollIfNeeded()
+        }
+    }
+}
+
+private enum LecturesListContainerSpace {
+    static let name = "lecturesListContainer"
+}
+
+private struct LecturesListScrollOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+private struct LecturesListScrollOffsetReader: View {
+    var body: some View {
+        GeometryReader { geometry in
+            Color.clear
+                .preference(
+                    key: LecturesListScrollOffsetPreferenceKey.self,
+                    value: max(-geometry.frame(in: .named(LecturesListContainerSpace.name)).minY, 0)
+                )
+        }
+        .frame(height: 0)
+    }
 }
 
 private struct ToastBannerView: View {
@@ -386,6 +495,18 @@ private struct EmptyFolderPlaceholderView: View {
             Text("No recordings in this folder")
         } description: {
             Text("Use the menu button on a recording to move it into this folder.")
+        }
+    }
+}
+
+private struct EmptySearchResultsPlaceholderView: View {
+    let query: String
+
+    var body: some View {
+        ContentUnavailableView {
+            Text("Nothing found")
+        } description: {
+            Text("No recordings match \"\(query)\".")
         }
     }
 }
@@ -424,6 +545,12 @@ private struct LecturesListPreviewCanvas: View {
                     PremiumBannerView()
                     QuickActionsStripView {} onImportText: {} onImportYouTube: {} onImportPDF: {}
                     previewSectionHeader
+                    LecturesSearchBarView(
+                        text: .constant("Plant"),
+                        isSearching: false,
+                        onClear: {},
+                        onCancel: {}
+                    )
                     previewFolderChips
 
                     if let firstLecture = lectures.first {
@@ -456,18 +583,11 @@ private struct LecturesListPreviewCanvas: View {
     }
 
     private var previewSectionHeader: some View {
-        HStack {
-            Text("Recordings")
-                .font(.title)
-                .bold()
-            Spacer()
-            Image(systemName: "folder")
-                .foregroundStyle(.blue.opacity(0.5))
-            Button("Search", systemImage: "magnifyingglass") {}
-                .labelStyle(.iconOnly)
-                .foregroundStyle(.blue)
-                .buttonStyle(.plain)
-        }
+        RecordingsSectionHeaderView(
+            foldersDestination: FoldersScreen(viewModel: LecturesListViewModel(repository: MockLectureRepository())),
+            showsFoldersNavigation: false,
+            onSearchTap: {}
+        )
     }
 
     private var previewFolderChips: some View {

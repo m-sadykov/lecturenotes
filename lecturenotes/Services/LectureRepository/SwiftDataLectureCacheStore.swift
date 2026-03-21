@@ -23,6 +23,30 @@ final class SwiftDataLectureCacheStore {
         return records.compactMap(decodeLecture(from:))
     }
 
+    func fetchLectures(for userID: String, remoteIDs: [String]) -> [Lecture] {
+        guard !remoteIDs.isEmpty else {
+            return []
+        }
+
+        let descriptor = FetchDescriptor<CachedLectureRecord>(
+            predicate: #Predicate { record in
+                record.ownerUserID == userID
+            }
+        )
+
+        let remoteIDSet = Set(remoteIDs)
+        let records = (try? modelContext.fetch(descriptor)) ?? []
+        let lecturesByRemoteID = records.reduce(into: [String: Lecture]()) { result, record in
+            guard remoteIDSet.contains(record.remoteID), let lecture = decodeLecture(from: record) else {
+                return
+            }
+
+            result[record.remoteID] = lecture
+        }
+
+        return remoteIDs.compactMap { lecturesByRemoteID[$0] }
+    }
+
     func fetchFolders(for userID: String) -> [LectureFolder] {
         let descriptor = FetchDescriptor<CachedFolderRecord>(
             predicate: #Predicate { record in
@@ -78,10 +102,18 @@ final class SwiftDataLectureCacheStore {
             CachedLectureRecord(
                 ownerUserID: userID,
                 remoteID: remoteID,
+                title: lecture.title,
+                summaryShort: lecture.summaryShort,
+                transcriptPreview: Self.transcriptPreview(for: lecture),
+                folderRemoteID: lecture.folderID?.uuidString,
                 createdAt: lecture.createdAt,
                 payload: Data()
             )
 
+        record.title = lecture.title
+        record.summaryShort = lecture.summaryShort
+        record.transcriptPreview = Self.transcriptPreview(for: lecture)
+        record.folderRemoteID = lecture.folderID?.uuidString
         record.createdAt = lecture.createdAt
         record.payload = try encoder.encode(lecture)
 
@@ -109,10 +141,18 @@ final class SwiftDataLectureCacheStore {
                 CachedLectureRecord(
                     ownerUserID: userID,
                     remoteID: remoteID,
+                    title: lecture.title,
+                    summaryShort: lecture.summaryShort,
+                    transcriptPreview: Self.transcriptPreview(for: lecture),
+                    folderRemoteID: lecture.folderID?.uuidString,
                     createdAt: lecture.createdAt,
                     payload: Data()
                 )
 
+            record.title = lecture.title
+            record.summaryShort = lecture.summaryShort
+            record.transcriptPreview = Self.transcriptPreview(for: lecture)
+            record.folderRemoteID = lecture.folderID?.uuidString
             record.createdAt = lecture.createdAt
             record.payload = try encoder.encode(lecture)
 
@@ -221,5 +261,20 @@ final class SwiftDataLectureCacheStore {
         if modelContext.hasChanges {
             try modelContext.save()
         }
+    }
+
+    private static func transcriptPreview(for lecture: Lecture) -> String {
+        let transcript = lecture.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !transcript.isEmpty else {
+            return ""
+        }
+
+        let previewLimit = 1_500
+        guard transcript.count > previewLimit else {
+            return transcript
+        }
+
+        let endIndex = transcript.index(transcript.startIndex, offsetBy: previewLimit)
+        return String(transcript[..<endIndex])
     }
 }

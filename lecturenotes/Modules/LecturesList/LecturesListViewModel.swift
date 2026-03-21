@@ -19,10 +19,23 @@ final class LecturesListViewModel {
     @ObservationIgnored private let importManager: LectureImportManager
     @ObservationIgnored private let userProfileService: FirebaseUserProfileService?
     @ObservationIgnored private var repositoryObservationTask: Task<Void, Never>?
+    @ObservationIgnored private var searchTask: Task<Void, Never>?
 
     var lectures: [Lecture] = []
     var folders: [LectureFolder] = []
-    var searchText = ""
+    var searchText = "" {
+        didSet {
+            guard oldValue != searchText else {
+                return
+            }
+
+            scheduleSearch()
+        }
+    }
+    var searchResults: [Lecture] = []
+    var isSearchPresented = false
+    var isSearchAutoPresented = false
+    var isSearching = false
     var selectedFolderID: LectureFolder.ID?
     var isLoading = false
     var selectedLecture: Lecture?
@@ -69,16 +82,20 @@ final class LecturesListViewModel {
 
     deinit {
         repositoryObservationTask?.cancel()
+        searchTask?.cancel()
     }
 
     var filteredLectures: [Lecture] {
-        lectures.filter { lecture in
+        let sourceLectures = hasActiveSearchQuery ? searchResults : lectures
+
+        return sourceLectures.filter { lecture in
             let matchesFolder = selectedFolderID == nil || lecture.folderID == selectedFolderID
-            let matchesQuery =
-                searchText.isEmpty ||
-                lecture.title.localizedStandardContains(searchText)
-            return matchesFolder && matchesQuery
+            return matchesFolder
         }
+    }
+
+    var hasActiveSearchQuery: Bool {
+        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     func lecture(withID lectureID: Lecture.ID) -> Lecture? {
@@ -135,6 +152,40 @@ final class LecturesListViewModel {
 
     func openLecture(_ lecture: Lecture) {
         selectedLecture = lecture
+    }
+
+    func presentSearch() {
+        isSearchAutoPresented = false
+        isSearchPresented = true
+    }
+
+    func presentSearchFromScroll() {
+        guard !hasActiveSearchQuery, !isSearchPresented else {
+            return
+        }
+
+        isSearchAutoPresented = true
+    }
+
+    func hideSearchForScrollIfNeeded() {
+        guard !hasActiveSearchQuery, !isSearchPresented else {
+            return
+        }
+
+        isSearchAutoPresented = false
+    }
+
+    func clearSearch() {
+        searchText = ""
+    }
+
+    func dismissSearch() {
+        searchTask?.cancel()
+        searchText = ""
+        searchResults = []
+        isSearching = false
+        isSearchPresented = false
+        isSearchAutoPresented = false
     }
 
     func requestDelete(_ lecture: Lecture) {
@@ -649,9 +700,69 @@ final class LecturesListViewModel {
         folders = await fetchedFolders
         lectures = await fetchedLectures
 
+        if hasActiveSearchQuery {
+            await refreshSearchResults()
+        } else {
+            searchResults = []
+        }
+
         if let selectedLectureID = selectedLecture?.id {
             selectedLecture = lectures.first(where: { $0.id == selectedLectureID })
         }
+    }
+
+    private func scheduleSearch() {
+        searchTask?.cancel()
+
+        guard hasActiveSearchQuery else {
+            searchResults = []
+            isSearching = false
+            return
+        }
+
+        isSearching = true
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        searchTask = Task { [weak self] in
+            do {
+                try await Task.sleep(for: .milliseconds(250))
+            } catch {
+                return
+            }
+
+            guard let self, !Task.isCancelled else {
+                return
+            }
+
+            await self.refreshSearchResults(for: query)
+        }
+    }
+
+    private func refreshSearchResults() async {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        await refreshSearchResults(for: query)
+    }
+
+    private func refreshSearchResults(for query: String) async {
+        guard !query.isEmpty else {
+            searchResults = []
+            isSearching = false
+            return
+        }
+
+        let results = await repository.searchLectures(matching: query)
+
+        guard !Task.isCancelled else {
+            return
+        }
+
+        let latestQuery = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard latestQuery == query else {
+            return
+        }
+
+        searchResults = results
+        isSearching = false
     }
     
     private func handleImportResult(_ result: SaveRecordingResult) {

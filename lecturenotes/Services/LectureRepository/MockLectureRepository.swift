@@ -4,6 +4,7 @@ protocol LectureRepository {
     func start() async
     func observeChanges() -> AsyncStream<Void>
     func fetchLectures() async -> [Lecture]
+    func searchLectures(matching query: String) async -> [Lecture]
     func fetchFolders() async -> [LectureFolder]
     func fetchLecture(id: UUID) async -> Lecture?
     func saveLecture(_ lecture: Lecture) async throws
@@ -18,6 +19,17 @@ extension LectureRepository {
         AsyncStream { continuation in
             continuation.finish()
         }
+    }
+
+    func searchLectures(matching query: String) async -> [Lecture] {
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lectures = await fetchLectures()
+
+        guard !trimmedQuery.isEmpty else {
+            return lectures
+        }
+
+        return lectures.filter { $0.matchesSearchQuery(trimmedQuery) }
     }
 }
 

@@ -8,6 +8,7 @@ final class FirebaseCachedLectureRepository: LectureRepository {
     private let authService: FirebaseAuthService
     private let firestore: Firestore
     private let cacheStore: SwiftDataLectureCacheStore
+    private let searchStore: SwiftDataLectureSearchStore
     private let syncService: FirebaseLectureSyncService
     private let commandService: FirebaseLectureCommandService
     private let notificationCenter: NotificationCenter
@@ -20,11 +21,13 @@ final class FirebaseCachedLectureRepository: LectureRepository {
         notificationCenter: NotificationCenter = .default
     ) {
         let cacheStore = SwiftDataLectureCacheStore(modelContainer: modelContainer)
+        let searchStore = SwiftDataLectureSearchStore(modelContainer: modelContainer)
         let notificationName = Notification.Name("lectureRepositoryDidChange.\(UUID().uuidString)")
 
         self.authService = authService
         self.firestore = firestore
         self.cacheStore = cacheStore
+        self.searchStore = searchStore
         self.commandService = FirebaseLectureCommandService(authService: authService)
         self.notificationCenter = notificationCenter
         self.notificationName = notificationName
@@ -70,6 +73,15 @@ final class FirebaseCachedLectureRepository: LectureRepository {
         }
 
         return cacheStore.fetchLectures(for: userID)
+    }
+
+    func searchLectures(matching query: String) async -> [Lecture] {
+        guard let userID = currentUserID else {
+            return []
+        }
+
+        let remoteIDs = await searchStore.searchLectureIDs(matching: query, for: userID)
+        return cacheStore.fetchLectures(for: userID, remoteIDs: remoteIDs)
     }
 
     func fetchFolders() async -> [LectureFolder] {
