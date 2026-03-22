@@ -20,6 +20,7 @@ struct LecturesListView: View {
         @Bindable var viewModel = viewModel
         let showsInlineSearchBar = (viewModel.isSearchPresented || viewModel.hasActiveSearchQuery) && currentScrollOffset < 140
         let showsFloatingSearchBar = viewModel.isSearchAutoPresented || ((viewModel.isSearchPresented || viewModel.hasActiveSearchQuery) && currentScrollOffset >= 140)
+        let displayedLectures = viewModel.displayedLectures
 
         NavigationStack {
             VStack(spacing: 0) {
@@ -76,9 +77,10 @@ struct LecturesListView: View {
                             )
                         }
 
-                        if viewModel.isLoading {
-                            ProgressView("Loading lectures")
+                        if viewModel.showsInitialLoadingIndicator && !viewModel.hasCompletedInitialLoad {
+                            LoadingLecturesPlaceholderView()
                                 .frame(maxWidth: .infinity)
+                                .padding(.top, 40)
                         } else if viewModel.lectures.isEmpty {
                             EmptyLecturesPlaceholderView()
                                 .frame(maxWidth: .infinity)
@@ -93,7 +95,7 @@ struct LecturesListView: View {
                                 .padding(.top, 40)
                         } else {
                             LazyVStack(spacing: 0) {
-                                ForEach(viewModel.filteredLectures) { lecture in
+                                ForEach(displayedLectures) { lecture in
                                     LectureRowView(
                                         lecture: lecture,
                                         onOpen: {
@@ -103,11 +105,20 @@ struct LecturesListView: View {
                                             viewModel.presentActionSheet(for: lecture.id)
                                         }
                                     )
+                                    .onAppear {
+                                        viewModel.loadMoreLecturesIfNeeded(currentLectureID: lecture.id)
+                                    }
 
-                                    if lecture.id != viewModel.filteredLectures.last?.id {
+                                    if lecture.id != displayedLectures.last?.id {
                                         Divider()
                                             .padding(.leading, 58)
                                     }
+                                }
+
+                                if viewModel.hasMoreLecturesToDisplay {
+                                    ProgressView()
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 20)
                                 }
                             }
                         }
@@ -491,6 +502,12 @@ private struct EmptyLecturesPlaceholderView: View {
         } description: {
             Text("Tap the mic button to start recording.")
         }
+    }
+}
+
+private struct LoadingLecturesPlaceholderView: View {
+    var body: some View {
+        ProgressView("Loading recordings")
     }
 }
 

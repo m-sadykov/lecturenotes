@@ -4,6 +4,8 @@ import Observation
 @MainActor
 @Observable
 final class LecturesListViewModel {
+    private static let lecturePageSize = 50
+
     enum SaveRecordingResult {
         case saved(Lecture)
         case rejected(message: String)
@@ -20,6 +22,8 @@ final class LecturesListViewModel {
     @ObservationIgnored private let userProfileService: FirebaseUserProfileService?
     @ObservationIgnored private var repositoryObservationTask: Task<Void, Never>?
     @ObservationIgnored private var searchTask: Task<Void, Never>?
+    @ObservationIgnored private var loadingIndicatorTask: Task<Void, Never>?
+    @ObservationIgnored private var hasLoadedOnce = false
 
     var lectures: [Lecture] = []
     var folders: [LectureFolder] = []
@@ -29,6 +33,7 @@ final class LecturesListViewModel {
                 return
             }
 
+            resetVisibleLectureCount()
             scheduleSearch()
         }
     }
@@ -36,8 +41,18 @@ final class LecturesListViewModel {
     var isSearchPresented = false
     var isSearchAutoPresented = false
     var isSearching = false
-    var selectedFolderID: LectureFolder.ID?
+    var selectedFolderID: LectureFolder.ID? {
+        didSet {
+            guard oldValue != selectedFolderID else {
+                return
+            }
+
+            resetVisibleLectureCount()
+        }
+    }
     var isLoading = false
+    var hasCompletedInitialLoad = false
+    var showsInitialLoadingIndicator = false
     var selectedLecture: Lecture?
     var activeSheet: LecturesListActiveSheet?
     var recorderViewModel: RecorderViewModel?
@@ -56,6 +71,8 @@ final class LecturesListViewModel {
     var pendingConsentAction: LecturesListPendingConsentAction?
     var pendingTextImportLecture: Lecture?
     var pendingYouTubeImportLecture: Lecture?
+    var visibleLectureCount: Int
+    private var hasReceivedRepositoryUpdate = false
 
     init(
         repository: LectureRepository,
@@ -66,6 +83,7 @@ final class LecturesListViewModel {
         self.processingService = processingService
         self.userProfileService = userProfileService
         importManager = LectureImportManager()
+        visibleLectureCount = Self.lecturePageSize
     }
 
     init(
@@ -78,11 +96,13 @@ final class LecturesListViewModel {
         self.processingService = processingService
         self.importManager = importManager
         self.userProfileService = userProfileService
+        visibleLectureCount = Self.lecturePageSize
     }
 
     deinit {
         repositoryObservationTask?.cancel()
         searchTask?.cancel()
+        loadingIndicatorTask?.cancel()
     }
 
     var filteredLectures: [Lecture] {
@@ -92,6 +112,14 @@ final class LecturesListViewModel {
             let matchesFolder = selectedFolderID == nil || lecture.folderID == selectedFolderID
             return matchesFolder
         }
+    }
+
+    var displayedLectures: [Lecture] {
+        Array(filteredLectures.prefix(visibleLectureCount))
+    }
+
+    var hasMoreLecturesToDisplay: Bool {
+        filteredLectures.count > visibleLectureCount
     }
 
     var hasActiveSearchQuery: Bool {
@@ -603,11 +631,37 @@ final class LecturesListViewModel {
     }
 
     func load() async {
+        guard !hasLoadedOnce, !isLoading else {
+            return
+        }
+
         startObservingRepositoryIfNeeded()
+        hasReceivedRepositoryUpdate = false
+        hasCompletedInitialLoad = false
         isLoading = true
+        showsInitialLoadingIndicator = false
+        scheduleInitialLoadingIndicator()
         await repository.start()
         await reloadRepositoryData()
+        await waitForInitialRepositoryContentIfNeeded()
+        loadingIndicatorTask?.cancel()
+        loadingIndicatorTask = nil
+        showsInitialLoadingIndicator = false
         isLoading = false
+        hasCompletedInitialLoad = true
+        hasLoadedOnce = true
+    }
+
+    func loadMoreLecturesIfNeeded(currentLectureID: Lecture.ID) {
+        guard hasMoreLecturesToDisplay else {
+            return
+        }
+
+        guard displayedLectures.last?.id == currentLectureID else {
+            return
+        }
+
+        visibleLectureCount += Self.lecturePageSize
     }
 
     func replaceLecture(_ lecture: Lecture) {
@@ -688,6 +742,7 @@ final class LecturesListViewModel {
             }
 
             for await _ in repository.observeChanges() {
+                hasReceivedRepositoryUpdate = true
                 await reloadRepositoryData()
             }
         }
@@ -708,6 +763,53 @@ final class LecturesListViewModel {
 
         if let selectedLectureID = selectedLecture?.id {
             selectedLecture = lectures.first(where: { $0.id == selectedLectureID })
+        }
+    }
+
+    private func waitForInitialRepositoryContentIfNeeded() async {
+        guard lectures.isEmpty else {
+            return
+        }
+
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { [weak self] in
+                await self?.waitUntilRepositoryUpdates()
+            }
+
+            group.addTask {
+                try? await Task.sleep(for: .seconds(2.5))
+            }
+
+            _ = await group.next()
+            group.cancelAll()
+        }
+
+        await reloadRepositoryData()
+    }
+
+    private func waitUntilRepositoryUpdates() async {
+        while !hasReceivedRepositoryUpdate {
+            if Task.isCancelled {
+                return
+            }
+
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+    }
+
+    private func resetVisibleLectureCount() {
+        visibleLectureCount = Self.lecturePageSize
+    }
+
+    private func scheduleInitialLoadingIndicator() {
+        loadingIndicatorTask?.cancel()
+        loadingIndicatorTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard let self, !Task.isCancelled, !hasCompletedInitialLoad else {
+                return
+            }
+
+            showsInitialLoadingIndicator = true
         }
     }
 
