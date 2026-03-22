@@ -26,7 +26,9 @@ struct LectureNotesRootView: View {
                         userProfileService: appEnvironment.userProfileService
                     ),
                     repository: appEnvironment.repository,
-                    processingService: appEnvironment.processingService
+                    authService: appEnvironment.authService,
+                    processingService: appEnvironment.processingService,
+                    userProfileService: appEnvironment.userProfileService
                 )
             }
         }

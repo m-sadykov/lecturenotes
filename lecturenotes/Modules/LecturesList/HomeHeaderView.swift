@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct HomeHeaderView: View {
+    let authService: FirebaseAuthService?
+    let userProfileService: FirebaseUserProfileService?
+
     var body: some View {
         HStack {
             Text("LectureNotes")
@@ -8,7 +11,10 @@ struct HomeHeaderView: View {
                 .bold()
             Spacer()
             NavigationLink {
-                SettingsView()
+                SettingsView(
+                    authService: authService,
+                    userProfileService: userProfileService
+                )
             } label: {
                 Image(systemName: "gearshape")
                     .font(.title3)

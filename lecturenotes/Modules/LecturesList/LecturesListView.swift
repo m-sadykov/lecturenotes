@@ -8,7 +8,9 @@ struct LecturesListView: View {
     @AppStorage("hasConfirmedAIProcessingConsent") private var hasConfirmedAIProcessingConsent = false
     @State var viewModel: LecturesListViewModel
     let repository: LectureRepository
+    let authService: FirebaseAuthService?
     let processingService: FirebaseLectureProcessingService?
+    let userProfileService: FirebaseUserProfileService?
     @State private var activeFileImport: LocalFileImport = .importAudio
     @State private var isFileImporterPresented = false
     @State private var pendingLocalConsentAction: LocalFileImport?
@@ -21,7 +23,10 @@ struct LecturesListView: View {
 
         NavigationStack {
             VStack(spacing: 0) {
-                HomeHeaderView()
+                HomeHeaderView(
+                    authService: authService,
+                    userProfileService: userProfileService
+                )
                     .padding(.horizontal, 20)
                     .padding(.top, 6)
                     .padding(.bottom, 12)
