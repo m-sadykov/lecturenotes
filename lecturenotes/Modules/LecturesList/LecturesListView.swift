@@ -7,6 +7,7 @@ struct LecturesListView: View {
 
     @AppStorage("hasConfirmedAIProcessingConsent") private var hasConfirmedAIProcessingConsent = false
     @State var viewModel: LecturesListViewModel
+    let paywallPresentationModel: PaywallPresentationModel
     let repository: LectureRepository
     let authService: FirebaseAuthService?
     let processingService: FirebaseLectureProcessingService?
@@ -36,7 +37,7 @@ struct LecturesListView: View {
                     VStack(alignment: .leading, spacing: 18) {
                         LecturesListScrollOffsetReader()
 
-                        PremiumBannerView()
+                        PremiumBannerView(paywallPresentationModel: paywallPresentationModel)
 
                         QuickActionsStripView {
                             presentAudioImportFlow()
@@ -554,6 +555,7 @@ private enum LocalFileImport {
 private struct LecturesListPreviewCanvas: View {
     private let lectures = MockLectures.makeLectures()
     private let folders = MockLectures.makeFolders()
+    @State private var paywallPresentationModel = PaywallPresentationModel()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -564,7 +566,7 @@ private struct LecturesListPreviewCanvas: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    PremiumBannerView()
+                    PremiumBannerView(paywallPresentationModel: paywallPresentationModel)
                     QuickActionsStripView {} onImportText: {} onImportYouTube: {} onImportPDF: {}
                     previewSectionHeader
                     LecturesSearchBarView(

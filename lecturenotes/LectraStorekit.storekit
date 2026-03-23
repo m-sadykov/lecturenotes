@@ -93,6 +93,34 @@
           "winbackOffers" : [
 
           ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "6.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "B769D931",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "",
+              "displayName" : "",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.marat.lecturenotesai_premium_monthly_discount",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Premium_monthly_discounted",
+          "subscriptionGroupID" : "3ADD8E97",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
         }
       ]
     },
@@ -153,6 +181,34 @@
           "productID" : "com.marat.lecturenotesai_pro_annual",
           "recurringSubscriptionPeriod" : "P1Y",
           "referenceName" : "Pro_annual",
+          "subscriptionGroupID" : "E1187980",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "59.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "30D3D5D9",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "",
+              "displayName" : "",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.marat.lecturenotesai_pro_annual_discount",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Pro_annual_discount",
           "subscriptionGroupID" : "E1187980",
           "type" : "RecurringSubscription",
           "winbackOffers" : [
