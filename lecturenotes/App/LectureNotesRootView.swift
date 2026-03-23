@@ -90,13 +90,22 @@ struct LectureNotesRootView: View {
             }
         }
         .onChange(of: scenePhase, initial: true) { _, newPhase in
-            guard newPhase == .active else { return }
-            guard !appState.needsOnboarding else { return }
+            switch newPhase {
+            case .active:
+                guard !appState.needsOnboarding else { return }
 
-            Task {
-                await paywallPresentationModel.presentScheduledProYearlyDiscountPaywallIfNeeded(
-                    for: subscriptionManager
+                Task {
+                    await paywallPresentationModel.presentScheduledProYearlyDiscountPaywallIfNeeded(
+                        for: subscriptionManager
+                    )
+                }
+            case .background:
+                paywallPresentationModel.markScheduledOfferAnchorFromAppBackgroundIfNeeded(
+                    for: subscriptionManager,
+                    isOnboardingRequired: appState.needsOnboarding
                 )
+            default:
+                return
             }
         }
         .task(id: shouldMonitorScheduledDiscountPaywall) {

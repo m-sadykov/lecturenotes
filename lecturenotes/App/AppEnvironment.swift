@@ -85,7 +85,20 @@ final class AppEnvironment {
 @MainActor
 @Observable
 final class AppState {
-    var needsOnboarding = true
+    var needsOnboarding: Bool {
+        didSet {
+            userDefaults.set(needsOnboarding, forKey: Self.needsOnboardingKey)
+        }
+    }
+
+    @ObservationIgnored private let userDefaults: UserDefaults
+
+    private static let needsOnboardingKey = "appState.needsOnboarding"
+
+    init(userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
+        self.needsOnboarding = userDefaults.object(forKey: Self.needsOnboardingKey) as? Bool ?? true
+    }
 
     static func preview(needsOnboarding: Bool = false) -> AppState {
         let state = AppState()

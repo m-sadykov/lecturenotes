@@ -13,7 +13,7 @@ final class PaywallPresentationModel {
     }
 
     static let defaultOfferingIdentifier = "default"
-    static let proYearlyDiscountOfferingIdentifier = "com.marat.lecturenotesai_pro_annual_discount"
+    static let proYearlyDiscountOfferingIdentifier = "pro_yearly_discount_offer"
 
     var presentedOffering: Offering?
     var isLoadingPaywall = false
@@ -23,7 +23,7 @@ final class PaywallPresentationModel {
     @ObservationIgnored private var activePresentationSource: PresentationSource?
     @ObservationIgnored private var didUnlockInActivePresentation = false
 
-    private static let scheduledOfferPresentationInterval: TimeInterval = 4 * 60 * 60
+    private static let scheduledOfferPresentationInterval: TimeInterval = 3 * 60 * 60
     static let scheduledOfferPollingInterval: Duration = .seconds(60)
     private static let scheduledOfferLastPresentedAtKey = "paywall.proYearlyDiscountOffer.lastPresentedAt"
 
@@ -43,7 +43,7 @@ final class PaywallPresentationModel {
     func presentDefaultPaywallAfterOnboardingIfNeeded(
         for subscriptionManager: SubscriptionManager
     ) async {
-        guard subscriptionManager.currentPlan == .freemium else { return }
+        guard shouldAllowPaywallPresentation(for: subscriptionManager.currentPlan) else { return }
         guard presentedOffering == nil else { return }
 
         _ = await presentPaywall(
@@ -57,7 +57,7 @@ final class PaywallPresentationModel {
     func presentScheduledProYearlyDiscountPaywallIfNeeded(
         for subscriptionManager: SubscriptionManager
     ) async {
-        guard subscriptionManager.currentPlan == .freemium else { return }
+        guard shouldAllowPaywallPresentation(for: subscriptionManager.currentPlan) else { return }
         guard presentedOffering == nil else { return }
         guard shouldPresentScheduledOffer else { return }
 
@@ -69,8 +69,19 @@ final class PaywallPresentationModel {
         )
 
         if didPresent {
-            userDefaults.set(Date.now, forKey: Self.scheduledOfferLastPresentedAtKey)
+            markScheduledOfferAnchorNow()
         }
+    }
+
+    func markScheduledOfferAnchorFromAppBackgroundIfNeeded(
+        for subscriptionManager: SubscriptionManager,
+        isOnboardingRequired: Bool
+    ) {
+        guard !isOnboardingRequired else { return }
+        guard shouldAllowPaywallPresentation(for: subscriptionManager.currentPlan) else { return }
+        guard presentedOffering == nil else { return }
+
+        markScheduledOfferAnchorNow()
     }
 
     func handleSuccessfulPurchaseOrRestore() {
@@ -83,13 +94,13 @@ final class PaywallPresentationModel {
             didUnlockInActivePresentation = false
         }
 
-        guard subscriptionManager.currentPlan == .freemium, !didUnlockInActivePresentation else {
+        guard shouldAllowPaywallPresentation(for: subscriptionManager.currentPlan), !didUnlockInActivePresentation else {
             return
         }
 
         switch activePresentationSource {
         case .postOnboarding, .scheduledDiscount:
-            userDefaults.set(Date.now, forKey: Self.scheduledOfferLastPresentedAtKey)
+            markScheduledOfferAnchorNow()
         case .manualDefault, .none:
             break
         }
@@ -146,6 +157,14 @@ final class PaywallPresentationModel {
 
     private var scheduledOfferLastPresentedAt: Date? {
         userDefaults.object(forKey: Self.scheduledOfferLastPresentedAtKey) as? Date
+    }
+
+    private func shouldAllowPaywallPresentation(for currentPlan: AppUserPlan) -> Bool {
+        currentPlan == .freemium
+    }
+
+    private func markScheduledOfferAnchorNow() {
+        userDefaults.set(Date.now, forKey: Self.scheduledOfferLastPresentedAtKey)
     }
 }
 
