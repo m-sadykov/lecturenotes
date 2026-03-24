@@ -150,7 +150,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.marat.lecturenotesai_pro_monthly",
+          "productID" : "com.marat.lecturenotesai_pro_monthly_2",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "Pro_monthly",
           "subscriptionGroupID" : "E1187980",
@@ -178,7 +178,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.marat.lecturenotesai_pro_annual",
+          "productID" : "com.marat.lecturenotesai_pro_annual_2",
           "recurringSubscriptionPeriod" : "P1Y",
           "referenceName" : "Pro_annual",
           "subscriptionGroupID" : "E1187980",
@@ -206,7 +206,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.marat.lecturenotesai_pro_annual_discount",
+          "productID" : "com.marat.lecturenotesai_pro_annual_discount_2",
           "recurringSubscriptionPeriod" : "P1Y",
           "referenceName" : "Pro_annual_discount",
           "subscriptionGroupID" : "E1187980",

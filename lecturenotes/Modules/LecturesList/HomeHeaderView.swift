@@ -6,7 +6,7 @@ struct HomeHeaderView: View {
 
     var body: some View {
         HStack {
-            Text("LectureNotes")
+            Text("LectraAI")
                 .font(.title)
                 .bold()
             Spacer()

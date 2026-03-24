@@ -298,7 +298,7 @@
 				DEVELOPMENT_TEAM = KKRU34GVP4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = LectureNotes;
+				INFOPLIST_KEY_CFBundleDisplayName = Lectra.AI;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "LectureNotes records audio so you can save and process lectures.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -336,7 +336,7 @@
 				DEVELOPMENT_TEAM = KKRU34GVP4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = LectureNotes;
+				INFOPLIST_KEY_CFBundleDisplayName = Lectra.AI;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "LectureNotes records audio so you can save and process lectures.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

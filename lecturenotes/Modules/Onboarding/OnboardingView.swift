@@ -2,38 +2,275 @@ import SwiftUI
 
 struct OnboardingView: View {
     @Bindable var appState: AppState
-    @State private var selectedLanguage = "English"
+    @State private var selectedPageIndex = 0
 
-    private let languages = ["English", "Русский", "Қазақша"]
+    private let pages = OnboardingPage.defaultPages
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Lecture Notes AI") {
-                    Text("Record lectures, get AI notes, flashcards, and quiz practice.")
-                }
+            ZStack {
+                Color(.systemGray6)
+                    .ignoresSafeArea()
 
-                Section("Permissions") {
-                    Label("Microphone access required for recording", systemImage: "mic.fill")
-                }
+                VStack(spacing: 0) {
+                    OnboardingHeaderView(
+                        showsSkip: selectedPageIndex < pages.count - 1,
+                        onSkip: finishOnboarding
+                    )
 
-                Section("Output Language") {
-                    Picker("Language", selection: $selectedLanguage) {
-                        ForEach(languages, id: \.self) { language in
-                            Text(language).tag(language)
+                    TabView(selection: $selectedPageIndex) {
+                        ForEach(pages.indices, id: \.self) { index in
+                            OnboardingPageView(page: pages[index])
+                                .tag(index)
                         }
                     }
-                }
-
-                Section {
-                    Button("Continue", systemImage: "arrow.right.circle.fill") {
-                        appState.needsOnboarding = false
-                    }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
                 }
             }
-            .navigationTitle("Welcome")
+            .safeAreaInset(edge: .bottom) {
+                OnboardingFooterView(
+                    pageCount: pages.count,
+                    selectedPageIndex: selectedPageIndex,
+                    actionTitle: selectedPageIndex == pages.count - 1 ? "Get Started" : "Continue",
+                    onPrimaryAction: handlePrimaryAction
+                )
+            }
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
+
+    private func handlePrimaryAction() {
+        if selectedPageIndex == pages.count - 1 {
+            finishOnboarding()
+            return
+        }
+
+        withAnimation(.easeInOut(duration: 0.25)) {
+            selectedPageIndex += 1
+        }
+    }
+
+    private func finishOnboarding() {
+        appState.needsOnboarding = false
+    }
+}
+
+private struct OnboardingHeaderView: View {
+    let showsSkip: Bool
+    let onSkip: () -> Void
+
+    var body: some View {
+        HStack {
+            Spacer()
+
+            Button("Skip", action: onSkip)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .opacity(showsSkip ? 1 : 0)
+                .allowsHitTesting(showsSkip)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+    }
+}
+
+private struct OnboardingPageView: View {
+    let page: OnboardingPage
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Spacer(minLength: 12)
+
+            OnboardingHeroView(
+                emoji: page.emoji
+            )
+
+            VStack(spacing: 12) {
+                Text(page.title)
+                    .font(.largeTitle)
+                    .bold()
+                    .frame(maxWidth: .infinity)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(page.message)
+                    .font(.body)
+                    .frame(maxWidth: .infinity)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            OnboardingBenefitsCard(benefits: page.benefits)
+
+            Spacer(minLength: 12)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 20)
+        .padding(.bottom, 32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+}
+
+private struct OnboardingHeroView: View {
+    let emoji: String
+
+    var body: some View {
+        Text(emoji)
+            .font(.system(size: 72))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct OnboardingBenefitsCard: View {
+    let benefits: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            ForEach(benefits, id: \.self) { benefit in
+                OnboardingBenefitRow(title: benefit)
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.background, in: .rect(cornerRadius: 24))
+        .overlay {
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(.black.opacity(0.04), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.04), radius: 10, y: 4)
+    }
+}
+
+private struct OnboardingBenefitRow: View {
+    let title: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(.black.opacity(0.06))
+                    .frame(width: 28, height: 28)
+
+                Image(systemName: "checkmark")
+                    .font(.footnote)
+                    .foregroundStyle(.primary)
+            }
+            .padding(.top, 2)
+
+            Text(title)
+                .font(.body)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+        }
+    }
+}
+
+private struct OnboardingFooterView: View {
+    let pageCount: Int
+    let selectedPageIndex: Int
+    let actionTitle: String
+    let onPrimaryAction: () -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            OnboardingPageIndicator(
+                pageCount: pageCount,
+                selectedPageIndex: selectedPageIndex
+            )
+
+            Button(action: onPrimaryAction) {
+                ZStack {
+                    Text("Get Started")
+                        .font(.headline)
+                        .opacity(0)
+
+                    Text(actionTitle)
+                        .font(.headline)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical)
+                .foregroundStyle(.white)
+                .background(.primary)
+                .clipShape(.rect(cornerRadius: 18))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 14)
+        .padding(.bottom, 16)
+        .background(.background)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(.black.opacity(0.06))
+                .frame(height: 1)
+        }
+    }
+}
+
+private struct OnboardingPageIndicator: View {
+    let pageCount: Int
+    let selectedPageIndex: Int
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(0..<pageCount, id: \.self) { index in
+                Capsule()
+                    .fill(index == selectedPageIndex ? Color.primary : Color.primary.opacity(0.12))
+                    .frame(width: index == selectedPageIndex ? 28 : 8, height: 8)
+                    .animation(.easeInOut(duration: 0.2), value: selectedPageIndex)
+            }
+        }
+    }
+}
+
+private struct OnboardingPage: Identifiable {
+    let id: String
+    let emoji: String
+    let title: String
+    let message: String
+    let benefits: [String]
+
+    static let defaultPages: [OnboardingPage] = [
+        OnboardingPage(
+            id: "capture",
+            emoji: "🎙️",
+            title: "Turn Any Lecture into Study Material",
+            message: "Record audio or import text, PDF, and YouTube content to keep every lecture in one organized place.",
+            benefits: [
+                "Record or import in the format you already use",
+                "Keep lectures, notes, and sources together",
+                "Start studying without rebuilding your workflow"
+            ]
+        ),
+        OnboardingPage(
+            id: "summarize",
+            emoji: "📝",
+            title: "Get Clear Notes Without Replaying Everything",
+            message: "LectraAI turns long material into a transcript plus concise summaries, so the main ideas are easy to review.",
+            benefits: [
+                "Short and detailed summaries for fast review",
+                "Structured notes from dense lecture content",
+                "Spend less time searching for the key points"
+            ]
+        ),
+        OnboardingPage(
+            id: "practice",
+            emoji: "🎯",
+            title: "Study with Flashcards and Quiz Practice",
+            message: "Move from passive reading to active recall with built-in study modes generated from each lecture.",
+            benefits: [
+                "Flashcards for memorization and spaced review",
+                "Quiz practice to check what you actually know",
+                "One lecture becomes summary, recall, and practice"
+            ]
+        )
+    ]
 }
 
 #Preview {

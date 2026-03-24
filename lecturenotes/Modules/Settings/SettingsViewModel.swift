@@ -104,7 +104,7 @@ final class SettingsViewModel {
 
         return SupportEmailDraft(
             recipient: SettingsSupportConfiguration.supportEmailAddress,
-            subject: "LectureNotes support request",
+            subject: "LectraAI support request",
             body: """
             Hi Support,
 

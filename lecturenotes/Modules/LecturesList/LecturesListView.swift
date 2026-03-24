@@ -594,7 +594,7 @@ private struct LecturesListPreviewCanvas: View {
 
     private var previewHeader: some View {
         HStack {
-            Text("LectureNotes")
+            Text("LectraAI")
                 .font(.title)
                 .bold()
             Spacer()
