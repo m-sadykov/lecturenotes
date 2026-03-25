@@ -9,6 +9,8 @@ final class FirebaseUserProfileService {
     private let authService: FirebaseAuthService
     private let firestore: Firestore
     private(set) var currentProfile: AppUserProfile?
+    @ObservationIgnored private var profileListener: ListenerRegistration?
+    @ObservationIgnored private var observedUserID: String?
 
     init(
         authService: FirebaseAuthService,
@@ -16,6 +18,10 @@ final class FirebaseUserProfileService {
     ) {
         self.authService = authService
         self.firestore = firestore ?? Firestore.firestore()
+    }
+
+    deinit {
+        profileListener?.remove()
     }
 
     func prepareCurrentUserProfile() async {
@@ -39,6 +45,7 @@ final class FirebaseUserProfileService {
                 merge: true
             )
             currentProfile = normalizedProfile
+            startObservingCurrentUserProfile(userID: user.uid, at: documentReference)
             return normalizedProfile
         }
 
@@ -49,6 +56,7 @@ final class FirebaseUserProfileService {
             merge: true
         )
         currentProfile = profile
+        startObservingCurrentUserProfile(userID: user.uid, at: documentReference)
         return profile
     }
 
@@ -118,6 +126,27 @@ final class FirebaseUserProfileService {
             plan: storedPlan,
             processingQuota: normalizedQuota
         )
+    }
+
+    private func startObservingCurrentUserProfile(
+        userID: String,
+        at documentReference: DocumentReference
+    ) {
+        guard observedUserID != userID || profileListener == nil else {
+            return
+        }
+
+        profileListener?.remove()
+        observedUserID = userID
+        profileListener = documentReference.addSnapshotListener { [weak self] snapshot, _ in
+            Task { @MainActor [weak self] in
+                guard let self, let snapshot, snapshot.exists, let data = snapshot.data(), !data.isEmpty else {
+                    return
+                }
+
+                self.currentProfile = self.normalizedProfile(userID: userID, data: data)
+            }
+        }
     }
 
     private func makeDocumentData(

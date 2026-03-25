@@ -368,6 +368,27 @@ struct LecturesListView: View {
                     }
                 )
             }
+            .sheet(
+                item: $viewModel.importLimitSheetContent,
+                onDismiss: {
+                    viewModel.dismissImportLimitSheet()
+                }
+            ) { content in
+                ImportLimitSheetView(
+                    title: content.title,
+                    message: content.message,
+                    upgradeTitle: content.upgradeTitle,
+                    upgradeMessage: content.upgradeMessage,
+                    onViewPlans: {
+                        viewModel.dismissImportLimitSheet()
+                        Task {
+                            await paywallPresentationModel.presentDefaultPaywall()
+                        }
+                    }
+                )
+                .presentationDetents([.height(ImportLimitSheetView.preferredSheetHeight)])
+                .presentationDragIndicator(.visible)
+            }
             .alert("Import", isPresented: $viewModel.isImportAlertPresented) {
                 Button("OK") {
                     viewModel.dismissImportAlert()

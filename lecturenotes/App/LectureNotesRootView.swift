@@ -30,6 +30,7 @@ struct LectureNotesRootView: View {
 
     var body: some View {
         let shouldMonitorScheduledDiscountPaywall = scenePhase == .active && !appState.needsOnboarding
+        let currentUserProfile = appEnvironment.userProfileService?.currentProfile
 
         Group {
             if appState.needsOnboarding {
@@ -79,6 +80,20 @@ struct LectureNotesRootView: View {
             }
         } message: {
             Text(paywallPresentationModel.paywallErrorMessage ?? "")
+        }
+        .onChange(of: currentUserProfile, initial: true) { oldValue, newValue in
+            guard didExhaustFreemiumProcessingQuota(from: oldValue, to: newValue) else { return }
+
+            Task {
+                await paywallPresentationModel.presentDefaultPaywallIfNeeded(for: subscriptionManager)
+            }
+        }
+        .onChange(of: lecturesListViewModel.processingLimitReachedToken, initial: false) { oldValue, newValue in
+            guard newValue > oldValue else { return }
+
+            Task {
+                await paywallPresentationModel.presentDefaultPaywallIfNeeded(for: subscriptionManager)
+            }
         }
         .onChange(of: appState.needsOnboarding, initial: false) { oldValue, newValue in
             guard oldValue, !newValue else { return }
@@ -131,6 +146,29 @@ struct LectureNotesRootView: View {
             await appEnvironment.userProfileService?.prepareCurrentUserProfile()
             await lecturesListViewModel.load()
         }
+    }
+
+    private func didExhaustFreemiumProcessingQuota(
+        from oldProfile: AppUserProfile?,
+        to newProfile: AppUserProfile?
+    ) -> Bool {
+        guard let newProfile else {
+            return false
+        }
+
+        guard newProfile.plan == .freemium, !newProfile.processingQuota.isUnlimited else {
+            return false
+        }
+
+        guard newProfile.processingQuota.remainingCount == 0 else {
+            return false
+        }
+
+        guard let oldProfile else {
+            return false
+        }
+
+        return oldProfile.processingQuota.isUnlimited || oldProfile.processingQuota.remainingCount > 0
     }
 }
  

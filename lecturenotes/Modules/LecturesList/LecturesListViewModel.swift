@@ -6,6 +6,20 @@ import Observation
 final class LecturesListViewModel {
     private static let lecturePageSize = 50
 
+    struct ImportLimitSheetContent: Identifiable {
+        enum Kind {
+            case audio
+            case pdf
+        }
+
+        let id = UUID()
+        let kind: Kind
+        let title: String
+        let message: String
+        let upgradeTitle: String
+        let upgradeMessage: String
+    }
+
     enum SaveRecordingResult {
         case saved(Lecture)
         case rejected(message: String)
@@ -60,12 +74,14 @@ final class LecturesListViewModel {
     var removalFeedbackToken = 0
     var importFeedbackToken = 0
     var processingStartFeedbackToken = 0
+    var processingLimitReachedToken = 0
     var isImporterPresented = false
     var isPDFImporterPresented = false
     var isTextImportSheetPresented = false
     var isYouTubeImportSheetPresented = false
     var isImportAlertPresented = false
     var importAlertMessage = ""
+    var importLimitSheetContent: ImportLimitSheetContent?
     var pendingDeletionLecture: Lecture?
     var isAIConsentPresented = false
     var pendingConsentAction: LecturesListPendingConsentAction?
@@ -147,6 +163,10 @@ final class LecturesListViewModel {
     func dismissImportAlert() {
         isImportAlertPresented = false
         importAlertMessage = ""
+    }
+
+    func dismissImportLimitSheet() {
+        importLimitSheetContent = nil
     }
 
     func dismissDeletionAlert() {
@@ -499,6 +519,7 @@ final class LecturesListViewModel {
             title: textDocument.suggestedTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? importManager.suggestedTitle(for: textDocument.text) : textDocument.suggestedTitle,
             sourceType: textDocument.sourceType,
             audioURL: nil,
+            pdfPageCount: textDocument.pageCount,
             createdAt: textDocument.createdAt,
             duration: importManager.estimateReadingDuration(for: textDocument.text),
             status: lectureStatus,
@@ -724,6 +745,11 @@ final class LecturesListViewModel {
                 lectureToProcess = try await processingService.startProcessing(for: lectureToProcess)
                 replaceLecture(lectureToProcess)
             } catch {
+                if let processingError = error as? FirebaseLectureProcessingError,
+                   case .processingLimitExceeded = processingError {
+                    processingLimitReachedToken += 1
+                }
+
                 lectureToProcess.status = .failed
                 lectureToProcess.processingErrorMessage = error.localizedDescription
                 replaceLecture(lectureToProcess)
@@ -873,6 +899,9 @@ final class LecturesListViewModel {
             importFeedbackToken += 1
             selectedLecture = lecture
         case .rejected(let message):
+            guard importLimitSheetContent == nil else {
+                return
+            }
             presentImportError(message)
         }
     }
@@ -915,6 +944,9 @@ final class LecturesListViewModel {
         let userProfile = await currentUserProfile()
         let limit = userProfile?.audioImportLimitDuration ?? .seconds(5 * 60)
         guard duration <= limit else {
+            importLimitSheetContent = makeAudioImportLimitSheetContent(
+                userProfile: userProfile
+            )
             return "Your \(userProfile?.plan.title ?? "Freemium") plan allows audio imports up to \(LectureFormatters.durationText(limit)) per file."
         }
 
@@ -929,6 +961,9 @@ final class LecturesListViewModel {
         let userProfile = await currentUserProfile()
         let limit = userProfile?.pdfPageLimit ?? 5
         guard pageCount <= limit else {
+            importLimitSheetContent = makePDFImportLimitSheetContent(
+                userProfile: userProfile
+            )
             return "Your \(userProfile?.plan.title ?? "Freemium") plan allows PDF imports up to \(limit) pages per file."
         }
 
@@ -942,6 +977,7 @@ final class LecturesListViewModel {
 
         let userProfile = await currentUserProfile()
         guard userProfile?.canStartProcessing ?? true else {
+            processingLimitReachedToken += 1
             let remainingCount = max(userProfile?.processingQuota.remainingCount ?? 0, 0)
             return "You have \(remainingCount) processing attempts left on your \(userProfile?.plan.title ?? "Freemium") plan."
         }
@@ -955,6 +991,50 @@ final class LecturesListViewModel {
         }
 
         return try? await userProfileService?.ensureCurrentUserProfile()
+    }
+
+    private func makeAudioImportLimitSheetContent(
+        userProfile: AppUserProfile?
+    ) -> ImportLimitSheetContent {
+        let message: String
+        switch userProfile?.plan ?? .freemium {
+        case .freemium:
+            message = "This recording exceeds your plan limit. Freemium plan allows only 5 minutes per audio import."
+        case .premium:
+            message = "This recording exceeds your plan limit. Premium plan allows only 100 minutes per audio import."
+        case .pro:
+            message = "This recording exceeds your plan limit. Pro plan allows only 4 hours per audio import."
+        }
+
+        return ImportLimitSheetContent(
+            kind: .audio,
+            title: "Recording Too Long",
+            message: message,
+            upgradeTitle: "Upgrade to Pro",
+            upgradeMessage: "Record up to 4 hours per recording with Pro."
+        )
+    }
+
+    private func makePDFImportLimitSheetContent(
+        userProfile: AppUserProfile?
+    ) -> ImportLimitSheetContent {
+        let message: String
+        switch userProfile?.plan ?? .freemium {
+        case .freemium:
+            message = "This file exceeds your plan limit. Freemium plan allows only 5 pages per file import."
+        case .premium:
+            message = "This file exceeds your plan limit. Premium plan allows only 50 pages per file import."
+        case .pro:
+            message = "This file exceeds your plan limit. Pro plan allows only 200 pages per file import."
+        }
+
+        return ImportLimitSheetContent(
+            kind: .pdf,
+            title: "PDF Too Large",
+            message: message,
+            upgradeTitle: "Upgrade to Pro",
+            upgradeMessage: "Import PDFs up to 200 pages with Pro."
+        )
     }
 }
 

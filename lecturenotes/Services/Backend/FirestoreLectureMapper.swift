@@ -31,6 +31,12 @@ enum FirestoreLectureMapper {
             "updatedAt": FieldValue.serverTimestamp()
         ]
 
+        if let pdfPageCount = lecture.pdfPageCount {
+            data["pdfPageCount"] = pdfPageCount
+        } else {
+            data["pdfPageCount"] = FieldValue.delete()
+        }
+
         if let sourceURL = lecture.sourceURL {
             data["sourceURL"] = sourceURL.absoluteString
         } else {
@@ -76,6 +82,7 @@ enum FirestoreLectureMapper {
             title: stringValue(for: "title", in: data) ?? "Untitled Lecture",
             sourceType: LectureSourceType(rawValue: stringValue(for: "sourceType", in: data) ?? "") ?? .audio,
             audioURL: preservedLocalAudioURL,
+            pdfPageCount: intValue(for: "pdfPageCount", in: data),
             sourceURL: urlValue(for: "sourceURL", in: data),
             youtubeVideoID: stringValue(for: "youtubeVideoID", in: data),
             folderID: uuidValue(for: "folderID", in: data),
@@ -102,6 +109,18 @@ enum FirestoreLectureMapper {
 
         if let value = data[key] as? Int {
             return Double(value)
+        }
+
+        return nil
+    }
+
+    private static func intValue(for key: String, in data: [String: Any]) -> Int? {
+        if let value = data[key] as? Int {
+            return value
+        }
+
+        if let value = data[key] as? Double {
+            return Int(value)
         }
 
         return nil

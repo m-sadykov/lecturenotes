@@ -68,6 +68,7 @@ async function loadUserConstraints(userId: string): Promise<{
   remainingCount: number;
   isUnlimited: boolean;
   audioImportLimitSec: number;
+  pdfPageLimit: number;
 }> {
   const snapshot = await admin.firestore().collection("users").doc(userId).get();
   const data = snapshot.data() ?? {};
@@ -76,6 +77,7 @@ async function loadUserConstraints(userId: string): Promise<{
     remainingCount: Math.max(numberValue(data.processingLimitRemainingCount), 0),
     isUnlimited: Boolean(data.processingLimitIsUnlimited),
     audioImportLimitSec: Math.max(numberValue(data.audioImportLimitSec), 5 * 60),
+    pdfPageLimit: Math.max(numberValue(data.pdfPageLimit), 5),
   };
 }
 
@@ -112,6 +114,7 @@ export const upsertLecture = onCall(
     const title = stringValue(payload.title).trim();
     const transcript = stringValue(payload.transcript).trim();
     const durationSec = Math.max(numberValue(payload.durationSec), 0);
+    const pdfPageCount = Math.max(numberValue(payload.pdfPageCount), 0);
     const sourceURL = nullableStringValue(payload.sourceURL);
     const youtubeVideoID = nullableStringValue(payload.youtubeVideoID);
     const folderID = nullableStringValue(payload.folderID);
@@ -135,6 +138,13 @@ export const upsertLecture = onCall(
       );
     }
 
+    if (sourceType === "pdf" && pdfPageCount < 1) {
+      throw new HttpsError(
+        "invalid-argument",
+        "PDF lectures must include a valid pdfPageCount.",
+      );
+    }
+
     if (sourceType === "youtube" && !sourceURL && !youtubeVideoID) {
       throw new HttpsError(
         "invalid-argument",
@@ -153,6 +163,21 @@ export const upsertLecture = onCall(
     });
 
     if (!snapshot.exists) {
+      const constraints = await loadUserConstraints(userId);
+      if (sourceType === "audio" && durationSec > constraints.audioImportLimitSec) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Audio exceeds the current plan limit.",
+        );
+      }
+
+      if (sourceType === "pdf" && pdfPageCount > constraints.pdfPageLimit) {
+        throw new HttpsError(
+          "failed-precondition",
+          "PDF exceeds the current plan limit.",
+        );
+      }
+
       const data: admin.firestore.UpdateData = {
         id: lectureId,
         title,
@@ -167,6 +192,10 @@ export const upsertLecture = onCall(
         quiz: [],
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       };
+
+      if (sourceType === "pdf") {
+        data.pdfPageCount = pdfPageCount;
+      }
 
       if (sourceURL) {
         data.sourceURL = sourceURL;
@@ -227,6 +256,7 @@ export const startLectureProcessing = onCall(
     const transcript = stringValue(lecture.transcript).trim();
     const sourceURL = stringValue(lecture.sourceURL).trim();
     const durationSec = Math.max(numberValue(lecture.durationSec), 0);
+    const pdfPageCount = Math.max(numberValue(lecture.pdfPageCount), 0);
 
     if (!isLectureSourceType(sourceType)) {
       throw new HttpsError("failed-precondition", "Lecture sourceType is invalid.");
@@ -244,6 +274,20 @@ export const startLectureProcessing = onCall(
       throw new HttpsError(
         "failed-precondition",
         "Audio exceeds the current plan limit.",
+      );
+    }
+
+    if (sourceType === "pdf" && pdfPageCount < 1) {
+      throw new HttpsError(
+        "failed-precondition",
+        "PDF page count is unavailable.",
+      );
+    }
+
+    if (sourceType === "pdf" && pdfPageCount > constraints.pdfPageLimit) {
+      throw new HttpsError(
+        "failed-precondition",
+        "PDF exceeds the current plan limit.",
       );
     }
 

@@ -40,6 +40,15 @@ final class PaywallPresentationModel {
         )
     }
 
+    func presentDefaultPaywallIfNeeded(
+        for subscriptionManager: SubscriptionManager
+    ) async {
+        guard shouldAllowPaywallPresentation(for: subscriptionManager.currentPlan) else { return }
+        guard presentedOffering == nil else { return }
+
+        await presentDefaultPaywall()
+    }
+
     func presentDefaultPaywallAfterOnboardingIfNeeded(
         for subscriptionManager: SubscriptionManager
     ) async {

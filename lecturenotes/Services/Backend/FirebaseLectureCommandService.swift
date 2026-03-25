@@ -22,6 +22,7 @@ final class FirebaseLectureCommandService {
             "title": lecture.title,
             "sourceType": lecture.sourceType.rawValue,
             "durationSec": lecture.duration.timeInterval,
+            "pdfPageCount": lecture.pdfPageCount ?? NSNull(),
             "transcript": lecture.transcript,
             "sourceURL": lecture.sourceURL?.absoluteString ?? NSNull(),
             "youtubeVideoID": lecture.youtubeVideoID ?? NSNull(),
