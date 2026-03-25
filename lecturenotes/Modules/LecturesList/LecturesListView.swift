@@ -278,6 +278,7 @@ struct LecturesListView: View {
             .animation(.spring(response: 0.28, dampingFraction: 0.88), value: showsFloatingSearchBar)
             .sensoryFeedback(.success, trigger: viewModel.removalFeedbackToken)
             .sensoryFeedback(.impact(weight: .light), trigger: viewModel.importFeedbackToken)
+            .sensoryFeedback(.impact(weight: .light), trigger: viewModel.importLimitFeedbackToken)
             .sensoryFeedback(.impact(weight: .light), trigger: viewModel.processingStartFeedbackToken)
             .sheet(item: $viewModel.activeSheet) { sheet in
                 switch sheet {
@@ -296,7 +297,9 @@ struct LecturesListView: View {
                                     folderName.map { "Removed from \($0)." } ?? "Removed from folder."
                                 )
                             },
-                            onEditTitle: {},
+                            onEditTitle: {
+                                viewModel.requestRename(lecture)
+                            },
                             onShare: {},
                             onDelete: {
                                 viewModel.requestDelete(lecture)
@@ -395,6 +398,28 @@ struct LecturesListView: View {
                 }
             } message: {
                 Text(viewModel.importAlertMessage)
+            }
+            .alert(
+                "Edit Title",
+                isPresented: Binding(
+                    get: { viewModel.isRenameAlertPresented },
+                    set: { isPresented in
+                        if !isPresented {
+                            viewModel.dismissRenameAlert()
+                        }
+                    }
+                )
+            ) {
+                TextField("Lecture title", text: $viewModel.draftTitle)
+                Button("Cancel", role: .cancel) {}
+                Button("Save") {
+                    viewModel.saveRenamedLecture()
+                }
+                .disabled(
+                    viewModel.draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isSavingTitle
+                )
+            } message: {
+                Text("Update the lecture title.")
             }
             .alert(
                 "Delete Lecture?",

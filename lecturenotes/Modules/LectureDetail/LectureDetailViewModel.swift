@@ -42,13 +42,16 @@ enum LectureDetailDestination: Identifiable {
 @Observable
 final class LectureDetailViewModel {
     var lecture: Lecture
+    var folders: [LectureFolder] = []
     var playerViewModel: LecturePlayerViewModel?
     var processingViewModel: LectureProcessingViewModel?
     var selectedSection: LectureDetailSection = .summary
     var activeDestination: LectureDetailDestination?
+    var isFolderPickerPresented = false
     var isRenameAlertPresented = false
     var isDeleteAlertPresented = false
     var isSavingTitle = false
+    var isSavingFolder = false
     var draftTitle = ""
     var toastMessage: String?
     var processingErrorFeedbackToken = 0
@@ -133,7 +136,7 @@ final class LectureDetailViewModel {
         }
 
         await repository.start()
-        await reloadLectureFromRepository()
+        await reloadRepositoryData()
 
         repositoryObservationTask = Task { @MainActor [weak self] in
             guard let self else {
@@ -141,7 +144,7 @@ final class LectureDetailViewModel {
             }
 
             for await _ in repository.observeChanges() {
-                await reloadLectureFromRepository()
+                await reloadRepositoryData()
             }
         }
     }
@@ -182,6 +185,10 @@ final class LectureDetailViewModel {
     func presentRename() {
         draftTitle = lecture.title
         isRenameAlertPresented = true
+    }
+
+    func presentFolderPicker() {
+        isFolderPickerPresented = true
     }
 
     func saveRenamedLecture() {
@@ -231,6 +238,32 @@ final class LectureDetailViewModel {
         isDeleteAlertPresented = true
     }
 
+    func createFolder(named name: String) {
+        let uniqueName = makeUniqueFolderName(from: name)
+        let folder = LectureFolder(name: uniqueName)
+        folders.append(folder)
+
+        let folders = self.folders
+        Task {
+            do {
+                try await repository.saveFolders(folders)
+            } catch {
+                await MainActor.run {
+                    self.folders.removeAll { $0.id == folder.id }
+                    showToast("Unable to create folder right now.")
+                }
+            }
+        }
+    }
+
+    func addLectureToFolder(_ folderID: LectureFolder.ID) {
+        updateLectureFolder(folderID)
+    }
+
+    func removeLectureFromFolder() {
+        updateLectureFolder(nil)
+    }
+
     func confirmDelete() async -> Bool {
         let wasDeleted = await onLectureDeleted(lecture.id)
         if !wasDeleted {
@@ -253,13 +286,65 @@ final class LectureDetailViewModel {
         }
     }
 
-    private func reloadLectureFromRepository() async {
-        guard let updatedLecture = await repository.fetchLecture(id: lecture.id) else {
+    private func reloadRepositoryData() async {
+        async let fetchedLecture = repository.fetchLecture(id: lecture.id)
+        async let fetchedFolders = repository.fetchFolders()
+
+        guard let updatedLecture = await fetchedLecture else {
             return
         }
 
+        folders = await fetchedFolders
         lecture = updatedLecture
         processingViewModel?.applyCachedLecture(updatedLecture)
         onLectureUpdated(updatedLecture)
+    }
+
+    private func updateLectureFolder(_ folderID: LectureFolder.ID?) {
+        guard !isSavingFolder else {
+            return
+        }
+
+        let previousLecture = lecture
+        var updatedLecture = lecture
+        updatedLecture.folderID = folderID
+
+        lecture = updatedLecture
+        onLectureUpdated(updatedLecture)
+        isSavingFolder = true
+        isFolderPickerPresented = false
+
+        Task {
+            do {
+                try await repository.saveLecture(updatedLecture)
+                let message = if let folderName = folders.first(where: { $0.id == folderID })?.name {
+                    "Added to \(folderName)."
+                } else if folderID == nil {
+                    "Removed from folder."
+                } else {
+                    "Added to folder."
+                }
+                showToast(message)
+            } catch {
+                lecture = previousLecture
+                onLectureUpdated(previousLecture)
+                try? await repository.saveLecture(previousLecture)
+                showToast("Unable to update folder right now.")
+            }
+
+            isSavingFolder = false
+        }
+    }
+
+    private func makeUniqueFolderName(from name: String) -> String {
+        let existingNames = Set(folders.map(\.name))
+        guard !existingNames.contains(name) else {
+            var index = 2
+            while existingNames.contains("\(name) \(index)") {
+                index += 1
+            }
+            return "\(name) \(index)"
+        }
+        return name
     }
 }

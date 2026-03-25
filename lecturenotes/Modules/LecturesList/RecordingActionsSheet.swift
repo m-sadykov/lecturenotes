@@ -39,7 +39,7 @@ struct RecordingActionsSheet: View {
                     ActionRowButton(title: "Add to folder", systemImage: "folder", action: onAddToFolder)
                 }
                 ActionRowButton(title: "Edit title", systemImage: "pencil", action: onEditTitle)
-                ActionRowButton(title: "Share As", systemImage: "square.and.arrow.up", action: onShare)
+//                ActionRowButton(title: "Share As", systemImage: "square.and.arrow.up", action: onShare)
 
                 Divider()
                     .padding(.vertical, 8)

@@ -37,6 +37,8 @@ final class LecturesListViewModel {
     @ObservationIgnored private var repositoryObservationTask: Task<Void, Never>?
     @ObservationIgnored private var searchTask: Task<Void, Never>?
     @ObservationIgnored private var loadingIndicatorTask: Task<Void, Never>?
+    @ObservationIgnored private var pendingRenamePresentationTask: Task<Void, Never>?
+    @ObservationIgnored private var pendingDeletionPresentationTask: Task<Void, Never>?
     @ObservationIgnored private var hasLoadedOnce = false
 
     var lectures: [Lecture] = []
@@ -73,6 +75,7 @@ final class LecturesListViewModel {
     var toastMessage: String?
     var removalFeedbackToken = 0
     var importFeedbackToken = 0
+    var importLimitFeedbackToken = 0
     var processingStartFeedbackToken = 0
     var processingLimitReachedToken = 0
     var isImporterPresented = false
@@ -82,6 +85,10 @@ final class LecturesListViewModel {
     var isImportAlertPresented = false
     var importAlertMessage = ""
     var importLimitSheetContent: ImportLimitSheetContent?
+    var pendingRenameLecture: Lecture?
+    var isRenameAlertPresented = false
+    var isSavingTitle = false
+    var draftTitle = ""
     var pendingDeletionLecture: Lecture?
     var isAIConsentPresented = false
     var pendingConsentAction: LecturesListPendingConsentAction?
@@ -119,6 +126,8 @@ final class LecturesListViewModel {
         repositoryObservationTask?.cancel()
         searchTask?.cancel()
         loadingIndicatorTask?.cancel()
+        pendingRenamePresentationTask?.cancel()
+        pendingDeletionPresentationTask?.cancel()
     }
 
     var filteredLectures: [Lecture] {
@@ -170,7 +179,16 @@ final class LecturesListViewModel {
     }
 
     func dismissDeletionAlert() {
+        pendingDeletionPresentationTask?.cancel()
         pendingDeletionLecture = nil
+    }
+
+    func dismissRenameAlert() {
+        pendingRenamePresentationTask?.cancel()
+        pendingRenameLecture = nil
+        isRenameAlertPresented = false
+        isSavingTitle = false
+        draftTitle = ""
     }
 
     func dismissTextImportSheet() {
@@ -238,7 +256,69 @@ final class LecturesListViewModel {
 
     func requestDelete(_ lecture: Lecture) {
         activeSheet = nil
-        pendingDeletionLecture = lecture
+        pendingDeletionPresentationTask?.cancel()
+        pendingDeletionLecture = nil
+        pendingDeletionPresentationTask = Task { @MainActor [weak self] in
+            await Task.yield()
+            guard let self, !Task.isCancelled else {
+                return
+            }
+            pendingDeletionLecture = lecture
+            pendingDeletionPresentationTask = nil
+        }
+    }
+
+    func requestRename(_ lecture: Lecture) {
+        activeSheet = nil
+        pendingRenamePresentationTask?.cancel()
+        pendingRenameLecture = nil
+        isRenameAlertPresented = false
+        draftTitle = lecture.title
+        pendingRenamePresentationTask = Task { @MainActor [weak self] in
+            await Task.yield()
+            guard let self, !Task.isCancelled else {
+                return
+            }
+            pendingRenameLecture = lecture
+            isRenameAlertPresented = true
+            pendingRenamePresentationTask = nil
+        }
+    }
+
+    func saveRenamedLecture() {
+        guard let lecture = pendingRenameLecture else {
+            return
+        }
+
+        let trimmedTitle = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty, !isSavingTitle else {
+            return
+        }
+
+        guard lecture.title != trimmedTitle else {
+            return
+        }
+
+        let previousLecture = lecture
+        var renamedLecture = lecture
+        renamedLecture.title = trimmedTitle
+
+        handleLectureUpdated(renamedLecture)
+        isSavingTitle = true
+
+        Task {
+            do {
+                try await repository.saveLecture(renamedLecture)
+                showToast("Title updated.")
+            } catch {
+                handleLectureUpdated(previousLecture)
+                try? await repository.saveLecture(previousLecture)
+                showToast("Unable to update title right now.")
+            }
+
+            isSavingTitle = false
+            pendingRenameLecture = nil
+        }
     }
 
     func handleLectureUpdated(_ updatedLecture: Lecture) {
@@ -944,8 +1024,8 @@ final class LecturesListViewModel {
         let userProfile = await currentUserProfile()
         let limit = userProfile?.audioImportLimitDuration ?? .seconds(5 * 60)
         guard duration <= limit else {
-            importLimitSheetContent = makeAudioImportLimitSheetContent(
-                userProfile: userProfile
+            presentImportLimitSheet(
+                makeAudioImportLimitSheetContent(userProfile: userProfile)
             )
             return "Your \(userProfile?.plan.title ?? "Freemium") plan allows audio imports up to \(LectureFormatters.durationText(limit)) per file."
         }
@@ -961,8 +1041,8 @@ final class LecturesListViewModel {
         let userProfile = await currentUserProfile()
         let limit = userProfile?.pdfPageLimit ?? 5
         guard pageCount <= limit else {
-            importLimitSheetContent = makePDFImportLimitSheetContent(
-                userProfile: userProfile
+            presentImportLimitSheet(
+                makePDFImportLimitSheetContent(userProfile: userProfile)
             )
             return "Your \(userProfile?.plan.title ?? "Freemium") plan allows PDF imports up to \(limit) pages per file."
         }
@@ -991,6 +1071,11 @@ final class LecturesListViewModel {
         }
 
         return try? await userProfileService?.ensureCurrentUserProfile()
+    }
+
+    private func presentImportLimitSheet(_ content: ImportLimitSheetContent) {
+        importLimitSheetContent = content
+        importLimitFeedbackToken += 1
     }
 
     private func makeAudioImportLimitSheetContent(

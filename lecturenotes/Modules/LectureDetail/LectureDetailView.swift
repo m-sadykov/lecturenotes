@@ -98,11 +98,21 @@ struct LectureDetailView: View {
 
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
+                    if viewModel.lecture.folderID == nil {
+                        Button("Add to folder", systemImage: "folder") {
+                            viewModel.presentFolderPicker()
+                        }
+                    } else {
+                        Button("Remove from folder", systemImage: "folder.badge.minus", role: .destructive) {
+                            viewModel.removeLectureFromFolder()
+                        }
+                    }
+
                     Button("Edit Title", systemImage: "pencil") {
                         viewModel.presentRename()
                     }
 
-                    Button("Delete Lecture", systemImage: "trash", role: .destructive) {
+                    Button("Delete", systemImage: "trash", role: .destructive) {
                         viewModel.requestDelete()
                     }
                 } label: {
@@ -111,6 +121,28 @@ struct LectureDetailView: View {
                         .foregroundStyle(.primary)
                 }
             }
+        }
+        .sheet(
+            isPresented: $viewModel.isFolderPickerPresented,
+            onDismiss: {
+                viewModel.isFolderPickerPresented = false
+            }
+        ) {
+            FolderSelectionSheet(
+                lecture: viewModel.lecture,
+                folders: viewModel.folders,
+                selectedFolderID: viewModel.lecture.folderID,
+                onCreateFolder: { folderName in
+                    viewModel.createFolder(named: folderName)
+                },
+                onSelectFolder: { folderID in
+                    viewModel.addLectureToFolder(folderID)
+                },
+                onClose: {
+                    viewModel.isFolderPickerPresented = false
+                }
+            )
+            .presentationDetents([.fraction(0.52), .large])
         }
         .overlay(alignment: .top) {
             if let toastMessage = viewModel.toastMessage {
