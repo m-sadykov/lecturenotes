@@ -78,6 +78,7 @@ final class LecturesListViewModel {
     var importLimitFeedbackToken = 0
     var processingStartFeedbackToken = 0
     var processingLimitReachedToken = 0
+    var reviewRequestToken = 0
     var isImporterPresented = false
     var isPDFImporterPresented = false
     var isTextImportSheetPresented = false
@@ -309,7 +310,6 @@ final class LecturesListViewModel {
         Task {
             do {
                 try await repository.saveLecture(renamedLecture)
-                showToast("Title updated.")
             } catch {
                 handleLectureUpdated(previousLecture)
                 try? await repository.saveLecture(previousLecture)
@@ -362,6 +362,24 @@ final class LecturesListViewModel {
             present(action)
         } else {
             pendingConsentAction = action
+            isAIConsentPresented = true
+        }
+    }
+
+    func requestRecordingFlow(hasConfirmedAIProcessingConsent: Bool) async {
+        guard processingService != nil else {
+            present(.record)
+            return
+        }
+
+        guard await canStartRecordingFlow() else {
+            return
+        }
+
+        if hasConfirmedAIProcessingConsent {
+            present(.record)
+        } else {
+            pendingConsentAction = .record
             isAIConsentPresented = true
         }
     }
@@ -436,10 +454,6 @@ final class LecturesListViewModel {
         }
 
         if let validationMessage = await validateRecordingDuration(recording.duration) {
-            return .rejected(message: validationMessage)
-        }
-
-        if let validationMessage = await validateProcessingAvailability() {
             return .rejected(message: validationMessage)
         }
 
@@ -673,15 +687,34 @@ final class LecturesListViewModel {
     }
 
     func deleteLecture(_ lectureID: Lecture.ID) async -> DeleteLectureResult {
-        guard lecture(withID: lectureID) != nil else {
+        guard let lectureIndex = lectures.firstIndex(where: { $0.id == lectureID }) else {
             return .deleted
+        }
+
+        let deletedLecture = lectures[lectureIndex]
+        let searchResultIndex = searchResults.firstIndex(where: { $0.id == lectureID })
+        let deletedSelectedLecture = selectedLecture?.id == lectureID ? selectedLecture : nil
+
+        lectures.remove(at: lectureIndex)
+        if let searchResultIndex {
+            searchResults.remove(at: searchResultIndex)
+        }
+        if deletedSelectedLecture != nil {
+            selectedLecture = nil
         }
 
         do {
             try await repository.deleteLecture(id: lectureID)
-            lectures.removeAll { $0.id == lectureID }
             return .deleted
         } catch {
+            lectures.insert(deletedLecture, at: min(lectureIndex, lectures.count))
+            if let searchResultIndex {
+                let restoredSearchResultIndex = min(searchResultIndex, searchResults.count)
+                searchResults.insert(deletedLecture, at: restoredSearchResultIndex)
+            }
+            if let deletedSelectedLecture {
+                selectedLecture = deletedSelectedLecture
+            }
             return .rejected(message: "Unable to delete lecture right now.")
         }
     }
@@ -855,11 +888,15 @@ final class LecturesListViewModel {
     }
 
     private func reloadRepositoryData() async {
+        let previousLectures = lectures
         async let fetchedFolders = repository.fetchFolders()
         async let fetchedLectures = repository.fetchLectures()
 
         folders = await fetchedFolders
         lectures = await fetchedLectures
+        if shouldRequestReview(previousLectures: previousLectures, updatedLectures: lectures) {
+            reviewRequestToken += 1
+        }
 
         if hasActiveSearchQuery {
             await refreshSearchResults()
@@ -869,6 +906,18 @@ final class LecturesListViewModel {
 
         if let selectedLectureID = selectedLecture?.id {
             selectedLecture = lectures.first(where: { $0.id == selectedLectureID })
+        }
+    }
+
+    private func shouldRequestReview(previousLectures: [Lecture], updatedLectures: [Lecture]) -> Bool {
+        let previousStatuses = Dictionary(uniqueKeysWithValues: previousLectures.map { ($0.id, $0.status) })
+
+        return updatedLectures.contains { lecture in
+            guard let previousStatus = previousStatuses[lecture.id] else {
+                return false
+            }
+
+            return previousStatus != .ready && lecture.status == .ready
         }
     }
 
@@ -1008,6 +1057,20 @@ final class LecturesListViewModel {
 
     private var currentRecordingLimit: Duration {
         userProfileService?.currentProfile?.recordingLimitDuration ?? .seconds(5 * 60)
+    }
+
+    private func canStartRecordingFlow() async -> Bool {
+        guard processingService != nil else {
+            return true
+        }
+
+        let userProfile = await currentUserProfile()
+        guard userProfile?.canStartProcessing ?? true else {
+            processingLimitReachedToken += 1
+            return false
+        }
+
+        return true
     }
 
     private func validateRecordingDuration(_ duration: Duration) async -> String? {

@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 import UniformTypeIdentifiers
 
 struct LecturesListView: View {
@@ -6,6 +7,7 @@ struct LecturesListView: View {
     private let stickySearchTopInset: CGFloat = 70
 
     @AppStorage("hasConfirmedAIProcessingConsent") private var hasConfirmedAIProcessingConsent = false
+    @Environment(\.requestReview) private var requestReview
     @State var viewModel: LecturesListViewModel
     let paywallPresentationModel: PaywallPresentationModel
     let repository: LectureRepository
@@ -16,9 +18,12 @@ struct LecturesListView: View {
     @State private var isFileImporterPresented = false
     @State private var pendingLocalConsentAction: LocalFileImport?
     @State private var currentScrollOffset: CGFloat = 0
+    @State private var isPremiumBannerVisible = false
+    @State private var hasPendingPremiumBannerFadeOut = false
 
     var body: some View {
         @Bindable var viewModel = viewModel
+        let shouldShowPremiumBanner = userProfileService?.currentProfile?.plan == .freemium
         let showsInlineSearchBar = (viewModel.isSearchPresented || viewModel.hasActiveSearchQuery) && currentScrollOffset < 140
         let showsFloatingSearchBar = viewModel.isSearchAutoPresented || ((viewModel.isSearchPresented || viewModel.hasActiveSearchQuery) && currentScrollOffset >= 140)
         let displayedLectures = viewModel.displayedLectures
@@ -37,7 +42,10 @@ struct LecturesListView: View {
                     VStack(alignment: .leading, spacing: 18) {
                         LecturesListScrollOffsetReader()
 
-                        PremiumBannerView(paywallPresentationModel: paywallPresentationModel)
+                        if isPremiumBannerVisible {
+                            PremiumBannerView(paywallPresentationModel: paywallPresentationModel)
+                                .transition(.opacity)
+                        }
 
                         QuickActionsStripView {
                             presentAudioImportFlow()
@@ -174,7 +182,11 @@ struct LecturesListView: View {
             .overlay(alignment: .bottomTrailing) {
                 if viewModel.activeSheet == nil && viewModel.recorderViewModel == nil {
                     FloatingRecordButton {
-                        viewModel.requestFlow(.record, hasConfirmedAIProcessingConsent: hasConfirmedAIProcessingConsent)
+                        Task {
+                            await viewModel.requestRecordingFlow(
+                                hasConfirmedAIProcessingConsent: hasConfirmedAIProcessingConsent
+                            )
+                        }
                     }
                         .padding(.trailing, 20)
                         .padding(.bottom, 20)
@@ -302,7 +314,18 @@ struct LecturesListView: View {
                             },
                             onShare: {},
                             onDelete: {
-                                viewModel.requestDelete(lecture)
+                                viewModel.closeActiveSheet()
+                                Task {
+                                    let result = await viewModel.deleteLecture(lectureID)
+                                    await MainActor.run {
+                                        switch result {
+                                        case .deleted:
+                                            viewModel.removalFeedbackToken += 1
+                                        case .rejected(let message):
+                                            viewModel.showToast(message)
+                                        }
+                                    }
+                                }
                             }
                         )
                         .presentationDetents([.height(lecture.folderID == nil ? 290 : 340), .fraction(0.52)])
@@ -389,7 +412,7 @@ struct LecturesListView: View {
                         }
                     }
                 )
-                .presentationDetents([.height(ImportLimitSheetView.preferredSheetHeight)])
+                .presentationDetents([.height(ImportLimitSheetView.estimatedSheetHeight)])
                 .presentationDragIndicator(.visible)
             }
             .alert("Import", isPresented: $viewModel.isImportAlertPresented) {
@@ -443,7 +466,39 @@ struct LecturesListView: View {
                 Text("Delete \"\(lecture.title)\"? This action cannot be undone.")
             }
             .task {
+                isPremiumBannerVisible = shouldShowPremiumBanner
                 await viewModel.load()
+            }
+            .onChange(of: shouldShowPremiumBanner, initial: false) { _, newValue in
+                if newValue {
+                    hasPendingPremiumBannerFadeOut = false
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        isPremiumBannerVisible = true
+                    }
+                } else if paywallPresentationModel.presentedOffering != nil {
+                    hasPendingPremiumBannerFadeOut = true
+                    isPremiumBannerVisible = true
+                } else {
+                    withAnimation(.easeOut(duration: 0.3)) {
+                        isPremiumBannerVisible = false
+                    }
+                }
+            }
+            .onChange(of: paywallPresentationModel.presentedOffering != nil, initial: false) { _, isPresented in
+                guard !isPresented, hasPendingPremiumBannerFadeOut, !shouldShowPremiumBanner else {
+                    return
+                }
+
+                hasPendingPremiumBannerFadeOut = false
+                withAnimation(.easeOut(duration: 0.3)) {
+                    isPremiumBannerVisible = false
+                }
+            }
+            .onChange(of: viewModel.reviewRequestToken, initial: false) { oldValue, newValue in
+                guard newValue > oldValue else {
+                    return
+                }
+                requestReview()
             }
         }
     }

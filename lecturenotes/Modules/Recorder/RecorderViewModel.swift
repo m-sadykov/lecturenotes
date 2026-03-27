@@ -39,11 +39,13 @@ final class RecorderViewModel {
     init(limit: Duration = .seconds(300)) {
         self.limit = limit
         self.recordingManager = RecordingManager()
+        bindRecordingManager()
     }
 
     init(limit: Duration = .seconds(300), recordingManager: RecordingManager) {
         self.limit = limit
         self.recordingManager = recordingManager
+        bindRecordingManager()
     }
 
     var progress: Double {
@@ -54,6 +56,34 @@ final class RecorderViewModel {
 
     var canTogglePause: Bool {
         mode == .recording || mode == .paused
+    }
+
+    func syncElapsedWithRecording() {
+        let currentDuration = recordingManager.currentDuration
+        if currentDuration > elapsed {
+            elapsed = currentDuration
+        }
+    }
+
+    func handleAppDidBecomeActive() {
+        recordingManager.refreshAfterForeground()
+        syncElapsedWithRecording()
+
+        guard mode == .recording, !recordingManager.isRecording else {
+            return
+        }
+
+        mode = .paused
+        errorMessage = "Recording was paused by the system."
+    }
+
+    func handleAppDidEnterBackground() {
+        guard mode == .recording else {
+            return
+        }
+
+        syncElapsedWithRecording()
+        recordingManager.prepareForBackgroundRecording()
     }
 
     func start() async {
@@ -75,6 +105,7 @@ final class RecorderViewModel {
     func pause() {
         guard mode == .recording else { return }
         recordingManager.pauseRecording()
+        syncElapsedWithRecording()
         mode = .paused
     }
 
@@ -97,6 +128,7 @@ final class RecorderViewModel {
     }
 
     func stop() {
+        syncElapsedWithRecording()
         mode = .finished
         timerTask?.cancel()
         timerTask = nil
@@ -104,6 +136,7 @@ final class RecorderViewModel {
     }
 
     func finishRecording() -> RecordingDraft? {
+        syncElapsedWithRecording()
         mode = .finished
         timerTask?.cancel()
         timerTask = nil
@@ -115,11 +148,12 @@ final class RecorderViewModel {
         return RecordingDraft(
             audioURL: recording.url,
             createdAt: recording.createdAt,
-            duration: max(.seconds(1), max(elapsed, recording.duration))
+            duration: max(.seconds(1), recording.duration)
         )
     }
 
     func stopAndDiscard() {
+        syncElapsedWithRecording()
         mode = .finished
         timerTask?.cancel()
         timerTask = nil
@@ -133,12 +167,33 @@ final class RecorderViewModel {
             guard let self else { return }
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
+                syncElapsedWithRecording()
                 guard mode == .recording else { continue }
-                elapsed += .seconds(1)
+                guard recordingManager.isRecording else {
+                    mode = .paused
+                    errorMessage = "Recording was paused by the system."
+                    continue
+                }
                 if elapsed >= limit {
                     stop()
                 }
             }
+        }
+    }
+
+    private func bindRecordingManager() {
+        recordingManager.onSystemPause = { [weak self] message in
+            guard let self else {
+                return
+            }
+
+            self.syncElapsedWithRecording()
+
+            if self.mode == .recording {
+                self.mode = .paused
+            }
+
+            self.errorMessage = message
         }
     }
 }

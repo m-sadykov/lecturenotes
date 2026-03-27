@@ -1,6 +1,8 @@
 import SwiftUI
+import UIKit
 
 struct MiniRecorderSheetView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @Bindable var viewModel: RecorderViewModel
     let onSave: (RecorderViewModel.RecordingDraft) -> Void
     let onClose: () -> Void
@@ -30,6 +32,25 @@ struct MiniRecorderSheetView: View {
         .ignoresSafeArea(edges: .bottom)
         .task {
             await viewModel.start()
+        }
+        .onAppear {
+            updateIdleTimer()
+        }
+        .onChange(of: viewModel.mode, initial: true) { _, _ in
+            updateIdleTimer()
+        }
+        .onChange(of: scenePhase, initial: true) { _, newPhase in
+            switch newPhase {
+            case .background:
+                viewModel.handleAppDidEnterBackground()
+            case .active:
+                viewModel.handleAppDidBecomeActive()
+            case .inactive:
+                break
+            }
+        }
+        .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = false
         }
         .sensoryFeedback(.impact(weight: .light), trigger: feedbackTrigger)
         .alert("Recording Error", isPresented: errorBinding) {
@@ -150,6 +171,15 @@ struct MiniRecorderSheetView: View {
 
     private func triggerFeedback() {
         feedbackTrigger += 1
+    }
+
+    private func updateIdleTimer() {
+        UIApplication.shared.isIdleTimerDisabled = switch viewModel.mode {
+        case .recording, .paused:
+            true
+        case .idle, .finished:
+            false
+        }
     }
 }
 

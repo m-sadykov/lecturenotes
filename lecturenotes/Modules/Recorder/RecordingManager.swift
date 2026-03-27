@@ -1,8 +1,9 @@
 import AVFoundation
 import Foundation
+import UIKit
 
 @MainActor
-final class RecordingManager {
+final class RecordingManager: NSObject, AVAudioRecorderDelegate {
     struct RecordingCapture {
         let url: URL
         let createdAt: Date
@@ -27,9 +28,44 @@ final class RecordingManager {
     private let session = AVAudioSession.sharedInstance()
     private var currentOutputURL: URL?
     private var startedAt: Date?
+    private var backgroundTaskIdentifier: UIBackgroundTaskIdentifier = .invalid
+    private var notificationObservers: [NSObjectProtocol] = []
+    private var shouldResumeAfterInterruption = false
+
+    var onSystemPause: ((String) -> Void)?
+
+    override init() {
+        super.init()
+        observeApplicationLifecycle()
+        observeAudioSessionLifecycle()
+    }
+
+    deinit {
+        for observer in notificationObservers {
+            NotificationCenter.default.removeObserver(observer)
+        }
+
+        let backgroundTaskIdentifier = self.backgroundTaskIdentifier
+        guard backgroundTaskIdentifier != .invalid else {
+            return
+        }
+
+        Task { @MainActor in
+            UIApplication.shared.endBackgroundTask(backgroundTaskIdentifier)
+        }
+    }
+
+    var currentDuration: Duration {
+        Duration.seconds(recorder?.currentTime ?? 0)
+    }
+
+    var isRecording: Bool {
+        recorder?.isRecording == true
+    }
 
     func startRecording() async throws {
-        try await configureSessionIfNeeded()
+        try await requestRecordPermissionIfNeeded()
+        try activateSessionForRecording()
 
         let outputURL = makeOutputURL()
         try FileManager.default.createDirectory(
@@ -46,7 +82,9 @@ final class RecordingManager {
         ]
 
         let recorder = try AVAudioRecorder(url: outputURL, settings: settings)
+        recorder.delegate = self
         recorder.isMeteringEnabled = true
+        recorder.prepareToRecord()
 
         guard recorder.record() else {
             throw RecordingError.recorderUnavailable
@@ -55,14 +93,33 @@ final class RecordingManager {
         currentOutputURL = outputURL
         startedAt = .now
         self.recorder = recorder
+        shouldResumeAfterInterruption = false
     }
 
     func pauseRecording() {
+        shouldResumeAfterInterruption = false
         recorder?.pause()
     }
 
     func resumeRecording() {
+        try? activateSessionForRecording()
         recorder?.record()
+    }
+
+    func prepareForBackgroundRecording() {
+        guard recorder != nil else {
+            return
+        }
+
+        beginBackgroundTaskIfNeeded()
+    }
+
+    func refreshAfterForeground() {
+        guard recorder != nil else {
+            return
+        }
+
+        endBackgroundTaskIfNeeded()
     }
 
     func stopRecording() -> RecordingCapture? {
@@ -76,6 +133,7 @@ final class RecordingManager {
         self.recorder = nil
         self.currentOutputURL = nil
         startedAt = nil
+        shouldResumeAfterInterruption = false
         deactivateSession()
         return RecordingCapture(url: currentOutputURL, createdAt: createdAt, duration: duration)
     }
@@ -89,11 +147,26 @@ final class RecordingManager {
         self.recorder = nil
         self.currentOutputURL = nil
         startedAt = nil
+        shouldResumeAfterInterruption = false
         try? FileManager.default.removeItem(at: currentOutputURL)
         deactivateSession()
     }
 
-    private func configureSessionIfNeeded() async throws {
+    nonisolated func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
+        guard !flag else {
+            return
+        }
+
+        Task { @MainActor [weak self] in
+            guard let self, recorder === self.recorder else {
+                return
+            }
+
+            self.onSystemPause?("Recording was stopped by the system.")
+        }
+    }
+
+    private func requestRecordPermissionIfNeeded() async throws {
         switch AVAudioApplication.shared.recordPermission {
         case .granted:
             break
@@ -111,13 +184,157 @@ final class RecordingManager {
         @unknown default:
             throw RecordingError.microphoneAccessDenied
         }
+    }
 
-        try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
+    private func activateSessionForRecording() throws {
+        try session.setCategory(.record, mode: .measurement, options: [.allowBluetoothHFP])
         try session.setActive(true)
     }
 
     private func deactivateSession() {
+        endBackgroundTaskIfNeeded()
         try? session.setActive(false, options: [.notifyOthersOnDeactivation])
+    }
+
+    private func observeApplicationLifecycle() {
+        let didEnterBackgroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.prepareForBackgroundRecording()
+            }
+        }
+
+        let didBecomeActiveObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.refreshAfterForeground()
+            }
+        }
+
+        notificationObservers.append(didEnterBackgroundObserver)
+        notificationObservers.append(didBecomeActiveObserver)
+    }
+
+    private func observeAudioSessionLifecycle() {
+        let interruptionObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: session,
+            queue: .main
+        ) { [weak self] notification in
+            Task { @MainActor [weak self] in
+                self?.handleAudioSessionInterruption(notification)
+            }
+        }
+
+        let routeChangeObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.routeChangeNotification,
+            object: session,
+            queue: .main
+        ) { [weak self] notification in
+            Task { @MainActor [weak self] in
+                self?.handleAudioRouteChange(notification)
+            }
+        }
+
+        let mediaServicesResetObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.mediaServicesWereResetNotification,
+            object: session,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.handleMediaServicesReset()
+            }
+        }
+
+        notificationObservers.append(interruptionObserver)
+        notificationObservers.append(routeChangeObserver)
+        notificationObservers.append(mediaServicesResetObserver)
+    }
+
+    private func handleAudioSessionInterruption(_ notification: Notification) {
+        guard recorder != nil,
+              let interruptionTypeRawValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let interruptionType = AVAudioSession.InterruptionType(rawValue: interruptionTypeRawValue) else {
+            return
+        }
+
+        switch interruptionType {
+        case .began:
+            shouldResumeAfterInterruption = isRecording
+            recorder?.pause()
+            onSystemPause?("Recording was paused by the system.")
+        case .ended:
+            let optionsRawValue = notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+            let options = AVAudioSession.InterruptionOptions(rawValue: optionsRawValue)
+
+            do {
+                try activateSessionForRecording()
+                if shouldResumeAfterInterruption && options.contains(.shouldResume) {
+                    recorder?.record()
+                }
+            } catch {
+                onSystemPause?(error.localizedDescription)
+            }
+
+            shouldResumeAfterInterruption = false
+        @unknown default:
+            shouldResumeAfterInterruption = false
+        }
+    }
+
+    private func handleAudioRouteChange(_ notification: Notification) {
+        guard recorder != nil,
+              let reasonRawValue = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
+              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonRawValue) else {
+            return
+        }
+
+        switch reason {
+        case .oldDeviceUnavailable:
+            try? activateSessionForRecording()
+        default:
+            break
+        }
+    }
+
+    private func handleMediaServicesReset() {
+        guard recorder != nil else {
+            return
+        }
+
+        do {
+            try activateSessionForRecording()
+            recorder?.record()
+        } catch {
+            onSystemPause?(error.localizedDescription)
+        }
+    }
+
+    private func beginBackgroundTaskIfNeeded() {
+        guard backgroundTaskIdentifier == .invalid else {
+            return
+        }
+
+        backgroundTaskIdentifier = UIApplication.shared.beginBackgroundTask(withName: "LectureRecording") { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.endBackgroundTaskIfNeeded()
+            }
+        }
+    }
+
+    private func endBackgroundTaskIfNeeded() {
+        guard backgroundTaskIdentifier != .invalid else {
+            return
+        }
+
+        UIApplication.shared.endBackgroundTask(backgroundTaskIdentifier)
+        backgroundTaskIdentifier = .invalid
     }
 
     private func makeOutputURL() -> URL {

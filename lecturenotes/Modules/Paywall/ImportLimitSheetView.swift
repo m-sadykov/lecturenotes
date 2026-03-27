@@ -7,7 +7,7 @@ struct ImportLimitSheetView: View {
     let upgradeMessage: String
     let onViewPlans: () -> Void
 
-    static let preferredSheetHeight: CGFloat = 470
+    static let estimatedSheetHeight: CGFloat = 400
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -33,14 +33,19 @@ struct ImportLimitSheetView: View {
                 title: upgradeTitle,
                 message: upgradeMessage
             )
-
-            Button("View Plans", action: onViewPlans)
-                .buttonStyle(.importLimitPrimary)
         }
         .padding(24)
         .padding(.top, 8)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(Color(.systemBackground))
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            Button("View Plans", action: onViewPlans)
+                .buttonStyle(.importLimitPrimary)
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
+                .background(Color(.systemBackground))
+        }
     }
 }
 
@@ -148,7 +153,7 @@ private struct ImportLimitSheetPreview: View {
                 upgradeMessage: "Record up to 4 hours per recording with Pro.",
                 onViewPlans: {}
             )
-            .presentationDetents([.height(ImportLimitSheetView.preferredSheetHeight)])
+            .presentationDetents([.height(ImportLimitSheetView.estimatedSheetHeight)])
             .presentationDragIndicator(.visible)
         }
     }

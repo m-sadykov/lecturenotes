@@ -13,6 +13,7 @@ final class LecturePlayerViewModel {
     var totalDuration: Duration = .zero
 
     @ObservationIgnored private let player: AVPlayer?
+    @ObservationIgnored private let audioSession = AVAudioSession.sharedInstance()
     @ObservationIgnored private var timeObserver: Any?
     @ObservationIgnored private var durationTask: Task<Void, Never>?
 
@@ -43,8 +44,11 @@ final class LecturePlayerViewModel {
         if isPlaying {
             player.pause()
             isPlaying = false
+            deactivatePlaybackSessionIfNeeded()
             return
         }
+
+        activatePlaybackSessionIfNeeded()
 
         if totalDuration.timeInterval > 0, currentTime.timeInterval >= totalDuration.timeInterval {
             let startTime = CMTime(seconds: 0, preferredTimescale: 600)
@@ -103,6 +107,7 @@ final class LecturePlayerViewModel {
         guard let player else { return }
         player.pause()
         isPlaying = false
+        deactivatePlaybackSessionIfNeeded()
     }
 
     func cleanup() {
@@ -113,6 +118,7 @@ final class LecturePlayerViewModel {
         self.timeObserver = nil
         player.pause()
         isPlaying = false
+        deactivatePlaybackSessionIfNeeded()
     }
 
     private func configurePlayer() {
@@ -161,6 +167,19 @@ final class LecturePlayerViewModel {
                 }
             }
         }
+    }
+
+    private func activatePlaybackSessionIfNeeded() {
+        do {
+            try audioSession.setCategory(.playback, mode: .default)
+            try audioSession.setActive(true)
+        } catch {
+            // Playback can still be attempted even if session activation fails.
+        }
+    }
+
+    private func deactivatePlaybackSessionIfNeeded() {
+        try? audioSession.setActive(false, options: [.notifyOthersOnDeactivation])
     }
 }
 

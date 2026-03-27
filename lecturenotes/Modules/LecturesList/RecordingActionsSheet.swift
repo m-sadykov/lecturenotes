@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct RecordingActionsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var isDeleteAlertPresented = false
+
     let lecture: Lecture
     let onAddToFolder: () -> Void
     let onRemoveFromFolder: (() -> Void)?
@@ -45,7 +48,7 @@ struct RecordingActionsSheet: View {
                     .padding(.vertical, 8)
 
                 Button("Delete", systemImage: "trash", role: .destructive) {
-                    onDelete()
+                    isDeleteAlertPresented = true
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 12)
@@ -53,6 +56,18 @@ struct RecordingActionsSheet: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .presentationDragIndicator(.visible)
+        .alert("Delete Lecture?", isPresented: $isDeleteAlertPresented) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                dismiss()
+                Task {
+                    await Task.yield()
+                    onDelete()
+                }
+            }
+        } message: {
+            Text("Delete \"\(lecture.title)\"? This action cannot be undone.")
+        }
     }
 }
 
