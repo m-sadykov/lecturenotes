@@ -5,50 +5,17 @@ import UIKit
 @MainActor
 @Observable
 final class SettingsViewModel {
-    var selectedLanguage: String {
-        didSet {
-            guard languages.contains(selectedLanguage) else {
-                selectedLanguage = Self.defaultLanguage
-                return
-            }
-
-            userDefaults.set(selectedLanguage, forKey: Self.selectedLanguageKey)
-        }
-    }
-
-    var deleteAudioAfterProcessing: Bool {
-        didSet {
-            userDefaults.set(deleteAudioAfterProcessing, forKey: Self.deleteAudioAfterProcessingKey)
-        }
-    }
-
     var isRestoringPurchases = false
-
-    let languages: [String]
 
     private let authService: FirebaseAuthService?
     private let userProfileService: FirebaseUserProfileService?
-    private let userDefaults: UserDefaults
-
-    private static let defaultLanguage = "English"
-    private static let supportedLanguages = ["English", "Русский", "Қазақша"]
-    private static let selectedLanguageKey = "settings.selectedLanguage"
-    private static let deleteAudioAfterProcessingKey = "settings.deleteAudioAfterProcessing"
 
     init(
         authService: FirebaseAuthService? = nil,
-        userProfileService: FirebaseUserProfileService? = nil,
-        userDefaults: UserDefaults = .standard
+        userProfileService: FirebaseUserProfileService? = nil
     ) {
         self.authService = authService
         self.userProfileService = userProfileService
-        self.userDefaults = userDefaults
-        self.languages = Self.supportedLanguages
-
-        let storedLanguage = userDefaults.string(forKey: Self.selectedLanguageKey)
-        let resolvedLanguage = storedLanguage ?? Self.defaultLanguage
-        self.selectedLanguage = Self.supportedLanguages.contains(resolvedLanguage) ? resolvedLanguage : Self.defaultLanguage
-        self.deleteAudioAfterProcessing = userDefaults.bool(forKey: Self.deleteAudioAfterProcessingKey)
     }
 
     var currentUserID: String? {
@@ -83,7 +50,13 @@ final class SettingsViewModel {
 
         do {
             _ = try await subscriptionManager.restorePurchases()
-            return "Purchases restored."
+
+            let restoredPlan = subscriptionManager.currentPlan
+            guard restoredPlan != .freemium else {
+                return "No active purchases were found to restore."
+            }
+
+            return "Purchases restored. Your \(restoredPlan.title) plan is active."
         } catch {
             return error.localizedDescription.isEmpty ? "Unable to restore purchases right now." : error.localizedDescription
         }

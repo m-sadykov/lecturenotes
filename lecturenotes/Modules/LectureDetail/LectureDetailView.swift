@@ -9,7 +9,7 @@ struct LectureDetailView: View {
         repository: LectureRepository,
         processingService: FirebaseLectureProcessingService? = nil,
         onLectureUpdated: @escaping (Lecture) -> Void = { _ in },
-        onLectureDeleted: @escaping (Lecture.ID) async -> Bool = { _ in true }
+        onLectureDeleted: @escaping (Lecture.ID) async -> String? = { _ in nil }
     ) {
         _viewModel = State(
             initialValue: LectureDetailViewModel(
@@ -185,6 +185,13 @@ struct LectureDetailView: View {
             }
         } message: {
             Text("This action cannot be undone.")
+        }
+        .alert("Error", isPresented: $viewModel.isErrorAlertPresented) {
+            Button("OK") {
+                viewModel.dismissErrorAlert()
+            }
+        } message: {
+            Text(viewModel.errorAlertMessage)
         }
         .sensoryFeedback(.impact(weight: .light), trigger: viewModel.processingSuccessFeedbackToken)
         .animation(.easeInOut(duration: 0.2), value: viewModel.toastMessage != nil)

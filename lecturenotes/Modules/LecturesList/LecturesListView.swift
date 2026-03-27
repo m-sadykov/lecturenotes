@@ -169,12 +169,9 @@ struct LecturesListView: View {
                             await MainActor.run {
                                 viewModel.handleLectureDeletedNavigation(lectureID)
                             }
-                            return true
+                            return nil
                         case .rejected(let message):
-                            await MainActor.run {
-                                viewModel.showToast(message)
-                            }
-                            return false
+                            return message
                         }
                     }
                 )
@@ -322,7 +319,7 @@ struct LecturesListView: View {
                                         case .deleted:
                                             viewModel.removalFeedbackToken += 1
                                         case .rejected(let message):
-                                            viewModel.showToast(message)
+                                            viewModel.presentErrorAlert(message)
                                         }
                                     }
                                 }
@@ -421,6 +418,13 @@ struct LecturesListView: View {
                 }
             } message: {
                 Text(viewModel.importAlertMessage)
+            }
+            .alert("Error", isPresented: $viewModel.isErrorAlertPresented) {
+                Button("OK") {
+                    viewModel.dismissErrorAlert()
+                }
+            } message: {
+                Text(viewModel.errorAlertMessage)
             }
             .alert(
                 "Edit Title",

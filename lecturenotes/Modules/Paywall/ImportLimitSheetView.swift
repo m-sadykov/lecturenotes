@@ -7,7 +7,7 @@ struct ImportLimitSheetView: View {
     let upgradeMessage: String
     let onViewPlans: () -> Void
 
-    static let estimatedSheetHeight: CGFloat = 400
+    static let estimatedSheetHeight: CGFloat = 450
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {

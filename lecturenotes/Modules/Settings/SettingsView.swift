@@ -23,30 +23,8 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        @Bindable var viewModel = viewModel
-
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                SettingsSectionHeader(title: "Preferences")
-
-                Picker("Output language", selection: $viewModel.selectedLanguage) {
-                    ForEach(viewModel.languages, id: \.self) { language in
-                        Text(language).tag(language)
-                    }
-                }
-                .pickerStyle(.navigationLink)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 18)
-
-                Divider()
-                    .padding(.leading, 20)
-
-                Toggle(isOn: $viewModel.deleteAudioAfterProcessing) {
-                    Text("Delete audio after processing")
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 18)
-
                 SettingsSectionHeader(title: "Actions")
 
                 SettingsActionRow(

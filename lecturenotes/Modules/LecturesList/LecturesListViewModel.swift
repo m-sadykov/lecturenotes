@@ -85,6 +85,8 @@ final class LecturesListViewModel {
     var isYouTubeImportSheetPresented = false
     var isImportAlertPresented = false
     var importAlertMessage = ""
+    var isErrorAlertPresented = false
+    var errorAlertMessage = ""
     var importLimitSheetContent: ImportLimitSheetContent?
     var pendingRenameLecture: Lecture?
     var isRenameAlertPresented = false
@@ -173,6 +175,11 @@ final class LecturesListViewModel {
     func dismissImportAlert() {
         isImportAlertPresented = false
         importAlertMessage = ""
+    }
+
+    func dismissErrorAlert() {
+        isErrorAlertPresented = false
+        errorAlertMessage = ""
     }
 
     func dismissImportLimitSheet() {
@@ -313,7 +320,7 @@ final class LecturesListViewModel {
             } catch {
                 handleLectureUpdated(previousLecture)
                 try? await repository.saveLecture(previousLecture)
-                showToast("Unable to update title right now.")
+                presentErrorAlert("Unable to update title right now.")
             }
 
             isSavingTitle = false
@@ -490,7 +497,7 @@ final class LecturesListViewModel {
         case .saved(let savedLecture):
             selectedLecture = savedLecture
         case .rejected(let message):
-            showToast(message)
+            presentErrorAlert(message)
         }
     }
 
@@ -1038,6 +1045,11 @@ final class LecturesListViewModel {
     private func presentImportError(_ message: String) {
         importAlertMessage = message
         isImportAlertPresented = true
+    }
+
+    func presentErrorAlert(_ message: String) {
+        errorAlertMessage = message
+        isErrorAlertPresented = true
     }
 
     private func present(_ action: LecturesListPendingConsentAction) {

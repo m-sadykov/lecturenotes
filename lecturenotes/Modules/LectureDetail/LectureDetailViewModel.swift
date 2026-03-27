@@ -50,9 +50,11 @@ final class LectureDetailViewModel {
     var isFolderPickerPresented = false
     var isRenameAlertPresented = false
     var isDeleteAlertPresented = false
+    var isErrorAlertPresented = false
     var isSavingTitle = false
     var isSavingFolder = false
     var draftTitle = ""
+    var errorAlertMessage = ""
     var toastMessage: String?
     var processingErrorFeedbackToken = 0
     var processingSuccessFeedbackToken = 0
@@ -60,7 +62,7 @@ final class LectureDetailViewModel {
     @ObservationIgnored private let repository: LectureRepository
     @ObservationIgnored private let processingService: FirebaseLectureProcessingService?
     @ObservationIgnored private let onLectureUpdated: (Lecture) -> Void
-    @ObservationIgnored private let onLectureDeleted: (Lecture.ID) async -> Bool
+    @ObservationIgnored private let onLectureDeleted: (Lecture.ID) async -> String?
     @ObservationIgnored private var repositoryObservationTask: Task<Void, Never>?
 
     init(
@@ -68,7 +70,7 @@ final class LectureDetailViewModel {
         repository: LectureRepository,
         processingService: FirebaseLectureProcessingService? = nil,
         onLectureUpdated: @escaping (Lecture) -> Void = { _ in },
-        onLectureDeleted: @escaping (Lecture.ID) async -> Bool = { _ in true }
+        onLectureDeleted: @escaping (Lecture.ID) async -> String? = { _ in nil }
     ) {
         self.lecture = lecture
         self.repository = repository
@@ -217,7 +219,7 @@ final class LectureDetailViewModel {
                 lecture = previousLecture
                 onLectureUpdated(previousLecture)
                 try? await repository.saveLecture(previousLecture)
-                showToast("Unable to update title right now.")
+                presentErrorAlert("Unable to update title right now.")
             }
 
             isSavingTitle = false
@@ -265,11 +267,11 @@ final class LectureDetailViewModel {
     }
 
     func confirmDelete() async -> Bool {
-        let wasDeleted = await onLectureDeleted(lecture.id)
-        if !wasDeleted {
-            showToast("Unable to delete lecture right now.")
+        if let errorMessage = await onLectureDeleted(lecture.id) {
+            presentErrorAlert(errorMessage)
+            return false
         }
-        return wasDeleted
+        return true
     }
 
     func showToast(_ message: String) {
@@ -284,6 +286,16 @@ final class LectureDetailViewModel {
                 toastMessage = nil
             }
         }
+    }
+
+    func dismissErrorAlert() {
+        isErrorAlertPresented = false
+        errorAlertMessage = ""
+    }
+
+    func presentErrorAlert(_ message: String) {
+        errorAlertMessage = message
+        isErrorAlertPresented = true
     }
 
     private func reloadRepositoryData() async {
