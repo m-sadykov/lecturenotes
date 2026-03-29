@@ -60,7 +60,8 @@ struct lecturenotesApp: App {
             initialValue: LecturesListViewModel(
                 repository: environment.repository,
                 processingService: environment.processingService,
-                userProfileService: environment.userProfileService
+                userProfileService: environment.userProfileService,
+                analyticsService: environment.analyticsService
             )
         )
     }

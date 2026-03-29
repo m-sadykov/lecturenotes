@@ -13,11 +13,18 @@ final class LecturePlayerViewModel {
     var totalDuration: Duration = .zero
 
     @ObservationIgnored private let player: AVPlayer?
+    @ObservationIgnored private let analyticsService: AppAnalyticsService?
+    @ObservationIgnored private let analyticsContext: LectureAnalyticsContext?
     @ObservationIgnored private let audioSession = AVAudioSession.sharedInstance()
     @ObservationIgnored private var timeObserver: Any?
     @ObservationIgnored private var durationTask: Task<Void, Never>?
 
-    init(audioURL: URL?, fallbackDuration: Duration) {
+    init(
+        audioURL: URL?,
+        fallbackDuration: Duration,
+        analyticsService: AppAnalyticsService? = nil,
+        analyticsContext: LectureAnalyticsContext? = nil
+    ) {
         if let audioURL {
             self.player = AVPlayer(url: audioURL)
         } else {
@@ -25,6 +32,8 @@ final class LecturePlayerViewModel {
         }
 
         self.totalDuration = fallbackDuration
+        self.analyticsService = analyticsService
+        self.analyticsContext = analyticsContext
         configurePlayer()
     }
 
@@ -45,6 +54,14 @@ final class LecturePlayerViewModel {
             player.pause()
             isPlaying = false
             deactivatePlaybackSessionIfNeeded()
+            if let analyticsContext {
+                analyticsService?.track(
+                    .audioPlayPaused(
+                        context: analyticsContext,
+                        positionSeconds: currentTime.timeInterval
+                    )
+                )
+            }
             return
         }
 
@@ -58,6 +75,9 @@ final class LecturePlayerViewModel {
 
         player.playImmediately(atRate: playbackRate)
         isPlaying = true
+        if let analyticsContext {
+            analyticsService?.track(.audioPlayStarted(context: analyticsContext))
+        }
     }
 
     func seek(to progress: Double) {
@@ -162,6 +182,9 @@ final class LecturePlayerViewModel {
                 let totalSeconds = totalDuration.timeInterval
                 if totalSeconds > 0, time.seconds >= totalSeconds {
                     isPlaying = false
+                    if let analyticsContext {
+                        analyticsService?.track(.audioPlayCompleted(context: analyticsContext))
+                    }
                     currentTime = .zero
                     player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero)
                 }

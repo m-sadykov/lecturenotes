@@ -10,16 +10,20 @@ final class AppEnvironment {
     @ObservationIgnored var authService: FirebaseAuthService?
     @ObservationIgnored var userProfileService: FirebaseUserProfileService?
     @ObservationIgnored var processingService: FirebaseLectureProcessingService?
+    @ObservationIgnored var analyticsService: AppAnalyticsService
 
     init(
         repository: LectureRepository? = nil,
         modelContainer: ModelContainer? = nil,
         authService: FirebaseAuthService? = nil,
         userProfileService: FirebaseUserProfileService? = nil,
-        processingService: FirebaseLectureProcessingService? = nil
+        processingService: FirebaseLectureProcessingService? = nil,
+        analyticsService: AppAnalyticsService? = nil
     ) {
         let resolvedModelContainer = modelContainer ?? Self.makeModelContainer()
+        let resolvedAnalyticsService = analyticsService ?? AppAnalyticsService()
         self.modelContainer = resolvedModelContainer
+        self.analyticsService = resolvedAnalyticsService
 
         if let repository {
             self.repository = repository
@@ -69,7 +73,8 @@ final class AppEnvironment {
     static func preview(repository: LectureRepository? = nil) -> AppEnvironment {
         AppEnvironment(
             repository: repository ?? MockLectureRepository(),
-            processingService: nil
+            processingService: nil,
+            analyticsService: AppAnalyticsService(isEnabled: false)
         )
     }
 

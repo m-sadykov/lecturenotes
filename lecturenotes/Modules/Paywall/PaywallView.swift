@@ -20,15 +20,22 @@ final class PaywallPresentationModel {
     var paywallErrorMessage: String?
 
     @ObservationIgnored private let userDefaults: UserDefaults
+    @ObservationIgnored private let analyticsService: AppAnalyticsService?
     @ObservationIgnored private var activePresentationSource: PresentationSource?
     @ObservationIgnored private var didUnlockInActivePresentation = false
+    @ObservationIgnored private var activeOfferingIdentifier: String?
+    @ObservationIgnored private var activeProductIdentifier: String?
 
     private static let scheduledOfferPresentationInterval: TimeInterval = 3 * 60 * 60
     static let scheduledOfferPollingInterval: Duration = .seconds(60)
     private static let scheduledOfferLastPresentedAtKey = "paywall.proYearlyDiscountOffer.lastPresentedAt"
 
-    init(userDefaults: UserDefaults = .standard) {
+    init(
+        userDefaults: UserDefaults = .standard,
+        analyticsService: AppAnalyticsService? = nil
+    ) {
         self.userDefaults = userDefaults
+        self.analyticsService = analyticsService
     }
 
     func presentDefaultPaywall() async {
@@ -97,10 +104,71 @@ final class PaywallPresentationModel {
         didUnlockInActivePresentation = true
     }
 
+    func handlePurchaseStarted(_ package: Package, currentPlan: AppUserPlan) {
+        activeOfferingIdentifier = package.offeringIdentifier
+        activeProductIdentifier = package.storeProduct.productIdentifier
+        analyticsService?.track(
+            .purchaseStarted(
+                productID: package.storeProduct.productIdentifier,
+                offeringID: package.offeringIdentifier,
+                planFrom: currentPlan
+            )
+        )
+    }
+
+    func handlePurchaseSuccess(_ customerInfo: CustomerInfo, currentPlan: AppUserPlan) {
+        analyticsService?.track(
+            .purchaseSuccess(
+                productID: activeProductIdentifier,
+                offeringID: activeOfferingIdentifier,
+                planFrom: currentPlan,
+                planTo: resolvePlan(from: customerInfo)
+            )
+        )
+    }
+
+    func handlePurchaseCancelled(currentPlan: AppUserPlan) {
+        analyticsService?.track(
+            .purchaseCancelled(
+                productID: activeProductIdentifier,
+                offeringID: activeOfferingIdentifier,
+                planFrom: currentPlan
+            )
+        )
+    }
+
+    func handlePurchaseFailure(_ error: Error, currentPlan: AppUserPlan) {
+        analyticsService?.track(
+            .purchaseFailed(
+                productID: activeProductIdentifier,
+                offeringID: activeOfferingIdentifier,
+                planFrom: currentPlan,
+                error: error
+            )
+        )
+    }
+
+    func handleRestoreStarted(currentPlan: AppUserPlan) {
+        analyticsService?.track(.restorePurchasesStarted(plan: currentPlan))
+    }
+
+    func handleRestoreCompleted(_ customerInfo: CustomerInfo, currentPlan: AppUserPlan) {
+        let restoredPlan = resolvePlan(from: customerInfo)
+        let result = restoredPlan == currentPlan && restoredPlan == .freemium ? "no_active_purchases" : "success"
+        analyticsService?.track(
+            .restorePurchasesResult(
+                result: result,
+                restoredPlan: restoredPlan
+            )
+        )
+    }
+
     func handlePaywallDismissal(for subscriptionManager: SubscriptionManager) {
         defer {
             activePresentationSource = nil
             didUnlockInActivePresentation = false
+            activeOfferingIdentifier = nil
+            activeProductIdentifier = nil
         }
 
         guard shouldAllowPaywallPresentation(for: subscriptionManager.currentPlan), !didUnlockInActivePresentation else {
@@ -141,6 +209,13 @@ final class PaywallPresentationModel {
             activePresentationSource = source
             didUnlockInActivePresentation = false
             presentedOffering = offering
+            analyticsService?.track(
+                .paywallShown(
+                    source: analyticsValue(for: source),
+                    offeringID: offering.identifier,
+                    currentPlan: nil
+                )
+            )
             return true
         } catch {
             if showsError {
@@ -174,6 +249,29 @@ final class PaywallPresentationModel {
 
     private func markScheduledOfferAnchorNow() {
         userDefaults.set(Date.now, forKey: Self.scheduledOfferLastPresentedAtKey)
+    }
+
+    private func resolvePlan(from customerInfo: CustomerInfo) -> AppUserPlan {
+        if customerInfo.entitlements[SubscriptionManager.proEntitlementIdentifier]?.isActive == true {
+            return .pro
+        }
+
+        if customerInfo.entitlements[SubscriptionManager.premiumEntitlementIdentifier]?.isActive == true {
+            return .premium
+        }
+
+        return .freemium
+    }
+
+    private func analyticsValue(for source: PresentationSource) -> String {
+        switch source {
+        case .postOnboarding:
+            "post_onboarding"
+        case .manualDefault:
+            "manual_default"
+        case .scheduledDiscount:
+            "scheduled_discount"
+        }
     }
 }
 

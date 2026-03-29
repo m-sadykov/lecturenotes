@@ -9,6 +9,7 @@ struct LectureDetailView: View {
         lecture: Lecture,
         repository: LectureRepository,
         processingService: FirebaseLectureProcessingService? = nil,
+        analyticsService: AppAnalyticsService? = nil,
         onLectureUpdated: @escaping (Lecture) -> Void = { _ in },
         onLectureDeleted: @escaping (Lecture.ID) async -> String? = { _ in nil }
     ) {
@@ -17,6 +18,7 @@ struct LectureDetailView: View {
                 lecture: lecture,
                 repository: repository,
                 processingService: processingService,
+                analyticsService: analyticsService,
                 onLectureUpdated: onLectureUpdated,
                 onLectureDeleted: onLectureDeleted
             )
@@ -157,9 +159,21 @@ struct LectureDetailView: View {
             NavigationStack {
                 switch destination {
                 case .flashcards:
-                    FlashcardsPracticeView(viewModel: FlashcardsPracticeViewModel(cards: viewModel.lecture.flashcards))
+                    FlashcardsPracticeView(
+                        viewModel: FlashcardsPracticeViewModel(
+                            cards: viewModel.lecture.flashcards,
+                            analyticsService: viewModel.analytics,
+                            analyticsContext: .init(lecture: viewModel.lecture)
+                        )
+                    )
                 case .quiz:
-                    QuizView(viewModel: QuizViewModel(questions: viewModel.lecture.quiz))
+                    QuizView(
+                        viewModel: QuizViewModel(
+                            questions: viewModel.lecture.quiz,
+                            analyticsService: viewModel.analytics,
+                            analyticsContext: .init(lecture: viewModel.lecture)
+                        )
+                    )
                 }
             }
         }

@@ -14,6 +14,7 @@ struct LecturesListView: View {
     let authService: FirebaseAuthService?
     let processingService: FirebaseLectureProcessingService?
     let userProfileService: FirebaseUserProfileService?
+    let analyticsService: AppAnalyticsService?
     @State private var activeFileImport: LocalFileImport = .importAudio
     @State private var isFileImporterPresented = false
     @State private var pendingLocalConsentAction: LocalFileImport?
@@ -32,7 +33,8 @@ struct LecturesListView: View {
             VStack(spacing: 0) {
                 HomeHeaderView(
                     authService: authService,
-                    userProfileService: userProfileService
+                    userProfileService: userProfileService,
+                    analyticsService: analyticsService
                 )
                     .padding(.horizontal, 20)
                     .padding(.top, 6)
@@ -158,6 +160,7 @@ struct LecturesListView: View {
                     lecture: lecture,
                     repository: repository,
                     processingService: processingService,
+                    analyticsService: analyticsService,
                     onLectureUpdated: { updatedLecture in
                         viewModel.handleLectureUpdated(updatedLecture)
                     },
@@ -536,6 +539,19 @@ struct LecturesListView: View {
     }
 
     private func presentFileImport(_ fileImport: LocalFileImport) {
+        let sourceType = switch fileImport {
+        case .importAudio:
+            "audio"
+        case .importPDF:
+            "pdf"
+        }
+        analyticsService?.track(
+            .contentCreateStarted(
+                sourceType: sourceType,
+                entryPoint: "file_importer",
+                plan: userProfileService?.currentProfile?.plan
+            )
+        )
         activeFileImport = fileImport
         isFileImporterPresented = true
     }

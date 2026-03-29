@@ -34,16 +34,31 @@ final class RecorderViewModel {
     var errorMessage: String?
 
     @ObservationIgnored private let recordingManager: RecordingManager
+    @ObservationIgnored private let analyticsService: AppAnalyticsService?
+    @ObservationIgnored private let plan: AppUserPlan?
     @ObservationIgnored private var timerTask: Task<Void, Never>?
 
-    init(limit: Duration = .seconds(300)) {
+    init(
+        limit: Duration = .seconds(300),
+        analyticsService: AppAnalyticsService? = nil,
+        plan: AppUserPlan? = nil
+    ) {
         self.limit = limit
+        self.analyticsService = analyticsService
+        self.plan = plan
         self.recordingManager = RecordingManager()
         bindRecordingManager()
     }
 
-    init(limit: Duration = .seconds(300), recordingManager: RecordingManager) {
+    init(
+        limit: Duration = .seconds(300),
+        recordingManager: RecordingManager,
+        analyticsService: AppAnalyticsService? = nil,
+        plan: AppUserPlan? = nil
+    ) {
         self.limit = limit
+        self.analyticsService = analyticsService
+        self.plan = plan
         self.recordingManager = recordingManager
         bindRecordingManager()
     }
@@ -92,6 +107,12 @@ final class RecorderViewModel {
         do {
             try await recordingManager.startRecording()
             record()
+            analyticsService?.track(
+                .recordStarted(
+                    limitMinutes: limit.minutesValue,
+                    plan: plan
+                )
+            )
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -107,6 +128,7 @@ final class RecorderViewModel {
         recordingManager.pauseRecording()
         syncElapsedWithRecording()
         mode = .paused
+        analyticsService?.track(.recordPaused(elapsedSeconds: elapsed.secondsValue))
     }
 
     func resume() {
@@ -114,6 +136,7 @@ final class RecorderViewModel {
         recordingManager.resumeRecording()
         mode = .recording
         startTimerIfNeeded()
+        analyticsService?.track(.recordResumed(elapsedSeconds: elapsed.secondsValue))
     }
 
     func togglePause() {
@@ -133,6 +156,12 @@ final class RecorderViewModel {
         timerTask?.cancel()
         timerTask = nil
         _ = recordingManager.stopRecording()
+        analyticsService?.track(
+            .recordFinished(
+                elapsedSeconds: elapsed.secondsValue,
+                finishReason: "limit_reached"
+            )
+        )
     }
 
     func finishRecording() -> RecordingDraft? {
@@ -144,6 +173,13 @@ final class RecorderViewModel {
         guard let recording = recordingManager.stopRecording() else {
             return nil
         }
+
+        analyticsService?.track(
+            .recordFinished(
+                elapsedSeconds: recording.duration.secondsValue,
+                finishReason: "user_saved"
+            )
+        )
 
         return RecordingDraft(
             audioURL: recording.url,
@@ -158,6 +194,12 @@ final class RecorderViewModel {
         timerTask?.cancel()
         timerTask = nil
         recordingManager.discardRecording()
+        analyticsService?.track(
+            .recordFinished(
+                elapsedSeconds: elapsed.secondsValue,
+                finishReason: "discarded"
+            )
+        )
     }
 
     private func startTimerIfNeeded() {
@@ -195,5 +237,15 @@ final class RecorderViewModel {
 
             self.errorMessage = message
         }
+    }
+}
+
+private extension Duration {
+    var minutesValue: Double {
+        secondsValue / 60
+    }
+
+    var secondsValue: Double {
+        TimeInterval(components.seconds) + (TimeInterval(components.attoseconds) / 1_000_000_000_000_000_000)
     }
 }

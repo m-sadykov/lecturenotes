@@ -10,17 +10,20 @@ final class LectureProcessingViewModel {
 
     @ObservationIgnored private let repository: LectureRepository
     @ObservationIgnored private let processingService: FirebaseLectureProcessingService
+    @ObservationIgnored private let analyticsService: AppAnalyticsService?
     @ObservationIgnored private let onLectureUpdated: @MainActor (Lecture) -> Void
 
     init(
         lecture: Lecture,
         repository: LectureRepository,
         processingService: FirebaseLectureProcessingService,
+        analyticsService: AppAnalyticsService? = nil,
         onLectureUpdated: @escaping @MainActor (Lecture) -> Void
     ) {
         self.lecture = lecture
         self.repository = repository
         self.processingService = processingService
+        self.analyticsService = analyticsService
         self.onLectureUpdated = onLectureUpdated
     }
 
@@ -71,5 +74,13 @@ final class LectureProcessingViewModel {
         lecture.status = .failed
         lecture.processingErrorMessage = error.localizedDescription
         onLectureUpdated(lecture)
+        analyticsService?.track(
+            .processingFailed(
+                context: .init(lecture: lecture),
+                plan: nil,
+                stage: lecture.processingStartStatus.rawValue,
+                reason: error.localizedDescription
+            )
+        )
     }
 }

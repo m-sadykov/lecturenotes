@@ -55,6 +55,21 @@ enum LectureDetailDestination: Identifiable {
     }
 }
 
+private extension LectureDetailSection {
+    var analyticsValue: String {
+        switch self {
+        case .summary:
+            "summary"
+        case .transcript:
+            "transcript"
+        case .flashcards:
+            "flashcards"
+        case .quiz:
+            "quiz"
+        }
+    }
+}
+
 @MainActor
 @Observable
 final class LectureDetailViewModel {
@@ -78,6 +93,7 @@ final class LectureDetailViewModel {
 
     @ObservationIgnored private let repository: LectureRepository
     @ObservationIgnored private let processingService: FirebaseLectureProcessingService?
+    @ObservationIgnored private let analyticsService: AppAnalyticsService?
     @ObservationIgnored private let onLectureUpdated: (Lecture) -> Void
     @ObservationIgnored private let onLectureDeleted: (Lecture.ID) async -> String?
     @ObservationIgnored private var repositoryObservationTask: Task<Void, Never>?
@@ -86,12 +102,14 @@ final class LectureDetailViewModel {
         lecture: Lecture,
         repository: LectureRepository,
         processingService: FirebaseLectureProcessingService? = nil,
+        analyticsService: AppAnalyticsService? = nil,
         onLectureUpdated: @escaping (Lecture) -> Void = { _ in },
         onLectureDeleted: @escaping (Lecture.ID) async -> String? = { _ in nil }
     ) {
         self.lecture = lecture
         self.repository = repository
         self.processingService = processingService
+        self.analyticsService = analyticsService
         self.onLectureUpdated = onLectureUpdated
         self.onLectureDeleted = onLectureDeleted
     }
@@ -116,6 +134,10 @@ final class LectureDetailViewModel {
         processingViewModel?.shouldShowProcessing ?? (lecture.status != .ready)
     }
 
+    var analytics: AppAnalyticsService? {
+        analyticsService
+    }
+
     func prepareAudioPlayerIfNeeded() {
         guard playerViewModel == nil, lecture.sourceType == .audio else {
             return
@@ -123,7 +145,9 @@ final class LectureDetailViewModel {
 
         playerViewModel = LecturePlayerViewModel(
             audioURL: lecture.audioURL,
-            fallbackDuration: lecture.duration
+            fallbackDuration: lecture.duration,
+            analyticsService: analyticsService,
+            analyticsContext: .init(lecture: lecture)
         )
     }
 
@@ -136,6 +160,7 @@ final class LectureDetailViewModel {
             lecture: lecture,
             repository: repository,
             processingService: processingService,
+            analyticsService: analyticsService,
             onLectureUpdated: { [weak self] updatedLecture in
                 guard let self else {
                     return
@@ -187,6 +212,12 @@ final class LectureDetailViewModel {
     }
 
     func selectSection(_ section: LectureDetailSection) {
+        analyticsService?.track(
+            .detailSectionSelected(
+                context: .init(lecture: lecture),
+                section: section.analyticsValue
+            )
+        )
         switch section {
         case .flashcards:
             activeDestination = .flashcards
@@ -198,6 +229,13 @@ final class LectureDetailViewModel {
     }
 
     func retryProcessing() async {
+        analyticsService?.track(.processingRetryTapped(context: .init(lecture: lecture)))
+        analyticsService?.track(
+            .processingStarted(
+                context: .init(lecture: lecture),
+                plan: nil
+            )
+        )
         await processingViewModel?.retryProcessing()
     }
 
@@ -249,6 +287,12 @@ final class LectureDetailViewModel {
         }
 
         UIPasteboard.general.string = copyableText
+        analyticsService?.track(
+            .sectionCopied(
+                context: .init(lecture: lecture),
+                section: selectedSection.analyticsValue
+            )
+        )
         let sectionName = selectedSection == .summary ? LectureDetailSection.summary.title : LectureDetailSection.transcript.title
         showToast(String(localized: "\(sectionName) copied."))
     }

@@ -11,15 +11,19 @@ struct SettingsView: View {
     @State private var alertMessage = ""
     @State private var isAlertPresented = false
     @State private var isLanguagePickerPresented = false
+    let analyticsService: AppAnalyticsService?
 
     init(
         authService: FirebaseAuthService? = nil,
-        userProfileService: FirebaseUserProfileService? = nil
+        userProfileService: FirebaseUserProfileService? = nil,
+        analyticsService: AppAnalyticsService? = nil
     ) {
+        self.analyticsService = analyticsService
         _viewModel = State(
             initialValue: SettingsViewModel(
                 authService: authService,
-                userProfileService: userProfileService
+                userProfileService: userProfileService,
+                analyticsService: analyticsService
             )
         )
     }
@@ -56,6 +60,7 @@ struct SettingsView: View {
                     systemImage: "envelope"
                 ) {
                     let draft = viewModel.makeSupportEmailDraft()
+                    analyticsService?.track(.supportEmailOpened)
 
                     if SettingsMailComposer.canSendMail {
                         supportEmailDraft = draft
@@ -122,11 +127,14 @@ struct SettingsView: View {
         .background(Color(.systemGray6))
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            analyticsService?.track(.settingsOpened(plan: subscriptionManager.currentPlan))
+        }
         .sheet(item: $supportEmailDraft) { draft in
             SettingsMailComposer(draft: draft)
         }
         .sheet(isPresented: $isLanguagePickerPresented) {
-            SettingsLanguagePickerView()
+            SettingsLanguagePickerView(analyticsService: analyticsService)
         }
         .alert("Settings", isPresented: $isAlertPresented) {
             Button("OK", role: .cancel) {}

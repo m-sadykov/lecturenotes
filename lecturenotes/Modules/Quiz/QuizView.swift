@@ -57,6 +57,9 @@ struct QuizView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sensoryFeedback(.impact(weight: .light), trigger: feedbackTrigger)
         .interactiveDismissDisabled(true)
+        .task {
+            viewModel.trackStarted()
+        }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Close", systemImage: "xmark") {

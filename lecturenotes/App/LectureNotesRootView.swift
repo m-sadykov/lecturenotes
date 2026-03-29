@@ -8,7 +8,7 @@ struct LectureNotesRootView: View {
     @State private var appState: AppState
     @State private var appEnvironment: AppEnvironment
     @State private var lecturesListViewModel: LecturesListViewModel
-    @State private var paywallPresentationModel = PaywallPresentationModel()
+    @State private var paywallPresentationModel: PaywallPresentationModel
 
     init(
         appState: AppState? = nil,
@@ -20,12 +20,16 @@ struct LectureNotesRootView: View {
         let resolvedLecturesListViewModel = lecturesListViewModel ?? LecturesListViewModel(
             repository: resolvedAppEnvironment.repository,
             processingService: resolvedAppEnvironment.processingService,
-            userProfileService: resolvedAppEnvironment.userProfileService
+            userProfileService: resolvedAppEnvironment.userProfileService,
+            analyticsService: resolvedAppEnvironment.analyticsService
         )
 
         _appState = State(initialValue: resolvedAppState)
         _appEnvironment = State(initialValue: resolvedAppEnvironment)
         _lecturesListViewModel = State(initialValue: resolvedLecturesListViewModel)
+        _paywallPresentationModel = State(
+            initialValue: PaywallPresentationModel(analyticsService: resolvedAppEnvironment.analyticsService)
+        )
     }
 
     var body: some View {
@@ -34,7 +38,10 @@ struct LectureNotesRootView: View {
 
         Group {
             if appState.needsOnboarding {
-                OnboardingView(appState: appState)
+                OnboardingView(
+                    appState: appState,
+                    analyticsService: appEnvironment.analyticsService
+                )
             } else {
                 LecturesListView(
                     viewModel: lecturesListViewModel,
@@ -42,7 +49,8 @@ struct LectureNotesRootView: View {
                     repository: appEnvironment.repository,
                     authService: appEnvironment.authService,
                     processingService: appEnvironment.processingService,
-                    userProfileService: appEnvironment.userProfileService
+                    userProfileService: appEnvironment.userProfileService,
+                    analyticsService: appEnvironment.analyticsService
                 )
             }
         }
@@ -52,13 +60,39 @@ struct LectureNotesRootView: View {
                 set: { paywallPresentationModel.presentedOffering = $0 }
             ),
             presentationMode: .fullScreen,
+            purchaseStarted: { package in
+                paywallPresentationModel.handlePurchaseStarted(
+                    package,
+                    currentPlan: subscriptionManager.currentPlan
+                )
+            },
             purchaseCompleted: { customerInfo in
+                paywallPresentationModel.handlePurchaseSuccess(
+                    customerInfo,
+                    currentPlan: subscriptionManager.currentPlan
+                )
                 subscriptionManager.update(from: customerInfo)
                 paywallPresentationModel.handleSuccessfulPurchaseOrRestore()
             },
+            purchaseCancelled: {
+                paywallPresentationModel.handlePurchaseCancelled(currentPlan: subscriptionManager.currentPlan)
+            },
+            restoreStarted: {
+                paywallPresentationModel.handleRestoreStarted(currentPlan: subscriptionManager.currentPlan)
+            },
             restoreCompleted: { customerInfo in
+                paywallPresentationModel.handleRestoreCompleted(
+                    customerInfo,
+                    currentPlan: subscriptionManager.currentPlan
+                )
                 subscriptionManager.update(from: customerInfo)
                 paywallPresentationModel.handleSuccessfulPurchaseOrRestore()
+            },
+            purchaseFailure: { error in
+                paywallPresentationModel.handlePurchaseFailure(
+                    error,
+                    currentPlan: subscriptionManager.currentPlan
+                )
             },
             onDismiss: {
                 paywallPresentationModel.handlePaywallDismissal(for: subscriptionManager)
@@ -122,6 +156,20 @@ struct LectureNotesRootView: View {
             default:
                 return
             }
+        }
+        .onChange(of: subscriptionManager.currentPlan, initial: true) { _, newPlan in
+            appEnvironment.analyticsService.setUserProperties(
+                plan: newPlan,
+                language: appState.selectedLanguage,
+                isPremium: newPlan != .freemium
+            )
+        }
+        .onChange(of: appState.selectedLanguage, initial: true) { _, newLanguage in
+            appEnvironment.analyticsService.setUserProperties(
+                plan: subscriptionManager.currentPlan,
+                language: newLanguage,
+                isPremium: subscriptionManager.currentPlan != .freemium
+            )
         }
         .task(id: shouldMonitorScheduledDiscountPaywall) {
             guard shouldMonitorScheduledDiscountPaywall else { return }

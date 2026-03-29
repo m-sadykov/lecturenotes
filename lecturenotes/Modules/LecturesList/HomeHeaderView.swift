@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeHeaderView: View {
     let authService: FirebaseAuthService?
     let userProfileService: FirebaseUserProfileService?
+    let analyticsService: AppAnalyticsService?
 
     var body: some View {
         HStack {
@@ -13,7 +14,8 @@ struct HomeHeaderView: View {
             NavigationLink {
                 SettingsView(
                     authService: authService,
-                    userProfileService: userProfileService
+                    userProfileService: userProfileService,
+                    analyticsService: analyticsService
                 )
             } label: {
                 Image(systemName: "gearshape")

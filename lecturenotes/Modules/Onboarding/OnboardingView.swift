@@ -2,7 +2,9 @@ import SwiftUI
 
 struct OnboardingView: View {
     @Bindable var appState: AppState
+    let analyticsService: AppAnalyticsService?
     @State private var selectedPageIndex = 0
+    @State private var hasTrackedStart = false
 
     private var pages: [OnboardingPage] {
         OnboardingPage.defaultPages
@@ -17,7 +19,7 @@ struct OnboardingView: View {
                 VStack(spacing: 0) {
                     OnboardingHeaderView(
                         showsSkip: selectedPageIndex < pages.count - 1,
-                        onSkip: finishOnboarding
+                        onSkip: skipOnboarding
                     )
 
                     TabView(selection: $selectedPageIndex) {
@@ -38,12 +40,20 @@ struct OnboardingView: View {
                 )
             }
             .toolbar(.hidden, for: .navigationBar)
+            .onAppear {
+                guard !hasTrackedStart else {
+                    return
+                }
+
+                hasTrackedStart = true
+                analyticsService?.track(.onboardingStarted)
+            }
         }
     }
 
     private func handlePrimaryAction() {
         if selectedPageIndex == pages.count - 1 {
-            finishOnboarding()
+            completeOnboarding()
             return
         }
 
@@ -52,8 +62,22 @@ struct OnboardingView: View {
         }
     }
 
+    private func completeOnboarding() {
+        analyticsService?.track(
+            .onboardingCompleted(
+                pagesSeenCount: min(max(selectedPageIndex + 1, 1), pages.count)
+            )
+        )
+        finishOnboarding()
+    }
+
     private func finishOnboarding() {
         appState.needsOnboarding = false
+    }
+
+    private func skipOnboarding() {
+        analyticsService?.track(.onboardingSkipped(pageIndex: selectedPageIndex))
+        finishOnboarding()
     }
 }
 
@@ -276,5 +300,8 @@ private struct OnboardingPage: Identifiable {
 }
 
 #Preview {
-    OnboardingView(appState: AppState())
+    OnboardingView(
+        appState: AppState(),
+        analyticsService: AppAnalyticsService(isEnabled: false)
+    )
 }

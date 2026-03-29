@@ -8,9 +8,17 @@ final class QuizViewModel {
 
     var currentIndex = 0
     private var answersByQuestionIndex: [Int: Int] = [:]
+    @ObservationIgnored private let analyticsService: AppAnalyticsService?
+    @ObservationIgnored private let analyticsContext: LectureAnalyticsContext?
 
-    init(questions: [QuizQuestion]) {
+    init(
+        questions: [QuizQuestion],
+        analyticsService: AppAnalyticsService? = nil,
+        analyticsContext: LectureAnalyticsContext? = nil
+    ) {
         self.questions = questions
+        self.analyticsService = analyticsService
+        self.analyticsContext = analyticsContext
     }
 
     var hasQuestions: Bool {
@@ -86,6 +94,15 @@ final class QuizViewModel {
         }
 
         answersByQuestionIndex[currentIndex] = optionIndex
+        if let analyticsContext, let currentQuestion {
+            analyticsService?.track(
+                .quizAnswered(
+                    context: analyticsContext,
+                    questionIndex: currentIndex,
+                    isCorrect: optionIndex == currentQuestion.correctIndex
+                )
+            )
+        }
     }
 
     func moveToNextQuestion() {
@@ -94,6 +111,16 @@ final class QuizViewModel {
         }
 
         currentIndex += 1
+        if currentIndex >= questions.count, let analyticsContext {
+            analyticsService?.track(
+                .quizCompleted(
+                    context: analyticsContext,
+                    correctCount: correctCount,
+                    wrongCount: wrongCount,
+                    totalCount: questions.count
+                )
+            )
+        }
     }
 
     func showQuestion(at index: Int) {
@@ -101,5 +128,18 @@ final class QuizViewModel {
             return
         }
         currentIndex = index
+    }
+
+    func trackStarted() {
+        guard let analyticsContext else {
+            return
+        }
+
+        analyticsService?.track(
+            .quizStarted(
+                context: analyticsContext,
+                questionCount: questions.count
+            )
+        )
     }
 }

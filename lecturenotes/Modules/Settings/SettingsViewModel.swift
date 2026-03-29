@@ -9,13 +9,16 @@ final class SettingsViewModel {
 
     private let authService: FirebaseAuthService?
     private let userProfileService: FirebaseUserProfileService?
+    private let analyticsService: AppAnalyticsService?
 
     init(
         authService: FirebaseAuthService? = nil,
-        userProfileService: FirebaseUserProfileService? = nil
+        userProfileService: FirebaseUserProfileService? = nil,
+        analyticsService: AppAnalyticsService? = nil
     ) {
         self.authService = authService
         self.userProfileService = userProfileService
+        self.analyticsService = analyticsService
     }
 
     var currentUserID: String? {
@@ -43,6 +46,7 @@ final class SettingsViewModel {
             return String(localized: "Purchase restore is already in progress.")
         }
 
+        analyticsService?.track(.restorePurchasesStarted(plan: currentPlan))
         isRestoringPurchases = true
         defer {
             isRestoringPurchases = false
@@ -53,11 +57,29 @@ final class SettingsViewModel {
 
             let restoredPlan = subscriptionManager.currentPlan
             guard restoredPlan != .freemium else {
+                analyticsService?.track(
+                    .restorePurchasesResult(
+                        result: "no_active_purchases",
+                        restoredPlan: restoredPlan
+                    )
+                )
                 return String(localized: "No active purchases were found to restore.")
             }
 
+            analyticsService?.track(
+                .restorePurchasesResult(
+                    result: "success",
+                    restoredPlan: restoredPlan
+                )
+            )
             return String(localized: "Purchases restored. Your \(restoredPlan.title) plan is active.")
         } catch {
+            analyticsService?.track(
+                .restorePurchasesResult(
+                    result: "failure",
+                    restoredPlan: nil
+                )
+            )
             return error.localizedDescription.isEmpty ? String(localized: "Unable to restore purchases right now.") : error.localizedDescription
         }
     }
@@ -69,6 +91,7 @@ final class SettingsViewModel {
         }
 
         UIPasteboard.general.string = currentUserID
+        analyticsService?.track(.userIDCopied)
         return true
     }
 
@@ -96,5 +119,9 @@ final class SettingsViewModel {
         let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? String(localized: "Unknown")
         let buildNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? String(localized: "Unknown")
         return "\(shortVersion) (\(buildNumber))"
+    }
+
+    private var currentPlan: AppUserPlan? {
+        userProfileService?.currentProfile?.plan
     }
 }

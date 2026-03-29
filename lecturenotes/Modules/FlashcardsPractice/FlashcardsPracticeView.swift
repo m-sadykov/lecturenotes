@@ -49,6 +49,9 @@ struct FlashcardsPracticeView: View {
         .navigationTitle("Flashcards")
         .navigationBarTitleDisplayMode(.inline)
         .interactiveDismissDisabled(true)
+        .task {
+            viewModel.trackStarted()
+        }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Close", systemImage: "xmark") {

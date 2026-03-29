@@ -82,6 +82,7 @@ final class LecturesListViewModel {
     @ObservationIgnored private let processingService: FirebaseLectureProcessingService?
     @ObservationIgnored private let importManager: LectureImportManager
     @ObservationIgnored private let userProfileService: FirebaseUserProfileService?
+    @ObservationIgnored private let analyticsService: AppAnalyticsService?
     @ObservationIgnored private var repositoryObservationTask: Task<Void, Never>?
     @ObservationIgnored private var searchTask: Task<Void, Never>?
     @ObservationIgnored private var loadingIndicatorTask: Task<Void, Never>?
@@ -112,6 +113,12 @@ final class LecturesListViewModel {
             }
 
             resetVisibleLectureCount()
+            analyticsService?.track(
+                .folderFilterApplied(
+                    hasFilter: selectedFolderID != nil,
+                    filteredCount: filteredLectures.count
+                )
+            )
         }
     }
     var isLoading = false
@@ -151,11 +158,13 @@ final class LecturesListViewModel {
     init(
         repository: LectureRepository,
         processingService: FirebaseLectureProcessingService? = nil,
-        userProfileService: FirebaseUserProfileService? = nil
+        userProfileService: FirebaseUserProfileService? = nil,
+        analyticsService: AppAnalyticsService? = nil
     ) {
         self.repository = repository
         self.processingService = processingService
         self.userProfileService = userProfileService
+        self.analyticsService = analyticsService
         importManager = LectureImportManager()
         visibleLectureCount = Self.lecturePageSize
     }
@@ -164,12 +173,14 @@ final class LecturesListViewModel {
         repository: LectureRepository,
         processingService: FirebaseLectureProcessingService? = nil,
         importManager: LectureImportManager,
-        userProfileService: FirebaseUserProfileService? = nil
+        userProfileService: FirebaseUserProfileService? = nil,
+        analyticsService: AppAnalyticsService? = nil
     ) {
         self.repository = repository
         self.processingService = processingService
         self.importManager = importManager
         self.userProfileService = userProfileService
+        self.analyticsService = analyticsService
         visibleLectureCount = Self.lecturePageSize
     }
 
@@ -289,6 +300,7 @@ final class LecturesListViewModel {
     }
 
     func openLecture(_ lecture: Lecture) {
+        analyticsService?.track(.lectureOpened(context: .init(lecture: lecture)))
         selectedLecture = lecture
     }
 
@@ -461,7 +473,10 @@ final class LecturesListViewModel {
         pendingConsentAction = nil
 
         guard let action else {
-            recorderViewModel = RecorderViewModel()
+            recorderViewModel = RecorderViewModel(
+                analyticsService: analyticsService,
+                plan: currentPlan
+            )
             return
         }
 
@@ -520,10 +535,26 @@ final class LecturesListViewModel {
 
     func saveRecording(_ recording: RecorderViewModel.RecordingDraft) async -> SaveRecordingResult {
         guard recording.duration >= Self.minimumRecordingDuration else {
+            analyticsService?.track(
+                .contentCreateFailed(
+                    sourceType: "recording",
+                    entryPoint: "mini_recorder",
+                    plan: currentPlan,
+                    reason: String(localized: "Recording must be at least 3 seconds long.")
+                )
+            )
             return .rejected(message: String(localized: "Recording must be at least 3 seconds long."))
         }
 
         if let validationMessage = await validateRecordingDuration(recording.duration) {
+            analyticsService?.track(
+                .contentCreateFailed(
+                    sourceType: "recording",
+                    entryPoint: "mini_recorder",
+                    plan: currentPlan,
+                    reason: validationMessage
+                )
+            )
             return .rejected(message: validationMessage)
         }
 
@@ -545,16 +576,38 @@ final class LecturesListViewModel {
         lectures.insert(lecture, at: 0)
         do {
             try await repository.saveLecture(lecture)
+            analyticsService?.track(
+                .contentCreateSuccess(
+                    context: .init(lecture: lecture),
+                    plan: currentPlan
+                )
+            )
             startProcessingIfNeeded(for: lecture)
             return .saved(lecture)
         } catch {
             lectures.removeAll { $0.id == lecture.id }
+            analyticsService?.track(
+                .contentCreateFailed(
+                    sourceType: "recording",
+                    entryPoint: "mini_recorder",
+                    plan: currentPlan,
+                    reason: String(localized: "Unable to save recording right now.")
+                )
+            )
             return .rejected(message: String(localized: "Unable to save recording right now."))
         }
     }
 
     func saveRecordingDraft(_ recording: RecorderViewModel.RecordingDraft) async {
         guard recording.duration >= Self.minimumRecordingDuration else {
+            analyticsService?.track(
+                .contentCreateFailed(
+                    sourceType: "recording",
+                    entryPoint: "mini_recorder",
+                    plan: currentPlan,
+                    reason: String(localized: "Recording must be at least 3 seconds long.")
+                )
+            )
             showLocalizedToast("Recording must be at least 3 seconds long.")
             return
         }
@@ -605,14 +658,36 @@ final class LecturesListViewModel {
 
             do {
                 try await repository.saveLecture(lecture)
+                analyticsService?.track(
+                    .contentCreateSuccess(
+                        context: .init(lecture: lecture),
+                        plan: currentPlan
+                    )
+                )
                 startProcessingIfNeeded(for: lecture)
                 return .saved(lecture)
             } catch {
                 lectures.removeAll { $0.id == lecture.id }
                 try? FileManager.default.removeItem(at: importedAudio.localURL)
+                analyticsService?.track(
+                    .contentCreateFailed(
+                        sourceType: "audio",
+                        entryPoint: "file_importer",
+                        plan: currentPlan,
+                        reason: String(localized: "Unable to save imported audio right now.")
+                    )
+                )
                 return .rejected(message: String(localized: "Unable to save imported audio right now."))
             }
         } catch {
+            analyticsService?.track(
+                .contentCreateFailed(
+                    sourceType: "audio",
+                    entryPoint: "file_importer",
+                    plan: currentPlan,
+                    reason: error.localizedDescription
+                )
+            )
             return .rejected(message: error.localizedDescription)
         }
     }
@@ -620,10 +695,26 @@ final class LecturesListViewModel {
     func importText(_ text: String) async -> SaveRecordingResult {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else {
+            analyticsService?.track(
+                .contentCreateFailed(
+                    sourceType: "text",
+                    entryPoint: "text_import_sheet",
+                    plan: currentPlan,
+                    reason: String(localized: "Enter some lecture text first.")
+                )
+            )
             return .rejected(message: String(localized: "Enter some lecture text first."))
         }
 
         if let validationMessage = await validateProcessingAvailability() {
+            analyticsService?.track(
+                .contentCreateFailed(
+                    sourceType: "text",
+                    entryPoint: "text_import_sheet",
+                    plan: currentPlan,
+                    reason: validationMessage
+                )
+            )
             return .rejected(message: validationMessage)
         }
 
@@ -647,6 +738,14 @@ final class LecturesListViewModel {
 
             return await saveImportedTextLecture(importedPDF)
         } catch {
+            analyticsService?.track(
+                .contentCreateFailed(
+                    sourceType: "pdf",
+                    entryPoint: "file_importer",
+                    plan: currentPlan,
+                    reason: error.localizedDescription
+                )
+            )
             return .rejected(message: error.localizedDescription)
         }
     }
@@ -703,6 +802,12 @@ final class LecturesListViewModel {
 
         do {
             try await repository.saveLecture(lecture)
+            analyticsService?.track(
+                .contentCreateSuccess(
+                    context: .init(lecture: lecture),
+                    plan: currentPlan
+                )
+            )
             startProcessingIfNeeded(for: lecture)
             return .saved(lecture)
         } catch {
@@ -715,6 +820,14 @@ final class LecturesListViewModel {
             case .audio, .youtube:
                 String(localized: "Unable to save imported content right now.")
             }
+            analyticsService?.track(
+                .contentCreateFailed(
+                    sourceType: textDocument.sourceType.rawValue,
+                    entryPoint: textDocument.sourceType == .pdf ? "file_importer" : "text_import_sheet",
+                    plan: currentPlan,
+                    reason: message
+                )
+            )
             return .rejected(message: message)
         }
     }
@@ -722,14 +835,38 @@ final class LecturesListViewModel {
     func importYouTube(urlString: String) async -> SaveRecordingResult {
         let trimmedURLString = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let sourceURL = URL(string: trimmedURLString), sourceURL.host() != nil else {
+            analyticsService?.track(
+                .contentCreateFailed(
+                    sourceType: "youtube",
+                    entryPoint: "youtube_import_sheet",
+                    plan: currentPlan,
+                    reason: String(localized: "Enter a valid YouTube link.")
+                )
+            )
             return .rejected(message: String(localized: "Enter a valid YouTube link."))
         }
 
         guard let videoID = importManager.parseYouTubeVideoID(from: sourceURL) else {
+            analyticsService?.track(
+                .contentCreateFailed(
+                    sourceType: "youtube",
+                    entryPoint: "youtube_import_sheet",
+                    plan: currentPlan,
+                    reason: String(localized: "Enter a valid YouTube link.")
+                )
+            )
             return .rejected(message: String(localized: "Enter a valid YouTube link."))
         }
 
         if let validationMessage = await validateProcessingAvailability() {
+            analyticsService?.track(
+                .contentCreateFailed(
+                    sourceType: "youtube",
+                    entryPoint: "youtube_import_sheet",
+                    plan: currentPlan,
+                    reason: validationMessage
+                )
+            )
             return .rejected(message: validationMessage)
         }
 
@@ -760,10 +897,24 @@ final class LecturesListViewModel {
 
         do {
             try await repository.saveLecture(lecture)
+            analyticsService?.track(
+                .contentCreateSuccess(
+                    context: .init(lecture: lecture),
+                    plan: currentPlan
+                )
+            )
             startProcessingIfNeeded(for: lecture)
             return .saved(lecture)
         } catch {
             lectures.removeAll { $0.id == lecture.id }
+            analyticsService?.track(
+                .contentCreateFailed(
+                    sourceType: "youtube",
+                    entryPoint: "youtube_import_sheet",
+                    plan: currentPlan,
+                    reason: String(localized: "Unable to save YouTube import right now.")
+                )
+            )
             return .rejected(message: String(localized: "Unable to save YouTube import right now."))
         }
     }
@@ -866,6 +1017,13 @@ final class LecturesListViewModel {
         isLoading = false
         hasCompletedInitialLoad = true
         hasLoadedOnce = true
+        analyticsService?.track(
+            .homeOpened(
+                lecturesCount: lectures.count,
+                foldersCount: folders.count,
+                plan: currentPlan
+            )
+        )
     }
 
     func loadMoreLecturesIfNeeded(currentLectureID: Lecture.ID) {
@@ -933,6 +1091,13 @@ final class LecturesListViewModel {
             return
         }
 
+        analyticsService?.track(
+            .processingStarted(
+                context: .init(lecture: lecture),
+                plan: currentPlan
+            )
+        )
+
         Task {
             var lectureToProcess = lecture
 
@@ -948,6 +1113,14 @@ final class LecturesListViewModel {
                 lectureToProcess.status = .failed
                 lectureToProcess.processingErrorMessage = error.localizedDescription
                 replaceLecture(lectureToProcess)
+                analyticsService?.track(
+                    .processingFailed(
+                        context: .init(lecture: lectureToProcess),
+                        plan: currentPlan,
+                        stage: lecture.sourceType.processingStartStatus.rawValue,
+                        reason: error.localizedDescription
+                    )
+                )
             }
         }
     }
@@ -976,6 +1149,7 @@ final class LecturesListViewModel {
 
         folders = await fetchedFolders
         lectures = await fetchedLectures
+        trackProcessingStatusChanges(from: previousLectures, to: lectures)
         if shouldRequestReview(previousLectures: previousLectures, updatedLectures: lectures) {
             reviewRequestToken += 1
         }
@@ -1102,6 +1276,47 @@ final class LecturesListViewModel {
 
         searchResults = results
         isSearching = false
+        analyticsService?.track(
+            .searchUsed(
+                queryLength: query.count,
+                resultsCount: results.count,
+                hasFolderFilter: selectedFolderID != nil
+            )
+        )
+    }
+
+    private func trackProcessingStatusChanges(from previousLectures: [Lecture], to updatedLectures: [Lecture]) {
+        let previousLecturesByID = Dictionary(uniqueKeysWithValues: previousLectures.map { ($0.id, $0) })
+
+        for lecture in updatedLectures {
+            guard let previousLecture = previousLecturesByID[lecture.id] else {
+                continue
+            }
+
+            guard previousLecture.status != lecture.status else {
+                continue
+            }
+
+            if previousLecture.status != .ready, lecture.status == .ready {
+                analyticsService?.track(
+                    .processingCompleted(
+                        context: .init(lecture: lecture),
+                        plan: currentPlan,
+                        flashcardsCount: lecture.flashcards.count,
+                        quizCount: lecture.quiz.count
+                    )
+                )
+            } else if previousLecture.status != .failed, lecture.status == .failed {
+                analyticsService?.track(
+                    .processingFailed(
+                        context: .init(lecture: lecture),
+                        plan: currentPlan,
+                        stage: previousLecture.status.rawValue,
+                        reason: lecture.processingErrorMessage ?? String(localized: "Unknown processing error")
+                    )
+                )
+            }
+        }
     }
     
     private func handleImportResult(_ result: SaveRecordingResult) {
@@ -1128,9 +1343,33 @@ final class LecturesListViewModel {
     }
 
     private func present(_ action: LecturesListPendingConsentAction) {
+        let sourceType: String = switch action {
+        case .record:
+            "recording"
+        case .importAudio:
+            "audio"
+        case .importText:
+            "text"
+        case .importPDF:
+            "pdf"
+        case .importYouTube:
+            "youtube"
+        }
+        analyticsService?.track(
+            .contentCreateStarted(
+                sourceType: sourceType,
+                entryPoint: "quick_actions",
+                plan: currentPlan
+            )
+        )
+
         switch action {
         case .record:
-            recorderViewModel = RecorderViewModel(limit: currentRecordingLimit)
+            recorderViewModel = RecorderViewModel(
+                limit: currentRecordingLimit,
+                analyticsService: analyticsService,
+                plan: currentPlan
+            )
         case .importAudio:
             isImporterPresented = true
         case .importText:
@@ -1144,6 +1383,10 @@ final class LecturesListViewModel {
 
     private var currentRecordingLimit: Duration {
         userProfileService?.currentProfile?.recordingLimitDuration ?? .seconds(5 * 60)
+    }
+
+    private var currentPlan: AppUserPlan? {
+        userProfileService?.currentProfile?.plan
     }
 
     private func canStartRecordingFlow() async -> Bool {
@@ -1164,6 +1407,15 @@ final class LecturesListViewModel {
         let userProfile = await currentUserProfile()
         let limit = userProfile?.recordingLimitDuration ?? .seconds(5 * 60)
         guard duration <= limit else {
+            analyticsService?.track(
+                .contentLimitHit(
+                    sourceType: "recording",
+                    limitType: "duration",
+                    plan: userProfile?.plan,
+                    allowedValue: limit.secondsValue,
+                    actualValue: duration.secondsValue
+                )
+            )
             return String(
                 localized: "Your \((userProfile?.plan ?? .freemium).title) plan allows up to \(LectureFormatters.durationText(limit)) per recording."
             )
@@ -1178,6 +1430,15 @@ final class LecturesListViewModel {
         guard duration <= limit else {
             presentImportLimitSheet(
                 makeAudioImportLimitSheetContent(userProfile: userProfile)
+            )
+            analyticsService?.track(
+                .contentLimitHit(
+                    sourceType: "audio",
+                    limitType: "duration",
+                    plan: userProfile?.plan,
+                    allowedValue: limit.secondsValue,
+                    actualValue: duration.secondsValue
+                )
             )
             return String(
                 localized: "Your \((userProfile?.plan ?? .freemium).title) plan allows audio imports up to \(LectureFormatters.durationText(limit)) per file."
@@ -1198,6 +1459,15 @@ final class LecturesListViewModel {
             presentImportLimitSheet(
                 makePDFImportLimitSheetContent(userProfile: userProfile)
             )
+            analyticsService?.track(
+                .contentLimitHit(
+                    sourceType: "pdf",
+                    limitType: "page_count",
+                    plan: userProfile?.plan,
+                    allowedValue: Double(limit),
+                    actualValue: Double(pageCount)
+                )
+            )
             return String(
                 localized: "Your \((userProfile?.plan ?? .freemium).title) plan allows PDF imports up to \(limit) pages per file."
             )
@@ -1215,6 +1485,15 @@ final class LecturesListViewModel {
         guard userProfile?.canStartProcessing ?? true else {
             processingLimitReachedToken += 1
             let remainingCount = max(userProfile?.processingQuota.remainingCount ?? 0, 0)
+            analyticsService?.track(
+                .contentLimitHit(
+                    sourceType: "processing",
+                    limitType: "quota",
+                    plan: userProfile?.plan,
+                    allowedValue: Double(userProfile?.processingQuota.totalCount ?? 0),
+                    actualValue: Double(userProfile?.processingQuota.usedCount ?? 0)
+                )
+            )
             return String(
                 localized: "You have \(remainingCount) processing attempts left on your \((userProfile?.plan ?? .freemium).title) plan."
             )
@@ -1252,6 +1531,12 @@ final class LecturesListViewModel {
             kind: .pdf,
             plan: userProfile?.plan ?? .freemium
         )
+    }
+}
+
+private extension Duration {
+    var secondsValue: Double {
+        TimeInterval(components.seconds) + (TimeInterval(components.attoseconds) / 1_000_000_000_000_000_000)
     }
 }
 
