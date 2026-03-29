@@ -76,8 +76,13 @@ struct YouTubeImportSheetView: View {
                                     .tint(.white)
                             }
 
-                            Text(isSubmitting ? "Sending..." : "Send")
-                                .bold()
+                            if isSubmitting {
+                                Text("Sending...")
+                                    .bold()
+                            } else {
+                                Text("Send")
+                                    .bold()
+                            }
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
@@ -160,12 +165,7 @@ private struct YouTubeURLField: UIViewRepresentable {
         textField.clearButtonMode = .whileEditing
         textField.textColor = .label
         textField.tintColor = .label
-        textField.attributedPlaceholder = NSAttributedString(
-            string: "https://www.youtube.com/watch?v=...",
-            attributes: [
-                .foregroundColor: UIColor.placeholderText,
-            ]
-        )
+        updatePlaceholder(for: textField)
         textField.textContentType = nil
         textField.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 16, height: 1))
         textField.leftViewMode = .always
@@ -180,8 +180,18 @@ private struct YouTubeURLField: UIViewRepresentable {
         if textField.text != text {
             textField.text = text
         }
+        updatePlaceholder(for: textField)
         context.coordinator.attach(to: textField)
         context.coordinator.handleAutofocusTrigger(autofocusTrigger)
+    }
+
+    private func updatePlaceholder(for textField: UITextField) {
+        textField.attributedPlaceholder = NSAttributedString(
+            string: String(localized: "https://www.youtube.com/watch?v=..."),
+            attributes: [
+                .foregroundColor: UIColor.placeholderText,
+            ]
+        )
     }
 
     final class Coordinator: NSObject, UITextFieldDelegate {

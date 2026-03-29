@@ -18,9 +18,7 @@ struct RecordingActionsSheet: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading) {
-                    Text(lecture.title)
-                        .font(.title2)
-                        .bold()
+                    lectureTitleView
                     Text(lecture.createdAt, format: LectureFormatters.dayMonthYear)
                         .foregroundStyle(.secondary)
                 }
@@ -66,13 +64,26 @@ struct RecordingActionsSheet: View {
                 }
             }
         } message: {
-            Text("Delete \"\(lecture.title)\"? This action cannot be undone.")
+            Text("Delete \"\(lecture.displayTitle)\"? This action cannot be undone.")
+        }
+    }
+
+    @ViewBuilder
+    private var lectureTitleView: some View {
+        if let localizedDisplayTitleKey = lecture.localizedDisplayTitleKey {
+            Text(localizedDisplayTitleKey.resource)
+                .font(.title2)
+                .bold()
+        } else {
+            Text(lecture.title)
+                .font(.title2)
+                .bold()
         }
     }
 }
 
 private struct ActionRowButton: View {
-    let title: String
+    let title: LocalizedStringResource
     let systemImage: String
     var role: ButtonRole? = nil
     let action: () -> Void
@@ -83,7 +94,7 @@ private struct ActionRowButton: View {
                 Image(systemName: systemImage)
                 Text(title)
                 Spacer()
-                Image(systemName: "chevron.right")
+                Image(systemName: "chevron.forward")
                     .foregroundStyle(role == .destructive ? .red : .secondary)
             }
             .padding(.horizontal)

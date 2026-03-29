@@ -4,11 +4,13 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.requestReview) private var requestReview
+    @Environment(AppState.self) private var appState
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @State private var viewModel: SettingsViewModel
     @State private var supportEmailDraft: SupportEmailDraft?
     @State private var alertMessage = ""
     @State private var isAlertPresented = false
+    @State private var isLanguagePickerPresented = false
 
     init(
         authService: FirebaseAuthService? = nil,
@@ -28,7 +30,7 @@ struct SettingsView: View {
                 SettingsSectionHeader(title: "Actions")
 
                 SettingsActionRow(
-                    title: "Rate the app",
+                    title: .localized("Rate the app"),
                     systemImage: "star.bubble"
                 ) {
                     requestReview()
@@ -37,7 +39,7 @@ struct SettingsView: View {
                 SettingsRowDivider()
 
                 SettingsActionRow(
-                    title: viewModel.isRestoringPurchases ? "Restoring purchases..." : "Restore purchases",
+                    title: viewModel.isRestoringPurchases ? .localized("Restoring purchases...") : .localized("Restore purchases"),
                     systemImage: "arrow.clockwise",
                     isDisabled: viewModel.isRestoringPurchases
                 ) {
@@ -50,7 +52,7 @@ struct SettingsView: View {
                 SettingsRowDivider()
 
                 SettingsActionRow(
-                    title: "Contact support",
+                    title: .localized("Contact support"),
                     systemImage: "envelope"
                 ) {
                     let draft = viewModel.makeSupportEmailDraft()
@@ -62,7 +64,7 @@ struct SettingsView: View {
 
                     openURL(draft.mailtoURL) { accepted in
                         if !accepted {
-                            presentAlert("Unable to open Mail right now.")
+                            presentAlert(String(localized: "Unable to open Mail right now."))
                         }
                     }
                 }
@@ -70,7 +72,7 @@ struct SettingsView: View {
                 SettingsSectionHeader(title: "Legal")
 
                 SettingsActionRow(
-                    title: "Privacy Policy",
+                    title: .localized("Privacy Policy"),
                     systemImage: "lock.doc"
                 ) {
                     openExternalURL(SettingsSupportConfiguration.privacyPolicyURL)
@@ -79,10 +81,20 @@ struct SettingsView: View {
                 SettingsRowDivider()
 
                 SettingsActionRow(
-                    title: "Terms of Use",
+                    title: .localized("Terms of Use"),
                     systemImage: "doc.text"
                 ) {
                     openExternalURL(SettingsSupportConfiguration.termsOfUseURL)
+                }
+
+                SettingsSectionHeader(title: "Language")
+
+                SettingsNavigationRow(
+                    title: "App Language",
+                    value: appState.selectedLanguage.nativeName,
+                    systemImage: "globe"
+                ) {
+                    isLanguagePickerPresented = true
                 }
 
                 SettingsSectionHeader(title: "Account")
@@ -92,7 +104,7 @@ struct SettingsView: View {
                     canCopyUserID: viewModel.canCopyUserID
                 ) {
                     guard viewModel.copyUserID() else {
-                        presentAlert("User ID is not available yet.")
+                        presentAlert(String(localized: "User ID is not available yet."))
                         return
                     }
                 }
@@ -113,6 +125,9 @@ struct SettingsView: View {
         .sheet(item: $supportEmailDraft) { draft in
             SettingsMailComposer(draft: draft)
         }
+        .sheet(isPresented: $isLanguagePickerPresented) {
+            SettingsLanguagePickerView()
+        }
         .alert("Settings", isPresented: $isAlertPresented) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -123,7 +138,7 @@ struct SettingsView: View {
     private func openExternalURL(_ url: URL) {
         openURL(url) { accepted in
             if !accepted {
-                presentAlert("Unable to open the link right now.")
+                presentAlert(String(localized: "Unable to open the link right now."))
             }
         }
     }
@@ -135,7 +150,7 @@ struct SettingsView: View {
 }
 
 private struct SettingsSectionHeader: View {
-    let title: String
+    let title: LocalizedStringResource
 
     var body: some View {
         Text(title)
@@ -147,8 +162,26 @@ private struct SettingsSectionHeader: View {
     }
 }
 
+private enum SettingsRowTitle {
+    case localized(LocalizedStringResource)
+    case custom(String)
+}
+
+private struct SettingsRowTitleView: View {
+    let title: SettingsRowTitle
+
+    var body: some View {
+        switch title {
+        case .localized(let resource):
+            Text(resource)
+        case .custom(let string):
+            Text(verbatim: string)
+        }
+    }
+}
+
 private struct SettingsActionRow: View {
-    let title: String
+    let title: SettingsRowTitle
     let systemImage: String
     var isDisabled = false
     let action: () -> Void
@@ -162,7 +195,7 @@ private struct SettingsActionRow: View {
                     .background(.black.opacity(0.05))
                     .clipShape(.rect(cornerRadius: 12))
 
-                Text(title)
+                SettingsRowTitleView(title: title)
                     .foregroundStyle(.primary)
 
                 Spacer()
@@ -212,8 +245,45 @@ private struct SettingsUserIDRow: View {
     }
 }
 
+private struct SettingsNavigationRow: View {
+    let title: LocalizedStringResource
+    let value: String
+    let systemImage: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: systemImage)
+                    .foregroundStyle(.primary)
+                    .frame(width: 44, height: 44)
+                    .background(.black.opacity(0.05))
+                    .clipShape(.rect(cornerRadius: 12))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .bold()
+
+                    Text(verbatim: value)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.forward")
+                    .font(.footnote)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 private struct SettingsStaticRow: View {
-    let title: String
+    let title: LocalizedStringResource
     let value: String
     let systemImage: String
 
@@ -250,6 +320,7 @@ private struct SettingsRowDivider: View {
 #Preview {
     NavigationStack {
         SettingsView()
+            .environment(AppState.preview())
             .environmentObject(SubscriptionManager())
     }
 }

@@ -24,7 +24,7 @@ final class SettingsViewModel {
 
     var maskedUserID: String {
         guard let currentUserID else {
-            return "Preparing..."
+            return String(localized: "Preparing...")
         }
 
         return SettingsUserIDFormatter.shortened(currentUserID)
@@ -40,7 +40,7 @@ final class SettingsViewModel {
 
     func restorePurchases(using subscriptionManager: SubscriptionManager) async -> String {
         guard !isRestoringPurchases else {
-            return "Purchase restore is already in progress."
+            return String(localized: "Purchase restore is already in progress.")
         }
 
         isRestoringPurchases = true
@@ -53,12 +53,12 @@ final class SettingsViewModel {
 
             let restoredPlan = subscriptionManager.currentPlan
             guard restoredPlan != .freemium else {
-                return "No active purchases were found to restore."
+                return String(localized: "No active purchases were found to restore.")
             }
 
-            return "Purchases restored. Your \(restoredPlan.title) plan is active."
+            return String(localized: "Purchases restored. Your \(restoredPlan.title) plan is active.")
         } catch {
-            return error.localizedDescription.isEmpty ? "Unable to restore purchases right now." : error.localizedDescription
+            return error.localizedDescription.isEmpty ? String(localized: "Unable to restore purchases right now.") : error.localizedDescription
         }
     }
 
@@ -73,26 +73,28 @@ final class SettingsViewModel {
     }
 
     func makeSupportEmailDraft() -> SupportEmailDraft {
-        let userIDText = currentUserID ?? "Unavailable"
+        let userIDText = currentUserID ?? String(localized: "Unavailable")
 
         return SupportEmailDraft(
             recipient: SettingsSupportConfiguration.supportEmailAddress,
-            subject: "LectraAI support request",
-            body: """
-            Hi Support,
+            subject: String(localized: "LectraAI support request"),
+            body: String(
+                localized: """
+                Hi Support,
 
-            I need help with:
+                I need help with:
 
 
-            User ID: \(userIDText)
-            App version: \(Self.appVersionText)
-            """
+                User ID: \(userIDText)
+                App version: \(Self.appVersionText)
+                """
+            )
         )
     }
 
     private static var appVersionText: String {
-        let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
-        let buildNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "Unknown"
+        let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? String(localized: "Unknown")
+        let buildNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? String(localized: "Unknown")
         return "\(shortVersion) (\(buildNumber))"
     }
 }

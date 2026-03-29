@@ -24,9 +24,9 @@ struct LectureImportManager {
         var errorDescription: String? {
             switch self {
             case .unableToImportAudio:
-                "Unable to import this audio file."
+                String(localized: "Unable to import this audio file.")
             case .missingAudioDuration:
-                "Unable to read the audio duration from file metadata."
+                String(localized: "Unable to read the audio duration from file metadata.")
             }
         }
     }
@@ -80,7 +80,7 @@ struct LectureImportManager {
             localURL: destinationURL,
             createdAt: createdAt,
             duration: duration,
-            suggestedTitle: suggestedTitle.isEmpty ? "Imported Recording" : suggestedTitle
+            suggestedTitle: suggestedTitle.isEmpty ? LectureLocalizedTitleKey.importedRecording.rawValue : suggestedTitle
         )
     }
 
@@ -148,7 +148,7 @@ struct LectureImportManager {
         let candidate = firstLine ?? text
         let words = candidate.split(whereSeparator: \.isWhitespace)
         let title = words.prefix(6).joined(separator: " ")
-        return title.isEmpty ? "Imported Text" : title
+        return title.isEmpty ? LectureLocalizedTitleKey.importedText.rawValue : title
     }
 
     private func loadDuration(for audioURL: URL) async -> Duration? {

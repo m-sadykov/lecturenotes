@@ -4,7 +4,9 @@ struct OnboardingView: View {
     @Bindable var appState: AppState
     @State private var selectedPageIndex = 0
 
-    private let pages = OnboardingPage.defaultPages
+    private var pages: [OnboardingPage] {
+        OnboardingPage.defaultPages
+    }
 
     var body: some View {
         NavigationStack {
@@ -126,12 +128,12 @@ private struct OnboardingHeroView: View {
 }
 
 private struct OnboardingBenefitsCard: View {
-    let benefits: [String]
+    let benefits: [LocalizedStringResource]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            ForEach(benefits, id: \.self) { benefit in
-                OnboardingBenefitRow(title: benefit)
+            ForEach(benefits.indices, id: \.self) { index in
+                OnboardingBenefitRow(title: benefits[index])
             }
         }
         .padding(20)
@@ -146,7 +148,7 @@ private struct OnboardingBenefitsCard: View {
 }
 
 private struct OnboardingBenefitRow: View {
-    let title: String
+    let title: LocalizedStringResource
 
     var body: some View {
         HStack(spacing: 12) {
@@ -174,7 +176,7 @@ private struct OnboardingBenefitRow: View {
 private struct OnboardingFooterView: View {
     let pageCount: Int
     let selectedPageIndex: Int
-    let actionTitle: String
+    let actionTitle: LocalizedStringResource
     let onPrimaryAction: () -> Void
 
     var body: some View {
@@ -232,9 +234,9 @@ private struct OnboardingPageIndicator: View {
 private struct OnboardingPage: Identifiable {
     let id: String
     let emoji: String
-    let title: String
-    let message: String
-    let benefits: [String]
+    let title: LocalizedStringResource
+    let message: LocalizedStringResource
+    let benefits: [LocalizedStringResource]
 
     static let defaultPages: [OnboardingPage] = [
         OnboardingPage(

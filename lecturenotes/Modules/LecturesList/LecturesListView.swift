@@ -275,13 +275,13 @@ struct LecturesListView: View {
                 }
             }
             .overlay(alignment: .top) {
-                if let toastMessage = viewModel.toastMessage {
-                    ToastBannerView(message: toastMessage)
+                if let toastPresentation = viewModel.toastPresentation {
+                    ToastBannerView(toastPresentation: toastPresentation)
                         .padding(.top, 12)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
-            .animation(.easeInOut(duration: 0.2), value: viewModel.toastMessage != nil)
+            .animation(.easeInOut(duration: 0.2), value: viewModel.toastPresentation != nil)
             .animation(.spring(response: 0.32, dampingFraction: 0.88), value: viewModel.recorderViewModel != nil)
             .animation(.spring(response: 0.28, dampingFraction: 0.88), value: showsInlineSearchBar)
             .animation(.spring(response: 0.28, dampingFraction: 0.88), value: showsFloatingSearchBar)
@@ -303,7 +303,7 @@ struct LecturesListView: View {
                                 viewModel.closeActiveSheet()
                                 viewModel.removalFeedbackToken += 1
                                 viewModel.showToast(
-                                    folderName.map { "Removed from \($0)." } ?? "Removed from folder."
+                                    folderName.map { String(localized: "Removed from \($0).") } ?? String(localized: "Removed from folder.")
                                 )
                             },
                             onEditTitle: {
@@ -467,7 +467,7 @@ struct LecturesListView: View {
                     }
                 }
             } message: { lecture in
-                Text("Delete \"\(lecture.title)\"? This action cannot be undone.")
+                Text("Delete \"\(lecture.displayTitle)\"? This action cannot be undone.")
             }
             .task {
                 isPremiumBannerVisible = shouldShowPremiumBanner
@@ -588,16 +588,23 @@ private struct LecturesListScrollOffsetReader: View {
 }
 
 private struct ToastBannerView: View {
-    let message: String
+    let toastPresentation: LecturesListViewModel.ToastPresentation
 
     var body: some View {
-        Text(message)
-            .foregroundStyle(.white)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(.black.opacity(0.88))
-            .clipShape(.rect(cornerRadius: 14))
-            .shadow(radius: 10, y: 4)
+        Group {
+            switch toastPresentation.content {
+            case .localized(let resource):
+                Text(resource)
+            case .custom(let string):
+                Text(verbatim: string)
+            }
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(.black.opacity(0.88))
+        .clipShape(.rect(cornerRadius: 14))
+        .shadow(radius: 10, y: 4)
     }
 }
 

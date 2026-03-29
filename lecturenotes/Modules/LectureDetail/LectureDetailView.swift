@@ -3,6 +3,7 @@ import SwiftUI
 struct LectureDetailView: View {
     @State private var viewModel: LectureDetailViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var isActionsPopoverPresented = false
 
     init(
         lecture: Lecture,
@@ -97,28 +98,29 @@ struct LectureDetailView: View {
             }
 
             ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    if viewModel.lecture.folderID == nil {
-                        Button("Add to folder", systemImage: "folder") {
-                            viewModel.presentFolderPicker()
-                        }
-                    } else {
-                        Button("Remove from folder", systemImage: "folder.badge.minus", role: .destructive) {
-                            viewModel.removeLectureFromFolder()
-                        }
-                    }
-
-                    Button("Edit Title", systemImage: "pencil") {
-                        viewModel.presentRename()
-                    }
-
-                    Button("Delete", systemImage: "trash", role: .destructive) {
-                        viewModel.requestDelete()
-                    }
+                Button {
+                    isActionsPopoverPresented = true
                 } label: {
                     Image(systemName: "ellipsis.circle")
                         .font(.title3)
                         .foregroundStyle(.primary)
+                }
+                .popover(isPresented: $isActionsPopoverPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+                    LectureDetailActionsSheet(
+                        onAddToFolder: {
+                            viewModel.presentFolderPicker()
+                        },
+                        onRemoveFromFolder: viewModel.lecture.folderID == nil ? nil : {
+                            viewModel.removeLectureFromFolder()
+                        },
+                        onEditTitle: {
+                            viewModel.presentRename()
+                        },
+                        onDelete: {
+                            viewModel.requestDelete()
+                        }
+                    )
+                    .presentationCompactAdaptation(.popover)
                 }
             }
         }
@@ -275,7 +277,7 @@ private struct LectureDetailSectionChipsView: View {
             HStack(spacing: 10) {
                 ForEach(LectureDetailSection.allCases) { section in
                     LectureDetailSectionChip(
-                        title: section.rawValue,
+                        title: section.titleResource,
                         emoji: section.emoji,
                         isSelected: selectedSection == section
                     ) {
@@ -290,7 +292,7 @@ private struct LectureDetailSectionChipsView: View {
 }
 
 private struct LectureDetailSectionChip: View {
-    let title: String
+    let title: LocalizedStringResource
     let emoji: String
     let isSelected: Bool
     let action: () -> Void
@@ -357,12 +359,9 @@ private struct LectureTextHeaderView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(lecture.title)
-                .font(.title)
-                .bold()
-                .lineLimit(2)
+            lectureTitleView
 
-            Text(metadataText)
+            metadataText
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -371,7 +370,24 @@ private struct LectureTextHeaderView: View {
         .padding(.vertical, 6)
     }
 
-    private var metadataText: String {
-        "\(lecture.createdAt.formatted(.dateTime.month(.abbreviated).day().year())) · \(lecture.sourceType.title)"
+    @ViewBuilder
+    private var lectureTitleView: some View {
+        if let localizedDisplayTitleKey = lecture.localizedDisplayTitleKey {
+            Text(localizedDisplayTitleKey.resource)
+                .font(.title)
+                .bold()
+                .lineLimit(2)
+        } else {
+            Text(lecture.title)
+                .font(.title)
+                .bold()
+                .lineLimit(2)
+        }
+    }
+
+    private var metadataText: Text {
+        Text(lecture.createdAt, format: LectureFormatters.date)
+        + Text(" · ")
+        + Text(lecture.sourceType.titleResource)
     }
 }

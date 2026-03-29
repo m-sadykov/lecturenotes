@@ -153,9 +153,15 @@ private struct QuizQuestionCardView: View {
                 Spacer()
 
                 if let lastAnswerWasCorrect {
-                    Text(lastAnswerWasCorrect ? "🎉 Correct" : "🙅 Wrong")
-                        .font(.headline)
-                        .foregroundStyle(.primary)
+                    if lastAnswerWasCorrect {
+                        Text("🎉 Correct")
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                    } else {
+                        Text("🙅 Wrong")
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                    }
                 }
             }
 

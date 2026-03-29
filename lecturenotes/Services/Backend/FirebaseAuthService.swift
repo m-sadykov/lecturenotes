@@ -43,7 +43,7 @@ enum FirebaseAuthServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingUser:
-            "Unable to sign in anonymously."
+            String(localized: "Unable to sign in anonymously.")
         }
     }
 }

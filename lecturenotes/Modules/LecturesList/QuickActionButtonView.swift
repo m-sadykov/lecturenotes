@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct QuickActionButtonView: View {
-    let title: String
+    let title: LocalizedStringResource
     let systemImage: String
     let action: () -> Void
 

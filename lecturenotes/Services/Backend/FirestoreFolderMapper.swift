@@ -19,7 +19,7 @@ enum FirestoreFolderMapper {
 
         return LectureFolder(
             id: folderID,
-            name: stringValue(for: "name", in: data) ?? "Folder"
+            name: stringValue(for: "name", in: data) ?? String(localized: "Folder")
         )
     }
 

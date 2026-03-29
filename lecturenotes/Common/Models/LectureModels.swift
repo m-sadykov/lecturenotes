@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum LectureStatus: String, CaseIterable, Identifiable, Codable {
     case draft
@@ -10,7 +11,7 @@ enum LectureStatus: String, CaseIterable, Identifiable, Codable {
 
     var id: Self { self }
 
-    var title: String {
+    var titleResource: LocalizedStringResource {
         switch self {
         case .draft:
             "Draft"
@@ -26,6 +27,10 @@ enum LectureStatus: String, CaseIterable, Identifiable, Codable {
             "Failed"
         }
     }
+
+    var title: String {
+        String(localized: titleResource)
+    }
 }
 
 enum LectureSourceType: String, CaseIterable, Identifiable, Codable {
@@ -36,7 +41,7 @@ enum LectureSourceType: String, CaseIterable, Identifiable, Codable {
 
     var id: Self { self }
 
-    var title: String {
+    var titleResource: LocalizedStringResource {
         switch self {
         case .audio:
             "Audio Recording"
@@ -47,6 +52,10 @@ enum LectureSourceType: String, CaseIterable, Identifiable, Codable {
         case .youtube:
             "YouTube Import"
         }
+    }
+
+    var title: String {
+        String(localized: titleResource)
     }
 
     var processingStartStatus: LectureStatus {
@@ -60,6 +69,65 @@ enum LectureSourceType: String, CaseIterable, Identifiable, Codable {
         case .youtube:
             .transcribing
         }
+    }
+}
+
+enum LectureLocalizedTitleKey: String, CaseIterable {
+    case newRecording = "New Recording"
+    case importedRecording = "Imported Recording"
+    case importedText = "Imported Text"
+    case importedPDF = "Imported PDF"
+    case youTubeImport = "YouTube Import"
+
+    var resource: LocalizedStringResource {
+        switch self {
+        case .newRecording:
+            "New Recording"
+        case .importedRecording:
+            "Imported Recording"
+        case .importedText:
+            "Imported Text"
+        case .importedPDF:
+            "Imported PDF"
+        case .youTubeImport:
+            "YouTube Import"
+        }
+    }
+
+    fileprivate var localizedVariants: Set<String> {
+        Self.cachedLocalizedVariants[self] ?? [rawValue]
+    }
+
+    fileprivate static func matching(_ title: String) -> Self? {
+        allCases.first { $0.localizedVariants.contains(title) }
+    }
+
+    private static let cachedLocalizedVariants: [Self: Set<String>] = Dictionary(
+        uniqueKeysWithValues: allCases.map { key in
+            var variants: Set<String> = [key.rawValue]
+
+            for localization in Bundle.main.localizations where localization != "Base" {
+                variants.insert(
+                    Bundle.main.localizedStringForLocale(
+                        key.rawValue,
+                        localeIdentifier: localization
+                    )
+                )
+            }
+
+            return (key, variants)
+        }
+    )
+}
+
+private extension Bundle {
+    func localizedStringForLocale(_ key: String, localeIdentifier: String) -> String {
+        let preferredLocalization = path(forResource: localeIdentifier, ofType: "lproj")
+        let languageCode = localeIdentifier.split(separator: "-").first.map(String.init)
+        let fallbackLocalization = languageCode.flatMap { path(forResource: $0, ofType: "lproj") }
+        let bundlePath = preferredLocalization ?? fallbackLocalization
+        let localizedBundle = bundlePath.flatMap(Bundle.init(path:))
+        return localizedBundle?.localizedString(forKey: key, value: key, table: nil) ?? key
     }
 }
 
@@ -162,5 +230,17 @@ struct Lecture: Identifiable, Hashable, Codable {
         }
 
         return sourceType.processingStartStatus
+    }
+
+    var localizedDisplayTitleKey: LectureLocalizedTitleKey? {
+        LectureLocalizedTitleKey.matching(title)
+    }
+
+    var displayTitle: String {
+        guard let localizedDisplayTitleKey else {
+            return title
+        }
+
+        return String(localized: localizedDisplayTitleKey.resource)
     }
 }

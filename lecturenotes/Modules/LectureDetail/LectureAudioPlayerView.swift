@@ -7,12 +7,9 @@ struct LectureAudioPlayerView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(lecture.title)
-                    .font(.title)
-                    .bold()
-                    .lineLimit(2)
+                lectureTitleView
 
-                Text(metadataText)
+                metadataText
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -75,8 +72,27 @@ struct LectureAudioPlayerView: View {
         }
     }
 
-    private var metadataText: String {
-        "\(lecture.createdAt.formatted(.dateTime.month(.abbreviated).day().year())) · \(LectureFormatters.clockText(lecture.duration)) · Audio Recording"
+    @ViewBuilder
+    private var lectureTitleView: some View {
+        if let localizedDisplayTitleKey = lecture.localizedDisplayTitleKey {
+            Text(localizedDisplayTitleKey.resource)
+                .font(.title)
+                .bold()
+                .lineLimit(2)
+        } else {
+            Text(lecture.title)
+                .font(.title)
+                .bold()
+                .lineLimit(2)
+        }
+    }
+
+    private var metadataText: Text {
+        Text(lecture.createdAt, format: LectureFormatters.date)
+        + Text(" · ")
+        + Text(LectureFormatters.clockText(lecture.duration))
+        + Text(" · ")
+        + Text(lecture.sourceType.titleResource)
     }
 }
 

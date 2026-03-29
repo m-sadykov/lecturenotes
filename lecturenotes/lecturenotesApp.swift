@@ -25,6 +25,7 @@ struct lecturenotesApp: App {
 
     @StateObject private var subscriptionManager: SubscriptionManager
     
+    @State private var appState: AppState
     @State private var appEnvironment: AppEnvironment
     @State private var lecturesListViewModel: LecturesListViewModel
     @State private var isSplashVisible = true
@@ -51,6 +52,7 @@ struct lecturenotesApp: App {
         _subscriptionManager = StateObject(
             wrappedValue: SubscriptionManager(userProfileService: userProfileService)
         )
+        _appState = State(initialValue: AppState())
         _appEnvironment = State(
             initialValue: environment
         )
@@ -99,21 +101,28 @@ struct lecturenotesApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if isSplashVisible {
-                SplashScreenView(progress: splashProgress)
-                    .transition(.opacity)
-                    .zIndex(1)
-                    .task() {
-                        await prepareStartupIfNeeded()
-                    }
-            } else {
-                LectureNotesRootView(
-                    appEnvironment: appEnvironment,
-                    lecturesListViewModel: lecturesListViewModel
-                )
-                    .preferredColorScheme(.light)
-                    .environmentObject(subscriptionManager)
+            Group {
+                if isSplashVisible {
+                    SplashScreenView(progress: splashProgress)
+                        .transition(.opacity)
+                        .zIndex(1)
+                        .task() {
+                            await prepareStartupIfNeeded()
+                        }
+                } else {
+                    LectureNotesRootView(
+                        appState: appState,
+                        appEnvironment: appEnvironment,
+                        lecturesListViewModel: lecturesListViewModel
+                    )
+                }
             }
+            .preferredColorScheme(.light)
+            .environmentObject(subscriptionManager)
+            .environment(appState)
+            .environment(\.locale, appState.locale)
+            .environment(\.layoutDirection, appState.selectedLanguage.layoutDirection)
+            .id(appState.selectedLanguage.id)
         }
     }
 }

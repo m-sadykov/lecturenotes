@@ -1,0 +1,424 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "App display name",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI"
+          }
+        }
+      }
+    },
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "lecturenotes"
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription" : {
+      "comment" : "Microphone permission reason",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يستخدم Lectra.AI الميكروفون لتسجيل المحاضرات حتى تتمكن من حفظها ومعالجتها."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI utilitza el micròfon per enregistrar conferències perquè les puguis desar i processar."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI používá mikrofon k nahrávání přednášek, abyste je mohli uložit a zpracovat."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI bruger mikrofonen til at optage forelæsninger, så du kan gemme og behandle dem."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI verwendet das Mikrofon, um Vorlesungen aufzunehmen, damit du sie speichern und verarbeiten kannst."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το Lectra.AI χρησιμοποιεί το μικρόφωνο για να καταγράφει διαλέξεις, ώστε να μπορείτε να τις αποθηκεύετε και να τις επεξεργάζεστε."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI records audio so you can save and process lectures."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI usa el micrófono para grabar clases y así puedas guardarlas y procesarlas."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI käyttää mikrofonia luentojen tallentamiseen, jotta voit tallentaa ja käsitellä ne."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI utilise le microphone pour enregistrer les cours afin que vous puissiez les enregistrer et les traiter."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI משתמש במיקרופון כדי להקליט הרצאות, כך שתוכל לשמור ולעבד אותן."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI व्याख्यान रिकॉर्ड करने के लिए माइक्रोफ़ोन का उपयोग करता है, ताकि आप उन्हें सहेज और प्रोसेस कर सकें।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI koristi mikrofon za snimanje predavanja kako biste ih mogli spremiti i obraditi."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Lectra.AI a mikrofont használja az előadások rögzítéséhez, hogy elmenthesd és feldolgozhasd őket."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI menggunakan mikrofon untuk merekam kuliah agar Anda dapat menyimpan dan memprosesnya."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI usa il microfono per registrare le lezioni così puoi salvarle ed elaborarle."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AIは講義を録音して保存・処理できるようにするため、マイクを使用します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI는 강의를 녹음하여 저장하고 처리할 수 있도록 마이크를 사용합니다."
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI menggunakan mikrofon untuk merakam kuliah supaya anda boleh menyimpan dan memprosesnya."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI bruker mikrofonen til å ta opp forelesninger, slik at du kan lagre og behandle dem."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI gebruikt de microfoon om colleges op te nemen, zodat je ze kunt opslaan en verwerken."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI używa mikrofonu do nagrywania wykładów, aby można było je zapisać i przetworzyć."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Lectra.AI usa o microfone para gravar aulas, para que possas guardá-las e processá-las."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI folosește microfonul pentru a înregistra cursuri, astfel încât să le poți salva și procesa."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI использует микрофон для записи лекций, чтобы вы могли сохранять и обрабатывать их."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI používa mikrofón na nahrávanie prednášok, aby ste si ich mohli uložiť a spracovať."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI använder mikrofonen för att spela in föreläsningar så att du kan spara och bearbeta dem."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI ใช้ไมโครโฟนเพื่อบันทึกการบรรยาย เพื่อให้คุณสามารถบันทึกและประมวลผลได้"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI, dersleri kaydetmeniz ve işlemeniz için mikrofonu kullanır."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI використовує мікрофон для запису лекцій, щоб ви могли зберігати й обробляти їх."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI sử dụng micrô để ghi âm bài giảng, để bạn có thể lưu và xử lý chúng."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI 会使用麦克风录制课程，以便你保存并处理内容。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectra.AI 會使用麥克風錄製課程，讓你可以儲存並處理內容。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

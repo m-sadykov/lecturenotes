@@ -45,7 +45,7 @@ struct QuizResultView: View {
         max(total - score, 0)
     }
 
-    private func resultCard(value: Int, title: String) -> some View {
+    private func resultCard(value: Int, title: LocalizedStringResource) -> some View {
         VStack(spacing: 8) {
             Text("\(value)")
                 .font(.largeTitle)

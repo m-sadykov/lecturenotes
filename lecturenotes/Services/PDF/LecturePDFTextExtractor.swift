@@ -16,9 +16,9 @@ struct LecturePDFTextExtractor {
         var errorDescription: String? {
             switch self {
             case .unreadableDocument:
-                "Unable to read this PDF file."
+                String(localized: "Unable to read this PDF file.")
             case .emptyDocument:
-                "This PDF does not contain selectable text."
+                String(localized: "This PDF does not contain selectable text.")
             }
         }
     }
@@ -61,7 +61,7 @@ struct LecturePDFTextExtractor {
             } else if !fallbackTitle.isEmpty {
                 fallbackTitle
             } else {
-                "Imported PDF"
+                LectureLocalizedTitleKey.importedPDF.rawValue
             }
 
             return ExtractionResult(

@@ -63,7 +63,7 @@ struct MiniRecorderSheetView: View {
     private var header: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Новая запись")
+                Text("New Recording")
                     .font(.title3)
                     .bold()
                 Text(statusText)
@@ -145,16 +145,16 @@ struct MiniRecorderSheetView: View {
         viewModel.mode == .paused ? .orange : .red
     }
 
-    private var statusText: String {
+    private var statusText: LocalizedStringResource {
         switch viewModel.mode {
         case .idle:
-            "Подготовка"
+            "Preparing"
         case .recording:
-            "Запись"
+            "Recording"
         case .paused:
-            "На паузе"
+            "Paused"
         case .finished:
-            "Завершено"
+            "Finished"
         }
     }
 

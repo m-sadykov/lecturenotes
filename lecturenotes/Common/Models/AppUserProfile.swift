@@ -10,11 +10,11 @@ enum AppUserPlan: String, CaseIterable, Codable, Identifiable {
     var title: String {
         switch self {
         case .freemium:
-            "Freemium"
+            String(localized: "Freemium")
         case .premium:
-            "Premium"
+            String(localized: "Premium")
         case .pro:
-            "Pro"
+            String(localized: "Pro")
         }
     }
 

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct FolderListContentView: View {
-    let title: String
+    let title: LocalizedStringResource
     let folders: [LectureFolder]
     let selectedFolderID: LectureFolder.ID?
     let closeButton: CloseButton?
@@ -123,7 +123,7 @@ struct FolderListContentView: View {
 }
 
 struct CloseButton {
-    let title: String
+    let title: LocalizedStringResource
     let systemImage: String
     let action: () -> Void
 }

@@ -5,11 +5,17 @@ struct SummarySectionView: View {
 
     var body: some View {
         ScrollView {
-            Text(lecture.summaryLong.isEmpty ? "No detailed summary yet." : lecture.summaryLong)
-                .font(.body)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .textSelection(.enabled)
+            Group {
+                if lecture.summaryLong.isEmpty {
+                    Text("No detailed summary yet.")
+                } else {
+                    Text(lecture.summaryLong)
+                }
+            }
+            .font(.body)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+            .textSelection(.enabled)
         }
     }
 }

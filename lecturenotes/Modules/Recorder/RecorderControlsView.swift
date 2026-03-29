@@ -13,11 +13,19 @@ struct RecorderControlsView: View {
             .buttonStyle(.borderedProminent)
             .disabled(viewModel.mode == .recording)
 
-            Button(viewModel.mode == .paused ? "Resume" : "Pause", systemImage: viewModel.mode == .paused ? "play.circle" : "pause.circle") {
-                viewModel.togglePause()
+            if viewModel.mode == .paused {
+                Button("Resume", systemImage: "play.circle") {
+                    viewModel.togglePause()
+                }
+                .buttonStyle(.bordered)
+                .disabled(!viewModel.canTogglePause)
+            } else {
+                Button("Pause", systemImage: "pause.circle") {
+                    viewModel.togglePause()
+                }
+                .buttonStyle(.bordered)
+                .disabled(!viewModel.canTogglePause)
             }
-            .buttonStyle(.bordered)
-            .disabled(!viewModel.canTogglePause)
 
             Button("Stop", systemImage: "stop.circle") {
                 viewModel.stop()

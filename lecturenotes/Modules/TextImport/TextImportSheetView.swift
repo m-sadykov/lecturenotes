@@ -77,8 +77,13 @@ struct TextImportSheetView: View {
                                     .tint(.white)
                             }
 
-                            Text(isSubmitting ? "Sending..." : "Send")
-                                .bold()
+                            if isSubmitting {
+                                Text("Sending...")
+                                    .bold()
+                            } else {
+                                Text("Send")
+                                    .bold()
+                            }
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)

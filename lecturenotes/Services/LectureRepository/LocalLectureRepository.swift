@@ -142,7 +142,7 @@ final class LocalLectureRepository: LectureRepository {
         var errorDescription: String? {
             switch self {
             case .failedToCreateStorage:
-                "Unable to prepare local lecture storage."
+                String(localized: "Unable to prepare local lecture storage.")
             }
         }
     }

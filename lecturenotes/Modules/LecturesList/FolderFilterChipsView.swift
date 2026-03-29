@@ -8,7 +8,7 @@ struct FolderFilterChipsView: View {
         ScrollView(.horizontal) {
             HStack {
                 FolderFilterChip(
-                    title: "All",
+                    title: .localized("All"),
                     isSelected: selectedFolderID == nil
                 ) {
                     selectedFolderID = nil
@@ -16,7 +16,7 @@ struct FolderFilterChipsView: View {
 
                 ForEach(folders) { folder in
                     FolderFilterChip(
-                        title: folder.name,
+                        title: .custom(folder.name),
                         isSelected: selectedFolderID == folder.id
                     ) {
                         selectedFolderID = folder.id
@@ -29,13 +29,13 @@ struct FolderFilterChipsView: View {
 }
 
 private struct FolderFilterChip: View {
-    let title: String
+    let title: ChipTitle
     let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Text(title)
+            chipLabel
                 .font(.caption)
                 .foregroundStyle(isSelected ? .white : .primary)
                 .padding(.horizontal, 16)
@@ -45,4 +45,19 @@ private struct FolderFilterChip: View {
         }
         .buttonStyle(.plain)
     }
+
+    @ViewBuilder
+    private var chipLabel: some View {
+        switch title {
+        case .localized(let value):
+            Text(value)
+        case .custom(let value):
+            Text(value)
+        }
+    }
+}
+
+private enum ChipTitle {
+    case localized(LocalizedStringResource)
+    case custom(String)
 }

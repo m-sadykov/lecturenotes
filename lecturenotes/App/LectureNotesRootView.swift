@@ -146,6 +146,7 @@ struct LectureNotesRootView: View {
             await appEnvironment.userProfileService?.prepareCurrentUserProfile()
             await lecturesListViewModel.load()
         }
+        .environment(appState)
     }
 
     private func didExhaustFreemiumProcessingQuota(

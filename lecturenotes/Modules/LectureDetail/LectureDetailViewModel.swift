@@ -2,13 +2,30 @@ import Observation
 import SwiftUI
 import UIKit
 
-enum LectureDetailSection: String, CaseIterable, Identifiable {
-    case summary = "Summary"
-    case transcript = "Transcript"
-    case flashcards = "Flashcards"
-    case quiz = "Quiz"
+enum LectureDetailSection: CaseIterable, Identifiable {
+    case summary
+    case transcript
+    case flashcards
+    case quiz
 
-    var id: String { rawValue }
+    var id: Self { self }
+
+    var titleResource: LocalizedStringResource {
+        switch self {
+        case .summary:
+            "Summary"
+        case .transcript:
+            "Transcript"
+        case .flashcards:
+            "Flashcards"
+        case .quiz:
+            "Quiz"
+        }
+    }
+
+    var title: String {
+        String(localized: titleResource)
+    }
 
     var emoji: String {
         switch self {
@@ -185,7 +202,7 @@ final class LectureDetailViewModel {
     }
 
     func presentRename() {
-        draftTitle = lecture.title
+        draftTitle = lecture.displayTitle
         isRenameAlertPresented = true
     }
 
@@ -199,7 +216,7 @@ final class LectureDetailViewModel {
             return
         }
 
-        guard lecture.title != trimmedTitle else {
+        guard lecture.displayTitle != trimmedTitle else {
             return
         }
 
@@ -214,12 +231,12 @@ final class LectureDetailViewModel {
         Task {
             do {
                 try await repository.saveLecture(renamedLecture)
-                showToast("Title updated.")
+                showToast(String(localized: "Title updated."))
             } catch {
                 lecture = previousLecture
                 onLectureUpdated(previousLecture)
                 try? await repository.saveLecture(previousLecture)
-                presentErrorAlert("Unable to update title right now.")
+                presentErrorAlert(String(localized: "Unable to update title right now."))
             }
 
             isSavingTitle = false
@@ -232,8 +249,8 @@ final class LectureDetailViewModel {
         }
 
         UIPasteboard.general.string = copyableText
-        let sectionName = selectedSection == .summary ? "Summary" : "Transcript"
-        showToast("\(sectionName) copied.")
+        let sectionName = selectedSection == .summary ? LectureDetailSection.summary.title : LectureDetailSection.transcript.title
+        showToast(String(localized: "\(sectionName) copied."))
     }
 
     func requestDelete() {
@@ -252,7 +269,7 @@ final class LectureDetailViewModel {
             } catch {
                 await MainActor.run {
                     self.folders.removeAll { $0.id == folder.id }
-                    showToast("Unable to create folder right now.")
+                    showToast(String(localized: "Unable to create folder right now."))
                 }
             }
         }
@@ -330,18 +347,18 @@ final class LectureDetailViewModel {
             do {
                 try await repository.saveLecture(updatedLecture)
                 let message = if let folderName = folders.first(where: { $0.id == folderID })?.name {
-                    "Added to \(folderName)."
+                    String(localized: "Added to \(folderName).")
                 } else if folderID == nil {
-                    "Removed from folder."
+                    String(localized: "Removed from folder.")
                 } else {
-                    "Added to folder."
+                    String(localized: "Added to folder.")
                 }
                 showToast(message)
             } catch {
                 lecture = previousLecture
                 onLectureUpdated(previousLecture)
                 try? await repository.saveLecture(previousLecture)
-                showToast("Unable to update folder right now.")
+                showToast(String(localized: "Unable to update folder right now."))
             }
 
             isSavingFolder = false

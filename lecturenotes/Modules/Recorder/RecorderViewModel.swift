@@ -10,7 +10,7 @@ final class RecorderViewModel {
         var errorDescription: String? {
             switch self {
             case .tooShort(let minimumDuration):
-                "Record at least \(Int(minimumDuration.components.seconds)) seconds to save."
+                String(localized: "Record at least \(Int(minimumDuration.components.seconds)) seconds to save.")
             }
         }
     }
@@ -74,7 +74,7 @@ final class RecorderViewModel {
         }
 
         mode = .paused
-        errorMessage = "Recording was paused by the system."
+        errorMessage = String(localized: "Recording was paused by the system.")
     }
 
     func handleAppDidEnterBackground() {
@@ -171,7 +171,7 @@ final class RecorderViewModel {
                 guard mode == .recording else { continue }
                 guard recordingManager.isRecording else {
                     mode = .paused
-                    errorMessage = "Recording was paused by the system."
+                    errorMessage = String(localized: "Recording was paused by the system.")
                     continue
                 }
                 if elapsed >= limit {

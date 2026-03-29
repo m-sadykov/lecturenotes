@@ -91,18 +91,41 @@ final class AppState {
         }
     }
 
+    var selectedLanguage: AppLanguage {
+        didSet {
+            userDefaults.set(selectedLanguage.rawValue, forKey: Self.selectedLanguageKey)
+            userDefaults.set([selectedLanguage.rawValue], forKey: Self.appleLanguagesKey)
+            Bundle.setAppLanguage(selectedLanguage)
+            AppInterfaceLayoutDirection.apply(for: selectedLanguage)
+        }
+    }
+
     @ObservationIgnored private let userDefaults: UserDefaults
 
     private static let needsOnboardingKey = "appState.needsOnboarding"
+    private static let selectedLanguageKey = "appState.selectedLanguage"
+    private static let appleLanguagesKey = "AppleLanguages"
+
+    var locale: Locale {
+        selectedLanguage.locale
+    }
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
         self.needsOnboarding = userDefaults.object(forKey: Self.needsOnboardingKey) as? Bool ?? true
+        self.selectedLanguage = AppLanguage(rawValue: userDefaults.string(forKey: Self.selectedLanguageKey) ?? "") ?? .english
+        userDefaults.set([selectedLanguage.rawValue], forKey: Self.appleLanguagesKey)
+        Bundle.setAppLanguage(selectedLanguage)
+        AppInterfaceLayoutDirection.apply(for: selectedLanguage)
     }
 
-    static func preview(needsOnboarding: Bool = false) -> AppState {
+    static func preview(
+        needsOnboarding: Bool = false,
+        selectedLanguage: AppLanguage = .english
+    ) -> AppState {
         let state = AppState()
         state.needsOnboarding = needsOnboarding
+        state.selectedLanguage = selectedLanguage
         return state
     }
 }

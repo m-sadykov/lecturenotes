@@ -1,10 +1,22 @@
 import Foundation
 import Observation
+import SwiftUI
 
 @MainActor
 @Observable
 final class LecturesListViewModel {
     private static let lecturePageSize = 50
+    private static let minimumRecordingDuration: Duration = .seconds(3)
+
+    struct ToastPresentation: Identifiable {
+        enum Content {
+            case localized(LocalizedStringResource)
+            case custom(String)
+        }
+
+        let id = UUID()
+        let content: Content
+    }
 
     struct ImportLimitSheetContent: Identifiable {
         enum Kind {
@@ -14,10 +26,46 @@ final class LecturesListViewModel {
 
         let id = UUID()
         let kind: Kind
-        let title: String
-        let message: String
-        let upgradeTitle: String
-        let upgradeMessage: String
+        let plan: AppUserPlan
+
+        var title: String {
+            switch kind {
+            case .audio:
+                String(localized: "Recording Too Long")
+            case .pdf:
+                String(localized: "PDF Too Large")
+            }
+        }
+
+        var message: String {
+            switch (kind, plan) {
+            case (.audio, .freemium):
+                String(localized: "This recording exceeds your plan limit. Freemium plan allows only 5 minutes per audio import.")
+            case (.audio, .premium):
+                String(localized: "This recording exceeds your plan limit. Premium plan allows only 100 minutes per audio import.")
+            case (.audio, .pro):
+                String(localized: "This recording exceeds your plan limit. Pro plan allows only 4 hours per audio import.")
+            case (.pdf, .freemium):
+                String(localized: "This file exceeds your plan limit. Freemium plan allows only 5 pages per file import.")
+            case (.pdf, .premium):
+                String(localized: "This file exceeds your plan limit. Premium plan allows only 50 pages per file import.")
+            case (.pdf, .pro):
+                String(localized: "This file exceeds your plan limit. Pro plan allows only 200 pages per file import.")
+            }
+        }
+
+        var upgradeTitle: String {
+            String(localized: "Upgrade to Pro")
+        }
+
+        var upgradeMessage: String {
+            switch kind {
+            case .audio:
+                String(localized: "Record up to 4 hours per recording with Pro.")
+            case .pdf:
+                String(localized: "Import PDFs up to 200 pages with Pro.")
+            }
+        }
     }
 
     enum SaveRecordingResult {
@@ -72,7 +120,7 @@ final class LecturesListViewModel {
     var selectedLecture: Lecture?
     var activeSheet: LecturesListActiveSheet?
     var recorderViewModel: RecorderViewModel?
-    var toastMessage: String?
+    var toastPresentation: ToastPresentation?
     var removalFeedbackToken = 0
     var importFeedbackToken = 0
     var importLimitFeedbackToken = 0
@@ -159,15 +207,31 @@ final class LecturesListViewModel {
     }
 
     func showToast(_ message: String) {
-        toastMessage = message
+        let toastPresentation = ToastPresentation(content: .custom(message))
+        self.toastPresentation = toastPresentation
 
         Task {
             try? await Task.sleep(for: .seconds(2))
             await MainActor.run {
-                guard toastMessage == message else {
+                guard self.toastPresentation?.id == toastPresentation.id else {
                     return
                 }
-                toastMessage = nil
+                self.toastPresentation = nil
+            }
+        }
+    }
+
+    func showLocalizedToast(_ message: LocalizedStringResource) {
+        let toastPresentation = ToastPresentation(content: .localized(message))
+        self.toastPresentation = toastPresentation
+
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            await MainActor.run {
+                guard self.toastPresentation?.id == toastPresentation.id else {
+                    return
+                }
+                self.toastPresentation = nil
             }
         }
     }
@@ -281,7 +345,7 @@ final class LecturesListViewModel {
         pendingRenamePresentationTask?.cancel()
         pendingRenameLecture = nil
         isRenameAlertPresented = false
-        draftTitle = lecture.title
+        draftTitle = lecture.displayTitle
         pendingRenamePresentationTask = Task { @MainActor [weak self] in
             await Task.yield()
             guard let self, !Task.isCancelled else {
@@ -303,7 +367,7 @@ final class LecturesListViewModel {
             return
         }
 
-        guard lecture.title != trimmedTitle else {
+        guard lecture.displayTitle != trimmedTitle else {
             return
         }
 
@@ -320,7 +384,7 @@ final class LecturesListViewModel {
             } catch {
                 handleLectureUpdated(previousLecture)
                 try? await repository.saveLecture(previousLecture)
-                presentErrorAlert("Unable to update title right now.")
+                presentErrorAlert(String(localized: "Unable to update title right now."))
             }
 
             isSavingTitle = false
@@ -455,9 +519,8 @@ final class LecturesListViewModel {
     }
 
     func saveRecording(_ recording: RecorderViewModel.RecordingDraft) async -> SaveRecordingResult {
-        let minimumDuration = Duration.seconds(3)
-        guard recording.duration >= minimumDuration else {
-            return .rejected(message: "Recording must be at least 3 seconds long.")
+        guard recording.duration >= Self.minimumRecordingDuration else {
+            return .rejected(message: String(localized: "Recording must be at least 3 seconds long."))
         }
 
         if let validationMessage = await validateRecordingDuration(recording.duration) {
@@ -466,7 +529,7 @@ final class LecturesListViewModel {
 
         let lectureStatus: LectureStatus = processingService == nil ? .ready : LectureSourceType.audio.processingStartStatus
         let lecture = Lecture(
-            title: "New Recording",
+            title: LectureLocalizedTitleKey.newRecording.rawValue,
             sourceType: .audio,
             audioURL: recording.audioURL,
             createdAt: recording.createdAt,
@@ -486,11 +549,16 @@ final class LecturesListViewModel {
             return .saved(lecture)
         } catch {
             lectures.removeAll { $0.id == lecture.id }
-            return .rejected(message: "Unable to save recording right now.")
+            return .rejected(message: String(localized: "Unable to save recording right now."))
         }
     }
 
     func saveRecordingDraft(_ recording: RecorderViewModel.RecordingDraft) async {
+        guard recording.duration >= Self.minimumRecordingDuration else {
+            showLocalizedToast("Recording must be at least 3 seconds long.")
+            return
+        }
+
         let result = await saveRecording(recording)
 
         switch result {
@@ -542,7 +610,7 @@ final class LecturesListViewModel {
             } catch {
                 lectures.removeAll { $0.id == lecture.id }
                 try? FileManager.default.removeItem(at: importedAudio.localURL)
-                return .rejected(message: "Unable to save imported audio right now.")
+                return .rejected(message: String(localized: "Unable to save imported audio right now."))
             }
         } catch {
             return .rejected(message: error.localizedDescription)
@@ -552,7 +620,7 @@ final class LecturesListViewModel {
     func importText(_ text: String) async -> SaveRecordingResult {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else {
-            return .rejected(message: "Enter some lecture text first.")
+            return .rejected(message: String(localized: "Enter some lecture text first."))
         }
 
         if let validationMessage = await validateProcessingAvailability() {
@@ -639,19 +707,26 @@ final class LecturesListViewModel {
             return .saved(lecture)
         } catch {
             lectures.removeAll { $0.id == lecture.id }
-            let importName = textDocument.sourceType == .pdf ? "PDF" : "text"
-            return .rejected(message: "Unable to save imported \(importName) right now.")
+            let message = switch textDocument.sourceType {
+            case .pdf:
+                String(localized: "Unable to save imported PDF right now.")
+            case .text:
+                String(localized: "Unable to save imported text right now.")
+            case .audio, .youtube:
+                String(localized: "Unable to save imported content right now.")
+            }
+            return .rejected(message: message)
         }
     }
 
     func importYouTube(urlString: String) async -> SaveRecordingResult {
         let trimmedURLString = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let sourceURL = URL(string: trimmedURLString), sourceURL.host() != nil else {
-            return .rejected(message: "Enter a valid YouTube link.")
+            return .rejected(message: String(localized: "Enter a valid YouTube link."))
         }
 
         guard let videoID = importManager.parseYouTubeVideoID(from: sourceURL) else {
-            return .rejected(message: "Enter a valid YouTube link.")
+            return .rejected(message: String(localized: "Enter a valid YouTube link."))
         }
 
         if let validationMessage = await validateProcessingAvailability() {
@@ -665,7 +740,7 @@ final class LecturesListViewModel {
         }
         let lecture = Lecture(
             id: UUID(),
-            title: "YouTube Import",
+            title: LectureLocalizedTitleKey.youTubeImport.rawValue,
             sourceType: .youtube,
             audioURL: nil,
             sourceURL: sourceURL,
@@ -678,7 +753,7 @@ final class LecturesListViewModel {
             summaryLong: "",
             flashcards: [],
             quiz: [],
-            processingErrorMessage: processingService == nil ? "YouTube import requires backend processing." : nil
+            processingErrorMessage: processingService == nil ? String(localized: "YouTube import requires backend processing.") : nil
         )
 
         lectures.insert(lecture, at: 0)
@@ -689,7 +764,7 @@ final class LecturesListViewModel {
             return .saved(lecture)
         } catch {
             lectures.removeAll { $0.id == lecture.id }
-            return .rejected(message: "Unable to save YouTube import right now.")
+            return .rejected(message: String(localized: "Unable to save YouTube import right now."))
         }
     }
 
@@ -722,7 +797,7 @@ final class LecturesListViewModel {
             if let deletedSelectedLecture {
                 selectedLecture = deletedSelectedLecture
             }
-            return .rejected(message: "Unable to delete lecture right now.")
+            return .rejected(message: String(localized: "Unable to delete lecture right now."))
         }
     }
 
@@ -744,14 +819,14 @@ final class LecturesListViewModel {
         switch result {
         case .success(let urls):
             guard let url = urls.first else {
-                presentImportError("No audio file was selected.")
+                presentImportError(String(localized: "No audio file was selected."))
                 return
             }
 
             let importResult = await importAudio(from: url)
             handleImportResult(importResult)
         case .failure(let error):
-            presentImportError("Import failed: \(error.localizedDescription)")
+            presentImportError(String(localized: "Import failed: \(error.localizedDescription)"))
         }
     }
 
@@ -759,7 +834,7 @@ final class LecturesListViewModel {
         switch result {
         case .success(let urls):
             guard let url = urls.first else {
-                presentImportError("No PDF file was selected.")
+                presentImportError(String(localized: "No PDF file was selected."))
                 return
             }
 
@@ -767,7 +842,7 @@ final class LecturesListViewModel {
             let importResult = await importPDF(from: url)
             handleImportResult(importResult)
         case .failure(let error):
-            presentImportError("Import failed: \(error.localizedDescription)")
+            presentImportError(String(localized: "Import failed: \(error.localizedDescription)"))
         }
     }
 
@@ -1089,7 +1164,9 @@ final class LecturesListViewModel {
         let userProfile = await currentUserProfile()
         let limit = userProfile?.recordingLimitDuration ?? .seconds(5 * 60)
         guard duration <= limit else {
-            return "Your \(userProfile?.plan.title ?? "Freemium") plan allows up to \(LectureFormatters.durationText(limit)) per recording."
+            return String(
+                localized: "Your \((userProfile?.plan ?? .freemium).title) plan allows up to \(LectureFormatters.durationText(limit)) per recording."
+            )
         }
 
         return nil
@@ -1102,7 +1179,9 @@ final class LecturesListViewModel {
             presentImportLimitSheet(
                 makeAudioImportLimitSheetContent(userProfile: userProfile)
             )
-            return "Your \(userProfile?.plan.title ?? "Freemium") plan allows audio imports up to \(LectureFormatters.durationText(limit)) per file."
+            return String(
+                localized: "Your \((userProfile?.plan ?? .freemium).title) plan allows audio imports up to \(LectureFormatters.durationText(limit)) per file."
+            )
         }
 
         return nil
@@ -1119,7 +1198,9 @@ final class LecturesListViewModel {
             presentImportLimitSheet(
                 makePDFImportLimitSheetContent(userProfile: userProfile)
             )
-            return "Your \(userProfile?.plan.title ?? "Freemium") plan allows PDF imports up to \(limit) pages per file."
+            return String(
+                localized: "Your \((userProfile?.plan ?? .freemium).title) plan allows PDF imports up to \(limit) pages per file."
+            )
         }
 
         return nil
@@ -1134,7 +1215,9 @@ final class LecturesListViewModel {
         guard userProfile?.canStartProcessing ?? true else {
             processingLimitReachedToken += 1
             let remainingCount = max(userProfile?.processingQuota.remainingCount ?? 0, 0)
-            return "You have \(remainingCount) processing attempts left on your \(userProfile?.plan.title ?? "Freemium") plan."
+            return String(
+                localized: "You have \(remainingCount) processing attempts left on your \((userProfile?.plan ?? .freemium).title) plan."
+            )
         }
 
         return nil
@@ -1156,44 +1239,18 @@ final class LecturesListViewModel {
     private func makeAudioImportLimitSheetContent(
         userProfile: AppUserProfile?
     ) -> ImportLimitSheetContent {
-        let message: String
-        switch userProfile?.plan ?? .freemium {
-        case .freemium:
-            message = "This recording exceeds your plan limit. Freemium plan allows only 5 minutes per audio import."
-        case .premium:
-            message = "This recording exceeds your plan limit. Premium plan allows only 100 minutes per audio import."
-        case .pro:
-            message = "This recording exceeds your plan limit. Pro plan allows only 4 hours per audio import."
-        }
-
         return ImportLimitSheetContent(
             kind: .audio,
-            title: "Recording Too Long",
-            message: message,
-            upgradeTitle: "Upgrade to Pro",
-            upgradeMessage: "Record up to 4 hours per recording with Pro."
+            plan: userProfile?.plan ?? .freemium
         )
     }
 
     private func makePDFImportLimitSheetContent(
         userProfile: AppUserProfile?
     ) -> ImportLimitSheetContent {
-        let message: String
-        switch userProfile?.plan ?? .freemium {
-        case .freemium:
-            message = "This file exceeds your plan limit. Freemium plan allows only 5 pages per file import."
-        case .premium:
-            message = "This file exceeds your plan limit. Premium plan allows only 50 pages per file import."
-        case .pro:
-            message = "This file exceeds your plan limit. Pro plan allows only 200 pages per file import."
-        }
-
         return ImportLimitSheetContent(
             kind: .pdf,
-            title: "PDF Too Large",
-            message: message,
-            upgradeTitle: "Upgrade to Pro",
-            upgradeMessage: "Import PDFs up to 200 pages with Pro."
+            plan: userProfile?.plan ?? .freemium
         )
     }
 }

@@ -36,7 +36,11 @@ struct ProcessingView: View {
                             Image(systemName: "arrow.clockwise")
                         }
 
-                        Text(isRetrying ? "Retrying..." : "Retry")
+                        if isRetrying {
+                            Text("Retrying...")
+                        } else {
+                            Text("Retry")
+                        }
                     }
                     .font(.headline)
                     .foregroundStyle(.white)
@@ -52,11 +56,7 @@ struct ProcessingView: View {
             } else {
                 Spacer(minLength: 40)
 
-                Text(footerMessage)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
+                footerMessageView
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -64,7 +64,7 @@ struct ProcessingView: View {
         .background(Color(.systemGray6))
     }
 
-    private var statusMessage: String {
+    private var statusMessage: LocalizedStringResource {
         switch lecture.status {
         case .draft:
             switch lecture.sourceType {
@@ -117,7 +117,7 @@ struct ProcessingView: View {
         }
     }
 
-    private var headlineTitle: String {
+    private var headlineTitle: LocalizedStringResource {
         switch lecture.status {
         case .failed:
             lecture.sourceType == .audio ? "Transcription Failed" : "Processing Failed"
@@ -143,38 +143,56 @@ struct ProcessingView: View {
         }
     }
 
-    private var footerMessage: String {
+    private var footerMessage: FooterMessage {
         switch lecture.status {
         case .uploading:
             switch lecture.sourceType {
             case .audio:
-                "Uploading your recording so processing can begin."
+                .localized("Uploading your recording so processing can begin.")
             case .text:
-                "Saving your text so processing can begin."
+                .localized("Saving your text so processing can begin.")
             case .pdf:
-                "Extracting text from your PDF so processing can begin."
+                .localized("Extracting text from your PDF so processing can begin.")
             case .youtube:
-                "Saving your YouTube source so processing can begin."
+                .localized("Saving your YouTube source so processing can begin.")
             }
         case .transcribing:
             switch lecture.sourceType {
             case .audio:
-                "Listening for the important concepts and turning them into text."
+                .localized("Listening for the important concepts and turning them into text.")
             case .text:
-                "Reviewing the imported text before creating study materials."
+                .localized("Reviewing the imported text before creating study materials.")
             case .pdf:
-                "Reviewing the imported PDF text before creating study materials."
+                .localized("Reviewing the imported PDF text before creating study materials.")
             case .youtube:
-                "Trying to convert YouTube captions into transcript text for your study materials."
+                .localized("Trying to convert YouTube captions into transcript text for your study materials.")
             }
         case .generating:
-            "Transforming the transcript into a polished study note."
+            .localized("Transforming the transcript into a polished study note.")
         case .ready:
-            "You can now open the summary, transcript, flashcards, and quiz."
+            .localized("You can now open the summary, transcript, flashcards, and quiz.")
         case .failed:
-            lecture.processingErrorMessage ?? "Processing failed."
+            .custom(lecture.processingErrorMessage ?? String(localized: "Processing failed."))
         case .draft:
-            "Getting everything ready."
+            .localized("Getting everything ready.")
+        }
+    }
+
+    @ViewBuilder
+    private var footerMessageView: some View {
+        switch footerMessage {
+        case .localized(let message):
+            Text(message)
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+        case .custom(let message):
+            Text(message)
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
         }
     }
 
@@ -197,9 +215,14 @@ struct ProcessingView: View {
 
 }
 
+private enum FooterMessage {
+    case localized(LocalizedStringResource)
+    case custom(String)
+}
+
 private struct ProcessingHeroView: View {
-    let title: String
-    let message: String
+    let title: LocalizedStringResource
+    let message: LocalizedStringResource
     let progress: Double
     let isFailed: Bool
 
@@ -234,7 +257,7 @@ private struct ProcessingHeroView: View {
                     .bold()
                     .multilineTextAlignment(.center)
 
-                Text("\(Int(progress * 100))% complete")
+                Text(progress, format: .percent.precision(.fractionLength(0)))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }

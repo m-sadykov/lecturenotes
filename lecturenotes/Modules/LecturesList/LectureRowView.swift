@@ -17,10 +17,8 @@ struct LectureRowView: View {
                         .background(.primary.opacity(0.05), in: .circle)
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(lecture.title)
-                            .bold()
-                            .lineLimit(1)
-                        Text(metadata)
+                        lectureTitleView
+                        metadata
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
@@ -52,12 +50,29 @@ struct LectureRowView: View {
         .sensoryFeedback(.impact(weight: .light), trigger: menuTapFeedbackTrigger)
     }
 
-    private var metadata: String {
+    @ViewBuilder
+    private var lectureTitleView: some View {
+        if let localizedDisplayTitleKey = lecture.localizedDisplayTitleKey {
+            Text(localizedDisplayTitleKey.resource)
+                .bold()
+                .lineLimit(1)
+        } else {
+            Text(lecture.title)
+                .bold()
+                .lineLimit(1)
+        }
+    }
+
+    private var metadata: Text {
         switch lecture.sourceType {
         case .audio:
-            "\(lecture.createdAt.formatted(LectureFormatters.dayMonthYear)) • \(LectureFormatters.clockText(lecture.duration))"
+            Text(lecture.createdAt, format: LectureFormatters.dayMonthYear)
+            + Text(" • ")
+            + Text(LectureFormatters.clockText(lecture.duration))
         case .text, .pdf, .youtube:
-            "\(lecture.createdAt.formatted(LectureFormatters.dayMonthYear)) • \(lecture.sourceType.title)"
+            Text(lecture.createdAt, format: LectureFormatters.dayMonthYear)
+            + Text(" • ")
+            + Text(lecture.sourceType.titleResource)
         }
     }
 
