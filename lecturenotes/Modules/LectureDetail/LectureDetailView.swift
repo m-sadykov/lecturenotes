@@ -10,6 +10,7 @@ struct LectureDetailView: View {
         repository: LectureRepository,
         processingService: FirebaseLectureProcessingService? = nil,
         analyticsService: AppAnalyticsService? = nil,
+        crashReportingService: CrashReportingService? = nil,
         onLectureUpdated: @escaping (Lecture) -> Void = { _ in },
         onLectureDeleted: @escaping (Lecture.ID) async -> String? = { _ in nil }
     ) {
@@ -19,6 +20,7 @@ struct LectureDetailView: View {
                 repository: repository,
                 processingService: processingService,
                 analyticsService: analyticsService,
+                crashReportingService: crashReportingService,
                 onLectureUpdated: onLectureUpdated,
                 onLectureDeleted: onLectureDeleted
             )
@@ -76,6 +78,9 @@ struct LectureDetailView: View {
             }
         }
         .background(Color(.systemGray6))
+        .task {
+            viewModel.configureCrashContext()
+        }
         .task {
             viewModel.prepareAudioPlayerIfNeeded()
         }

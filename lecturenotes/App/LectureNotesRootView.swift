@@ -21,14 +21,18 @@ struct LectureNotesRootView: View {
             repository: resolvedAppEnvironment.repository,
             processingService: resolvedAppEnvironment.processingService,
             userProfileService: resolvedAppEnvironment.userProfileService,
-            analyticsService: resolvedAppEnvironment.analyticsService
+            analyticsService: resolvedAppEnvironment.analyticsService,
+            crashReportingService: resolvedAppEnvironment.crashReportingService
         )
 
         _appState = State(initialValue: resolvedAppState)
         _appEnvironment = State(initialValue: resolvedAppEnvironment)
         _lecturesListViewModel = State(initialValue: resolvedLecturesListViewModel)
         _paywallPresentationModel = State(
-            initialValue: PaywallPresentationModel(analyticsService: resolvedAppEnvironment.analyticsService)
+            initialValue: PaywallPresentationModel(
+                analyticsService: resolvedAppEnvironment.analyticsService,
+                crashReportingService: resolvedAppEnvironment.crashReportingService
+            )
         )
     }
 
@@ -40,7 +44,8 @@ struct LectureNotesRootView: View {
             if appState.needsOnboarding {
                 OnboardingView(
                     appState: appState,
-                    analyticsService: appEnvironment.analyticsService
+                    analyticsService: appEnvironment.analyticsService,
+                    crashReportingService: appEnvironment.crashReportingService
                 )
             } else {
                 LecturesListView(
@@ -50,7 +55,8 @@ struct LectureNotesRootView: View {
                     authService: appEnvironment.authService,
                     processingService: appEnvironment.processingService,
                     userProfileService: appEnvironment.userProfileService,
-                    analyticsService: appEnvironment.analyticsService
+                    analyticsService: appEnvironment.analyticsService,
+                    crashReportingService: appEnvironment.crashReportingService
                 )
             }
         }
@@ -163,9 +169,19 @@ struct LectureNotesRootView: View {
                 language: appState.selectedLanguage,
                 isPremium: newPlan != .freemium
             )
+            appEnvironment.crashReportingService.setUserContext(
+                plan: newPlan,
+                language: appState.selectedLanguage,
+                isPremium: newPlan != .freemium
+            )
         }
         .onChange(of: appState.selectedLanguage, initial: true) { _, newLanguage in
             appEnvironment.analyticsService.setUserProperties(
+                plan: subscriptionManager.currentPlan,
+                language: newLanguage,
+                isPremium: subscriptionManager.currentPlan != .freemium
+            )
+            appEnvironment.crashReportingService.setUserContext(
                 plan: subscriptionManager.currentPlan,
                 language: newLanguage,
                 isPremium: subscriptionManager.currentPlan != .freemium

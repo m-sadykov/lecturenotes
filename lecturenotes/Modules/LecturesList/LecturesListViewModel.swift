@@ -83,6 +83,7 @@ final class LecturesListViewModel {
     @ObservationIgnored private let importManager: LectureImportManager
     @ObservationIgnored private let userProfileService: FirebaseUserProfileService?
     @ObservationIgnored private let analyticsService: AppAnalyticsService?
+    @ObservationIgnored private let crashReportingService: CrashReportingService?
     @ObservationIgnored private var repositoryObservationTask: Task<Void, Never>?
     @ObservationIgnored private var searchTask: Task<Void, Never>?
     @ObservationIgnored private var loadingIndicatorTask: Task<Void, Never>?
@@ -159,12 +160,14 @@ final class LecturesListViewModel {
         repository: LectureRepository,
         processingService: FirebaseLectureProcessingService? = nil,
         userProfileService: FirebaseUserProfileService? = nil,
-        analyticsService: AppAnalyticsService? = nil
+        analyticsService: AppAnalyticsService? = nil,
+        crashReportingService: CrashReportingService? = nil
     ) {
         self.repository = repository
         self.processingService = processingService
         self.userProfileService = userProfileService
         self.analyticsService = analyticsService
+        self.crashReportingService = crashReportingService
         importManager = LectureImportManager()
         visibleLectureCount = Self.lecturePageSize
     }
@@ -174,13 +177,15 @@ final class LecturesListViewModel {
         processingService: FirebaseLectureProcessingService? = nil,
         importManager: LectureImportManager,
         userProfileService: FirebaseUserProfileService? = nil,
-        analyticsService: AppAnalyticsService? = nil
+        analyticsService: AppAnalyticsService? = nil,
+        crashReportingService: CrashReportingService? = nil
     ) {
         self.repository = repository
         self.processingService = processingService
         self.importManager = importManager
         self.userProfileService = userProfileService
         self.analyticsService = analyticsService
+        self.crashReportingService = crashReportingService
         visibleLectureCount = Self.lecturePageSize
     }
 
@@ -301,6 +306,15 @@ final class LecturesListViewModel {
 
     func openLecture(_ lecture: Lecture) {
         analyticsService?.track(.lectureOpened(context: .init(lecture: lecture)))
+        crashReportingService?.setCurrentScreen("lecture_detail")
+        crashReportingService?.setLectureContext(lecture)
+        crashReportingService?.breadcrumb(
+            "lecture_opened",
+            metadata: [
+                "lecture_id": lecture.id.uuidString,
+                "source_type": lecture.sourceType.rawValue,
+            ]
+        )
         selectedLecture = lecture
     }
 
@@ -475,6 +489,7 @@ final class LecturesListViewModel {
         guard let action else {
             recorderViewModel = RecorderViewModel(
                 analyticsService: analyticsService,
+                crashReportingService: crashReportingService,
                 plan: currentPlan
             )
             return
@@ -586,6 +601,14 @@ final class LecturesListViewModel {
             return .saved(lecture)
         } catch {
             lectures.removeAll { $0.id == lecture.id }
+            crashReportingService?.recordNonFatal(
+                error,
+                reason: "recording_save_failed",
+                metadata: [
+                    "source_type": "recording",
+                    "lecture_id": lecture.id.uuidString,
+                ]
+            )
             analyticsService?.track(
                 .contentCreateFailed(
                     sourceType: "recording",
@@ -669,6 +692,14 @@ final class LecturesListViewModel {
             } catch {
                 lectures.removeAll { $0.id == lecture.id }
                 try? FileManager.default.removeItem(at: importedAudio.localURL)
+                crashReportingService?.recordNonFatal(
+                    error,
+                    reason: "audio_import_failed",
+                    metadata: [
+                        "source_type": "audio",
+                        "lecture_id": lecture.id.uuidString,
+                    ]
+                )
                 analyticsService?.track(
                     .contentCreateFailed(
                         sourceType: "audio",
@@ -680,6 +711,13 @@ final class LecturesListViewModel {
                 return .rejected(message: String(localized: "Unable to save imported audio right now."))
             }
         } catch {
+            crashReportingService?.recordNonFatal(
+                error,
+                reason: "audio_import_failed",
+                metadata: [
+                    "source_type": "audio",
+                ]
+            )
             analyticsService?.track(
                 .contentCreateFailed(
                     sourceType: "audio",
@@ -738,6 +776,13 @@ final class LecturesListViewModel {
 
             return await saveImportedTextLecture(importedPDF)
         } catch {
+            crashReportingService?.recordNonFatal(
+                error,
+                reason: "pdf_import_failed",
+                metadata: [
+                    "source_type": "pdf",
+                ]
+            )
             analyticsService?.track(
                 .contentCreateFailed(
                     sourceType: "pdf",
@@ -828,6 +873,14 @@ final class LecturesListViewModel {
                     reason: message
                 )
             )
+            crashReportingService?.recordNonFatal(
+                error,
+                reason: textDocument.sourceType == .pdf ? "pdf_import_failed" : "text_import_failed",
+                metadata: [
+                    "source_type": textDocument.sourceType.rawValue,
+                    "lecture_id": lecture.id.uuidString,
+                ]
+            )
             return .rejected(message: message)
         }
     }
@@ -907,6 +960,14 @@ final class LecturesListViewModel {
             return .saved(lecture)
         } catch {
             lectures.removeAll { $0.id == lecture.id }
+            crashReportingService?.recordNonFatal(
+                error,
+                reason: "youtube_import_failed",
+                metadata: [
+                    "source_type": "youtube",
+                    "lecture_id": lecture.id.uuidString,
+                ]
+            )
             analyticsService?.track(
                 .contentCreateFailed(
                     sourceType: "youtube",
@@ -948,6 +1009,14 @@ final class LecturesListViewModel {
             if let deletedSelectedLecture {
                 selectedLecture = deletedSelectedLecture
             }
+            crashReportingService?.recordNonFatal(
+                error,
+                reason: "lecture_delete_failed",
+                metadata: [
+                    "lecture_id": lectureID.uuidString,
+                    "source_type": deletedLecture.sourceType.rawValue,
+                ]
+            )
             return .rejected(message: String(localized: "Unable to delete lecture right now."))
         }
     }
@@ -1017,6 +1086,15 @@ final class LecturesListViewModel {
         isLoading = false
         hasCompletedInitialLoad = true
         hasLoadedOnce = true
+        crashReportingService?.setCurrentScreen("home")
+        crashReportingService?.setCurrentFlow("home")
+        crashReportingService?.breadcrumb(
+            "home_load_completed",
+            metadata: [
+                "lectures_count": lectures.count,
+                "folders_count": folders.count,
+            ]
+        )
         analyticsService?.track(
             .homeOpened(
                 lecturesCount: lectures.count,
@@ -1091,6 +1169,9 @@ final class LecturesListViewModel {
             return
         }
 
+        crashReportingService?.setLectureContext(lecture)
+        crashReportingService?.setCurrentFlow("processing")
+        crashReportingService?.setProcessingStage(lecture.processingStartStatus.rawValue)
         analyticsService?.track(
             .processingStarted(
                 context: .init(lecture: lecture),
@@ -1113,6 +1194,14 @@ final class LecturesListViewModel {
                 lectureToProcess.status = .failed
                 lectureToProcess.processingErrorMessage = error.localizedDescription
                 replaceLecture(lectureToProcess)
+                crashReportingService?.breadcrumb(
+                    "processing_request_failed",
+                    metadata: [
+                        "lecture_id": lecture.id.uuidString,
+                        "source_type": lecture.sourceType.rawValue,
+                        "processing_stage": lecture.processingStartStatus.rawValue,
+                    ]
+                )
                 analyticsService?.track(
                     .processingFailed(
                         context: .init(lecture: lectureToProcess),
@@ -1368,6 +1457,7 @@ final class LecturesListViewModel {
             recorderViewModel = RecorderViewModel(
                 limit: currentRecordingLimit,
                 analyticsService: analyticsService,
+                crashReportingService: crashReportingService,
                 plan: currentPlan
             )
         case .importAudio:

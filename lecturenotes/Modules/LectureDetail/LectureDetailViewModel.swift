@@ -94,6 +94,7 @@ final class LectureDetailViewModel {
     @ObservationIgnored private let repository: LectureRepository
     @ObservationIgnored private let processingService: FirebaseLectureProcessingService?
     @ObservationIgnored private let analyticsService: AppAnalyticsService?
+    @ObservationIgnored private let crashReportingService: CrashReportingService?
     @ObservationIgnored private let onLectureUpdated: (Lecture) -> Void
     @ObservationIgnored private let onLectureDeleted: (Lecture.ID) async -> String?
     @ObservationIgnored private var repositoryObservationTask: Task<Void, Never>?
@@ -103,6 +104,7 @@ final class LectureDetailViewModel {
         repository: LectureRepository,
         processingService: FirebaseLectureProcessingService? = nil,
         analyticsService: AppAnalyticsService? = nil,
+        crashReportingService: CrashReportingService? = nil,
         onLectureUpdated: @escaping (Lecture) -> Void = { _ in },
         onLectureDeleted: @escaping (Lecture.ID) async -> String? = { _ in nil }
     ) {
@@ -110,6 +112,7 @@ final class LectureDetailViewModel {
         self.repository = repository
         self.processingService = processingService
         self.analyticsService = analyticsService
+        self.crashReportingService = crashReportingService
         self.onLectureUpdated = onLectureUpdated
         self.onLectureDeleted = onLectureDeleted
     }
@@ -136,6 +139,12 @@ final class LectureDetailViewModel {
 
     var analytics: AppAnalyticsService? {
         analyticsService
+    }
+
+    func configureCrashContext() {
+        crashReportingService?.setCurrentScreen("lecture_detail")
+        crashReportingService?.setCurrentFlow("lecture_detail")
+        crashReportingService?.setLectureContext(lecture)
     }
 
     func prepareAudioPlayerIfNeeded() {

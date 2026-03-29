@@ -35,16 +35,19 @@ final class RecorderViewModel {
 
     @ObservationIgnored private let recordingManager: RecordingManager
     @ObservationIgnored private let analyticsService: AppAnalyticsService?
+    @ObservationIgnored private let crashReportingService: CrashReportingService?
     @ObservationIgnored private let plan: AppUserPlan?
     @ObservationIgnored private var timerTask: Task<Void, Never>?
 
     init(
         limit: Duration = .seconds(300),
         analyticsService: AppAnalyticsService? = nil,
+        crashReportingService: CrashReportingService? = nil,
         plan: AppUserPlan? = nil
     ) {
         self.limit = limit
         self.analyticsService = analyticsService
+        self.crashReportingService = crashReportingService
         self.plan = plan
         self.recordingManager = RecordingManager()
         bindRecordingManager()
@@ -54,10 +57,12 @@ final class RecorderViewModel {
         limit: Duration = .seconds(300),
         recordingManager: RecordingManager,
         analyticsService: AppAnalyticsService? = nil,
+        crashReportingService: CrashReportingService? = nil,
         plan: AppUserPlan? = nil
     ) {
         self.limit = limit
         self.analyticsService = analyticsService
+        self.crashReportingService = crashReportingService
         self.plan = plan
         self.recordingManager = recordingManager
         bindRecordingManager()
@@ -90,6 +95,13 @@ final class RecorderViewModel {
 
         mode = .paused
         errorMessage = String(localized: "Recording was paused by the system.")
+        crashReportingService?.breadcrumb(
+            "recording_session_interrupted",
+            metadata: [
+                "elapsed_seconds": elapsed.secondsValue,
+                "interruption_reason": "app_became_active_without_recording",
+            ]
+        )
     }
 
     func handleAppDidEnterBackground() {
@@ -107,6 +119,8 @@ final class RecorderViewModel {
         do {
             try await recordingManager.startRecording()
             record()
+            crashReportingService?.setCurrentFlow("recording")
+            crashReportingService?.breadcrumb("recording_session_started")
             analyticsService?.track(
                 .recordStarted(
                     limitMinutes: limit.minutesValue,
@@ -115,6 +129,13 @@ final class RecorderViewModel {
             )
         } catch {
             errorMessage = error.localizedDescription
+            crashReportingService?.recordNonFatal(
+                error,
+                reason: "recording_start_failed",
+                metadata: [
+                    "limit_minutes": limit.minutesValue,
+                ]
+            )
         }
     }
 
@@ -214,6 +235,13 @@ final class RecorderViewModel {
                 guard recordingManager.isRecording else {
                     mode = .paused
                     errorMessage = String(localized: "Recording was paused by the system.")
+                    crashReportingService?.breadcrumb(
+                        "recording_session_interrupted",
+                        metadata: [
+                            "elapsed_seconds": elapsed.secondsValue,
+                            "interruption_reason": "recording_manager_not_recording",
+                        ]
+                    )
                     continue
                 }
                 if elapsed >= limit {
@@ -236,6 +264,13 @@ final class RecorderViewModel {
             }
 
             self.errorMessage = message
+            self.crashReportingService?.breadcrumb(
+                "recording_session_interrupted",
+                metadata: [
+                    "elapsed_seconds": self.elapsed.secondsValue,
+                    "interruption_reason": message,
+                ]
+            )
         }
     }
 }

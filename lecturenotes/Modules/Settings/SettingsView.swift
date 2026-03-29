@@ -12,18 +12,22 @@ struct SettingsView: View {
     @State private var isAlertPresented = false
     @State private var isLanguagePickerPresented = false
     let analyticsService: AppAnalyticsService?
+    let crashReportingService: CrashReportingService?
 
     init(
         authService: FirebaseAuthService? = nil,
         userProfileService: FirebaseUserProfileService? = nil,
-        analyticsService: AppAnalyticsService? = nil
+        analyticsService: AppAnalyticsService? = nil,
+        crashReportingService: CrashReportingService? = nil
     ) {
         self.analyticsService = analyticsService
+        self.crashReportingService = crashReportingService
         _viewModel = State(
             initialValue: SettingsViewModel(
                 authService: authService,
                 userProfileService: userProfileService,
-                analyticsService: analyticsService
+                analyticsService: analyticsService,
+                crashReportingService: crashReportingService
             )
         )
     }
@@ -61,6 +65,7 @@ struct SettingsView: View {
                 ) {
                     let draft = viewModel.makeSupportEmailDraft()
                     analyticsService?.track(.supportEmailOpened)
+                    crashReportingService?.breadcrumb("support_email_opened")
 
                     if SettingsMailComposer.canSendMail {
                         supportEmailDraft = draft
@@ -129,12 +134,16 @@ struct SettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             analyticsService?.track(.settingsOpened(plan: subscriptionManager.currentPlan))
+            crashReportingService?.setCurrentScreen("settings")
         }
         .sheet(item: $supportEmailDraft) { draft in
             SettingsMailComposer(draft: draft)
         }
         .sheet(isPresented: $isLanguagePickerPresented) {
-            SettingsLanguagePickerView(analyticsService: analyticsService)
+            SettingsLanguagePickerView(
+                analyticsService: analyticsService,
+                crashReportingService: crashReportingService
+            )
         }
         .alert("Settings", isPresented: $isAlertPresented) {
             Button("OK", role: .cancel) {}

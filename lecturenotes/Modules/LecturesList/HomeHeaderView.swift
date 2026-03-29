@@ -4,6 +4,7 @@ struct HomeHeaderView: View {
     let authService: FirebaseAuthService?
     let userProfileService: FirebaseUserProfileService?
     let analyticsService: AppAnalyticsService?
+    let crashReportingService: CrashReportingService?
 
     var body: some View {
         HStack {
@@ -15,7 +16,8 @@ struct HomeHeaderView: View {
                 SettingsView(
                     authService: authService,
                     userProfileService: userProfileService,
-                    analyticsService: analyticsService
+                    analyticsService: analyticsService,
+                    crashReportingService: crashReportingService
                 )
             } label: {
                 Image(systemName: "gearshape")

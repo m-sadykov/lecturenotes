@@ -21,6 +21,7 @@ final class PaywallPresentationModel {
 
     @ObservationIgnored private let userDefaults: UserDefaults
     @ObservationIgnored private let analyticsService: AppAnalyticsService?
+    @ObservationIgnored private let crashReportingService: CrashReportingService?
     @ObservationIgnored private var activePresentationSource: PresentationSource?
     @ObservationIgnored private var didUnlockInActivePresentation = false
     @ObservationIgnored private var activeOfferingIdentifier: String?
@@ -32,10 +33,12 @@ final class PaywallPresentationModel {
 
     init(
         userDefaults: UserDefaults = .standard,
-        analyticsService: AppAnalyticsService? = nil
+        analyticsService: AppAnalyticsService? = nil,
+        crashReportingService: CrashReportingService? = nil
     ) {
         self.userDefaults = userDefaults
         self.analyticsService = analyticsService
+        self.crashReportingService = crashReportingService
     }
 
     func presentDefaultPaywall() async {
@@ -107,6 +110,14 @@ final class PaywallPresentationModel {
     func handlePurchaseStarted(_ package: Package, currentPlan: AppUserPlan) {
         activeOfferingIdentifier = package.offeringIdentifier
         activeProductIdentifier = package.storeProduct.productIdentifier
+        crashReportingService?.setCurrentFlow("purchase")
+        crashReportingService?.breadcrumb(
+            "purchase_flow_started",
+            metadata: [
+                "product_id": package.storeProduct.productIdentifier,
+                "offering_id": package.offeringIdentifier,
+            ]
+        )
         analyticsService?.track(
             .purchaseStarted(
                 productID: package.storeProduct.productIdentifier,
@@ -128,6 +139,13 @@ final class PaywallPresentationModel {
     }
 
     func handlePurchaseCancelled(currentPlan: AppUserPlan) {
+        crashReportingService?.breadcrumb(
+            "purchase_cancelled",
+            metadata: [
+                "product_id": activeProductIdentifier ?? "",
+                "offering_id": activeOfferingIdentifier ?? "",
+            ]
+        )
         analyticsService?.track(
             .purchaseCancelled(
                 productID: activeProductIdentifier,
@@ -138,6 +156,14 @@ final class PaywallPresentationModel {
     }
 
     func handlePurchaseFailure(_ error: Error, currentPlan: AppUserPlan) {
+        crashReportingService?.recordNonFatal(
+            error,
+            reason: "purchase_failed",
+            metadata: [
+                "product_id": activeProductIdentifier ?? "",
+                "offering_id": activeOfferingIdentifier ?? "",
+            ]
+        )
         analyticsService?.track(
             .purchaseFailed(
                 productID: activeProductIdentifier,
@@ -149,12 +175,20 @@ final class PaywallPresentationModel {
     }
 
     func handleRestoreStarted(currentPlan: AppUserPlan) {
+        crashReportingService?.breadcrumb("restore_purchases_started")
         analyticsService?.track(.restorePurchasesStarted(plan: currentPlan))
     }
 
     func handleRestoreCompleted(_ customerInfo: CustomerInfo, currentPlan: AppUserPlan) {
         let restoredPlan = resolvePlan(from: customerInfo)
         let result = restoredPlan == currentPlan && restoredPlan == .freemium ? "no_active_purchases" : "success"
+        crashReportingService?.breadcrumb(
+            "restore_purchases_completed",
+            metadata: [
+                "result": result,
+                "restored_plan": restoredPlan.rawValue,
+            ]
+        )
         analyticsService?.track(
             .restorePurchasesResult(
                 result: result,
@@ -193,6 +227,14 @@ final class PaywallPresentationModel {
         guard !isLoadingPaywall else { return false }
         isLoadingPaywall = true
         defer { isLoadingPaywall = false }
+        crashReportingService?.setCurrentFlow("paywall")
+        crashReportingService?.breadcrumb(
+            "paywall_load_started",
+            metadata: [
+                "source": analyticsValue(for: source),
+                "offering_id": offeringIdentifier,
+            ]
+        )
 
         do {
             let offerings = try await Purchases.shared.offerings()
@@ -221,6 +263,14 @@ final class PaywallPresentationModel {
             if showsError {
                 paywallErrorMessage = String(localized: "Paywall is unavailable right now.")
             }
+            crashReportingService?.recordNonFatal(
+                error,
+                reason: "paywall_load_failed",
+                metadata: [
+                    "source": analyticsValue(for: source),
+                    "offering_id": offeringIdentifier,
+                ]
+            )
             return false
         }
     }

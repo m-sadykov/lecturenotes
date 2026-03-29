@@ -15,6 +15,7 @@ struct LecturesListView: View {
     let processingService: FirebaseLectureProcessingService?
     let userProfileService: FirebaseUserProfileService?
     let analyticsService: AppAnalyticsService?
+    let crashReportingService: CrashReportingService?
     @State private var activeFileImport: LocalFileImport = .importAudio
     @State private var isFileImporterPresented = false
     @State private var pendingLocalConsentAction: LocalFileImport?
@@ -34,7 +35,8 @@ struct LecturesListView: View {
                 HomeHeaderView(
                     authService: authService,
                     userProfileService: userProfileService,
-                    analyticsService: analyticsService
+                    analyticsService: analyticsService,
+                    crashReportingService: crashReportingService
                 )
                     .padding(.horizontal, 20)
                     .padding(.top, 6)
@@ -161,6 +163,7 @@ struct LecturesListView: View {
                     repository: repository,
                     processingService: processingService,
                     analyticsService: analyticsService,
+                    crashReportingService: crashReportingService,
                     onLectureUpdated: { updatedLecture in
                         viewModel.handleLectureUpdated(updatedLecture)
                     },

@@ -20,17 +20,23 @@ final class SubscriptionManager: NSObject, ObservableObject {
     @Published private(set) var isPremium: Bool = false
 
     private let userProfileService: FirebaseUserProfileService?
+    private let crashReportingService: CrashReportingService?
     private var started = false
     private var cancellables = Set<AnyCancellable>()
 
-    init(userProfileService: FirebaseUserProfileService? = nil) {
+    init(
+        userProfileService: FirebaseUserProfileService? = nil,
+        crashReportingService: CrashReportingService? = nil
+    ) {
         self.userProfileService = userProfileService
+        self.crashReportingService = crashReportingService
         super.init()
     }
 
     func start() {
         guard !started else { return }
         started = true
+        crashReportingService?.breadcrumb("subscription_manager_started")
 
         // Avoid running RevenueCat logic inside SwiftUI previews.
         if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
@@ -60,13 +66,19 @@ final class SubscriptionManager: NSObject, ObservableObject {
     }
 
     func refresh() async {
+        crashReportingService?.breadcrumb("subscription_refresh_started")
         do {
             let info = try await Purchases.shared.customerInfo()
             await MainActor.run {
                 self.apply(customerInfo: info)
             }
         } catch {
-            // Intentionally ignore refresh errors for now (e.g. no network).
+            crashReportingService?.breadcrumb(
+                "subscription_refresh_failed",
+                metadata: [
+                    "error": error.localizedDescription,
+                ]
+            )
         }
     }
 
@@ -95,6 +107,7 @@ final class SubscriptionManager: NSObject, ObservableObject {
         Task {
             await userProfileService?.syncSubscriptionPlan(currentPlan)
         }
+        crashReportingService?.setCustomValue(resolvedPlan.rawValue, forKey: "plan")
     }
 
     private func resolvePlan(from customerInfo: CustomerInfo) -> AppUserPlan {

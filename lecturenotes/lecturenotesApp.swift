@@ -37,6 +37,9 @@ struct lecturenotesApp: App {
     
     init() {
         _ = firebaseConfigured
+        let crashReportingService = CrashReportingService()
+        crashReportingService.breadcrumb("app_launch_started")
+        crashReportingService.breadcrumb("firebase_configured")
 
         #if DEBUG
         Purchases.logLevel = .debug
@@ -47,10 +50,14 @@ struct lecturenotesApp: App {
         let userProfileService = FirebaseUserProfileService(authService: authService)
         let environment = AppEnvironment(
             authService: authService,
-            userProfileService: userProfileService
+            userProfileService: userProfileService,
+            crashReportingService: crashReportingService
         )
         _subscriptionManager = StateObject(
-            wrappedValue: SubscriptionManager(userProfileService: userProfileService)
+            wrappedValue: SubscriptionManager(
+                userProfileService: userProfileService,
+                crashReportingService: crashReportingService
+            )
         )
         _appState = State(initialValue: AppState())
         _appEnvironment = State(
@@ -61,7 +68,8 @@ struct lecturenotesApp: App {
                 repository: environment.repository,
                 processingService: environment.processingService,
                 userProfileService: environment.userProfileService,
-                analyticsService: environment.analyticsService
+                analyticsService: environment.analyticsService,
+                crashReportingService: environment.crashReportingService
             )
         )
     }
@@ -70,19 +78,26 @@ struct lecturenotesApp: App {
         guard !hasPreparedStartup else { return }
         hasPreparedStartup = true
 
+        appEnvironment.crashReportingService.setCurrentFlow("app_launch")
         await updateSplashProgress(to: 0.15)
+        appEnvironment.crashReportingService.breadcrumb("subscription_start_requested")
         subscriptionManager.start()
 
+        appEnvironment.crashReportingService.breadcrumb("repository_start_started")
         await appEnvironment.repository.start()
+        appEnvironment.crashReportingService.breadcrumb("repository_start_completed")
         await updateSplashProgress(to: 0.4)
 
+        appEnvironment.crashReportingService.breadcrumb("user_profile_prepare_started")
         await appEnvironment.userProfileService?.prepareCurrentUserProfile()
+        appEnvironment.crashReportingService.breadcrumb("user_profile_prepare_completed")
         await updateSplashProgress(to: 0.65)
 
         await subscriptionManager.refresh()
         await updateSplashProgress(to: 0.82)
 
         await lecturesListViewModel.load()
+        appEnvironment.crashReportingService.breadcrumb("app_launch_completed")
         await updateSplashProgress(to: 1.0)
 
         await MainActor.run {

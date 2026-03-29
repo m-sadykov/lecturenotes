@@ -4,9 +4,14 @@ struct SettingsLanguagePickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
     let analyticsService: AppAnalyticsService?
+    let crashReportingService: CrashReportingService?
 
-    init(analyticsService: AppAnalyticsService? = nil) {
+    init(
+        analyticsService: AppAnalyticsService? = nil,
+        crashReportingService: CrashReportingService? = nil
+    ) {
         self.analyticsService = analyticsService
+        self.crashReportingService = crashReportingService
     }
 
     var body: some View {
@@ -21,6 +26,13 @@ struct SettingsLanguagePickerView: View {
                                 from: previousLanguage,
                                 to: language
                             )
+                        )
+                        crashReportingService?.breadcrumb(
+                            "language_changed",
+                            metadata: [
+                                "from": previousLanguage.rawValue,
+                                "to": language.rawValue,
+                            ]
                         )
                     }
                     dismiss()

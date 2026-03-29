@@ -3,6 +3,7 @@ import SwiftUI
 struct OnboardingView: View {
     @Bindable var appState: AppState
     let analyticsService: AppAnalyticsService?
+    let crashReportingService: CrashReportingService?
     @State private var selectedPageIndex = 0
     @State private var hasTrackedStart = false
 
@@ -46,6 +47,9 @@ struct OnboardingView: View {
                 }
 
                 hasTrackedStart = true
+                crashReportingService?.setCurrentScreen("onboarding")
+                crashReportingService?.setCurrentFlow("onboarding")
+                crashReportingService?.breadcrumb("onboarding_started")
                 analyticsService?.track(.onboardingStarted)
             }
         }
@@ -63,6 +67,7 @@ struct OnboardingView: View {
     }
 
     private func completeOnboarding() {
+        crashReportingService?.breadcrumb("onboarding_completed")
         analyticsService?.track(
             .onboardingCompleted(
                 pagesSeenCount: min(max(selectedPageIndex + 1, 1), pages.count)
@@ -76,6 +81,7 @@ struct OnboardingView: View {
     }
 
     private func skipOnboarding() {
+        crashReportingService?.breadcrumb("onboarding_skipped", metadata: ["page_index": selectedPageIndex])
         analyticsService?.track(.onboardingSkipped(pageIndex: selectedPageIndex))
         finishOnboarding()
     }
@@ -302,6 +308,7 @@ private struct OnboardingPage: Identifiable {
 #Preview {
     OnboardingView(
         appState: AppState(),
-        analyticsService: AppAnalyticsService(isEnabled: false)
+        analyticsService: AppAnalyticsService(isEnabled: false),
+        crashReportingService: CrashReportingService(isEnabled: false)
     )
 }

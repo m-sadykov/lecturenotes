@@ -11,13 +11,15 @@ final class FirebaseLectureProcessingService {
     private let storage: Storage
     private let audioChunker: LectureAudioChunker
     private let commandService: FirebaseLectureCommandService
+    private let crashReportingService: CrashReportingService?
 
     init(
         authService: FirebaseAuthService,
         userProfileService: FirebaseUserProfileService,
         firestore: Firestore? = nil,
         storage: Storage? = nil,
-        audioChunker: LectureAudioChunker? = nil
+        audioChunker: LectureAudioChunker? = nil,
+        crashReportingService: CrashReportingService? = nil
     ) {
         self.authService = authService
         self.userProfileService = userProfileService
@@ -25,11 +27,21 @@ final class FirebaseLectureProcessingService {
         self.storage = storage ?? Storage.storage()
         self.audioChunker = audioChunker ?? LectureAudioChunker()
         self.commandService = FirebaseLectureCommandService(authService: authService)
+        self.crashReportingService = crashReportingService
     }
 
     func startProcessing(for lecture: Lecture) async throws -> Lecture {
         var processingLecture = lecture
         processingLecture.processingErrorMessage = nil
+        crashReportingService?.setLectureContext(lecture)
+        crashReportingService?.setCurrentFlow("processing")
+        crashReportingService?.breadcrumb(
+            "processing_request_started",
+            metadata: [
+                "lecture_id": lecture.id.uuidString,
+                "source_type": lecture.sourceType.rawValue,
+            ]
+        )
 
         do {
             let userProfile = try await userProfileService.ensureCurrentUserProfile()
@@ -41,6 +53,7 @@ final class FirebaseLectureProcessingService {
 
             switch lecture.sourceType {
             case .audio:
+                crashReportingService?.setProcessingStage("upload")
                 guard lecture.duration <= userProfile.audioImportLimitDuration else {
                     throw FirebaseLectureProcessingError.audioLimitExceeded(
                         limit: userProfile.audioImportLimitDuration
@@ -69,6 +82,7 @@ final class FirebaseLectureProcessingService {
                     throw error
                 }
             case .text, .pdf:
+                crashReportingService?.setProcessingStage("generate")
                 let trimmedTranscript = lecture.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmedTranscript.isEmpty else {
                     throw FirebaseLectureProcessingError.missingTranscript
@@ -79,6 +93,7 @@ final class FirebaseLectureProcessingService {
                 try await commandService.startProcessing(lectureID: lecture.id)
                 return processingLecture
             case .youtube:
+                crashReportingService?.setProcessingStage("transcribe")
                 guard let sourceURL = lecture.sourceURL else {
                     throw FirebaseLectureProcessingError.missingSourceURL
                 }
@@ -90,6 +105,27 @@ final class FirebaseLectureProcessingService {
                 return processingLecture
             }
         } catch {
+            if !Self.isExpectedProcessingValidationError(error) {
+                crashReportingService?.recordNonFatal(
+                    error,
+                    reason: "processing_request_failed",
+                    metadata: [
+                        "lecture_id": lecture.id.uuidString,
+                        "source_type": lecture.sourceType.rawValue,
+                        "processing_stage": processingLecture.status.rawValue,
+                    ]
+                )
+            } else {
+                crashReportingService?.breadcrumb(
+                    "processing_request_failed",
+                    metadata: [
+                        "lecture_id": lecture.id.uuidString,
+                        "source_type": lecture.sourceType.rawValue,
+                        "processing_stage": processingLecture.status.rawValue,
+                        "reason": error.localizedDescription,
+                    ]
+                )
+            }
             await commandService.markLectureFailed(lecture.id, message: error.localizedDescription)
             throw error
         }
@@ -184,6 +220,18 @@ final class FirebaseLectureProcessingService {
         }
     }
 
+    private static func isExpectedProcessingValidationError(_ error: Error) -> Bool {
+        guard let error = error as? FirebaseLectureProcessingError else {
+            return false
+        }
+
+        switch error {
+        case .processingLimitExceeded, .audioLimitExceeded, .missingAudioFile, .missingTranscript, .missingSourceURL:
+            return true
+        case .missingLectureDocument:
+            return false
+        }
+    }
 }
 
 enum FirebaseLectureProcessingError: LocalizedError {

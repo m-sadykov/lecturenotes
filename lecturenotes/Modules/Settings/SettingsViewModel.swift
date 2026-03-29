@@ -10,15 +10,18 @@ final class SettingsViewModel {
     private let authService: FirebaseAuthService?
     private let userProfileService: FirebaseUserProfileService?
     private let analyticsService: AppAnalyticsService?
+    private let crashReportingService: CrashReportingService?
 
     init(
         authService: FirebaseAuthService? = nil,
         userProfileService: FirebaseUserProfileService? = nil,
-        analyticsService: AppAnalyticsService? = nil
+        analyticsService: AppAnalyticsService? = nil,
+        crashReportingService: CrashReportingService? = nil
     ) {
         self.authService = authService
         self.userProfileService = userProfileService
         self.analyticsService = analyticsService
+        self.crashReportingService = crashReportingService
     }
 
     var currentUserID: String? {
@@ -46,6 +49,7 @@ final class SettingsViewModel {
             return String(localized: "Purchase restore is already in progress.")
         }
 
+        crashReportingService?.breadcrumb("restore_purchases_started")
         analyticsService?.track(.restorePurchasesStarted(plan: currentPlan))
         isRestoringPurchases = true
         defer {
@@ -57,6 +61,7 @@ final class SettingsViewModel {
 
             let restoredPlan = subscriptionManager.currentPlan
             guard restoredPlan != .freemium else {
+                crashReportingService?.breadcrumb("restore_purchases_completed", metadata: ["result": "no_active_purchases"])
                 analyticsService?.track(
                     .restorePurchasesResult(
                         result: "no_active_purchases",
@@ -66,6 +71,13 @@ final class SettingsViewModel {
                 return String(localized: "No active purchases were found to restore.")
             }
 
+            crashReportingService?.breadcrumb(
+                "restore_purchases_completed",
+                metadata: [
+                    "result": "success",
+                    "restored_plan": restoredPlan.rawValue,
+                ]
+            )
             analyticsService?.track(
                 .restorePurchasesResult(
                     result: "success",
@@ -74,6 +86,13 @@ final class SettingsViewModel {
             )
             return String(localized: "Purchases restored. Your \(restoredPlan.title) plan is active.")
         } catch {
+            crashReportingService?.recordNonFatal(
+                error,
+                reason: "restore_purchases_failed",
+                metadata: [
+                    "plan": currentPlan?.rawValue ?? "",
+                ]
+            )
             analyticsService?.track(
                 .restorePurchasesResult(
                     result: "failure",
@@ -92,6 +111,7 @@ final class SettingsViewModel {
 
         UIPasteboard.general.string = currentUserID
         analyticsService?.track(.userIDCopied)
+        crashReportingService?.breadcrumb("user_id_copied")
         return true
     }
 

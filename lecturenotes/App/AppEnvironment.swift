@@ -11,6 +11,7 @@ final class AppEnvironment {
     @ObservationIgnored var userProfileService: FirebaseUserProfileService?
     @ObservationIgnored var processingService: FirebaseLectureProcessingService?
     @ObservationIgnored var analyticsService: AppAnalyticsService
+    @ObservationIgnored var crashReportingService: CrashReportingService
 
     init(
         repository: LectureRepository? = nil,
@@ -18,12 +19,15 @@ final class AppEnvironment {
         authService: FirebaseAuthService? = nil,
         userProfileService: FirebaseUserProfileService? = nil,
         processingService: FirebaseLectureProcessingService? = nil,
-        analyticsService: AppAnalyticsService? = nil
+        analyticsService: AppAnalyticsService? = nil,
+        crashReportingService: CrashReportingService? = nil
     ) {
         let resolvedModelContainer = modelContainer ?? Self.makeModelContainer()
         let resolvedAnalyticsService = analyticsService ?? AppAnalyticsService()
+        let resolvedCrashReportingService = crashReportingService ?? CrashReportingService()
         self.modelContainer = resolvedModelContainer
         self.analyticsService = resolvedAnalyticsService
+        self.crashReportingService = resolvedCrashReportingService
 
         if let repository {
             self.repository = repository
@@ -41,7 +45,8 @@ final class AppEnvironment {
             self.userProfileService = userProfileService
             self.processingService = processingService ?? FirebaseLectureProcessingService(
                 authService: authService,
-                userProfileService: userProfileService
+                userProfileService: userProfileService,
+                crashReportingService: resolvedCrashReportingService
             )
             return
         }
@@ -66,7 +71,8 @@ final class AppEnvironment {
         self.userProfileService = resolvedUserProfileService
         self.processingService = processingService ?? FirebaseLectureProcessingService(
             authService: resolvedAuthService,
-            userProfileService: resolvedUserProfileService
+            userProfileService: resolvedUserProfileService,
+            crashReportingService: resolvedCrashReportingService
         )
     }
 
@@ -74,7 +80,8 @@ final class AppEnvironment {
         AppEnvironment(
             repository: repository ?? MockLectureRepository(),
             processingService: nil,
-            analyticsService: AppAnalyticsService(isEnabled: false)
+            analyticsService: AppAnalyticsService(isEnabled: false),
+            crashReportingService: CrashReportingService(isEnabled: false)
         )
     }
 
