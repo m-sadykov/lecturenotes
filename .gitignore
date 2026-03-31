@@ -172,3 +172,4 @@ site/
 .agents/
 .skills-lock.json
 .docs/
+.claude/

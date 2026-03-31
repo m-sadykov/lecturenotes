@@ -47,6 +47,8 @@ struct MiniRecorderSheetView: View {
                 viewModel.handleAppDidBecomeActive()
             case .inactive:
                 break
+            @unknown default:
+                break
             }
         }
         .onDisappear {
