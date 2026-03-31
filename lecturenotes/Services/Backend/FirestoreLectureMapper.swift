@@ -82,6 +82,7 @@ enum FirestoreLectureMapper {
             title: stringValue(for: "title", in: data) ?? String(localized: "Untitled Lecture"),
             sourceType: LectureSourceType(rawValue: stringValue(for: "sourceType", in: data) ?? "") ?? .audio,
             audioURL: preservedLocalAudioURL,
+            remoteAudioPath: stringValue(for: "audioPath", in: data),
             pdfPageCount: intValue(for: "pdfPageCount", in: data),
             sourceURL: urlValue(for: "sourceURL", in: data),
             youtubeVideoID: stringValue(for: "youtubeVideoID", in: data),

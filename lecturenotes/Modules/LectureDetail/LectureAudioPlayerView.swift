@@ -159,6 +159,7 @@ private extension Double {
         lecture: previewLectureForPlayer,
         viewModel: LecturePlayerViewModel(
             audioURL: nil,
+            remoteAudioPath: nil,
             fallbackDuration: .seconds(600)
         )
     )

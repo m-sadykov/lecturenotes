@@ -12,6 +12,7 @@ final class LocalLectureRepository: LectureRepository {
         var title: String
         var sourceType: LectureSourceType
         var audioFileName: String?
+        var remoteAudioPath: String?
         var pdfPageCount: Int?
         var sourceURL: URL?
         var youtubeVideoID: String?
@@ -31,6 +32,7 @@ final class LocalLectureRepository: LectureRepository {
             case title
             case sourceType
             case audioFileName
+            case remoteAudioPath
             case pdfPageCount
             case sourceURL
             case youtubeVideoID
@@ -56,6 +58,7 @@ final class LocalLectureRepository: LectureRepository {
                 }
                 return url.lastPathComponent
             }
+            remoteAudioPath = lecture.remoteAudioPath
             pdfPageCount = lecture.pdfPageCount
             sourceURL = lecture.sourceURL
             youtubeVideoID = lecture.youtubeVideoID
@@ -77,6 +80,7 @@ final class LocalLectureRepository: LectureRepository {
             title = try container.decode(String.self, forKey: .title)
             sourceType = try container.decodeIfPresent(LectureSourceType.self, forKey: .sourceType) ?? .audio
             audioFileName = try container.decodeIfPresent(String.self, forKey: .audioFileName)
+            remoteAudioPath = try container.decodeIfPresent(String.self, forKey: .remoteAudioPath)
             pdfPageCount = try container.decodeIfPresent(Int.self, forKey: .pdfPageCount)
             sourceURL = try container.decodeIfPresent(URL.self, forKey: .sourceURL)
             youtubeVideoID = try container.decodeIfPresent(String.self, forKey: .youtubeVideoID)
@@ -98,6 +102,7 @@ final class LocalLectureRepository: LectureRepository {
             try container.encode(title, forKey: .title)
             try container.encode(sourceType, forKey: .sourceType)
             try container.encodeIfPresent(audioFileName, forKey: .audioFileName)
+            try container.encodeIfPresent(remoteAudioPath, forKey: .remoteAudioPath)
             try container.encodeIfPresent(pdfPageCount, forKey: .pdfPageCount)
             try container.encodeIfPresent(sourceURL, forKey: .sourceURL)
             try container.encodeIfPresent(youtubeVideoID, forKey: .youtubeVideoID)
@@ -119,6 +124,7 @@ final class LocalLectureRepository: LectureRepository {
                 title: title,
                 sourceType: sourceType,
                 audioURL: audioFileName.map { recordingsDirectory.appending(path: $0) },
+                remoteAudioPath: remoteAudioPath,
                 pdfPageCount: pdfPageCount,
                 sourceURL: sourceURL,
                 youtubeVideoID: youtubeVideoID,

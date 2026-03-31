@@ -1,4 +1,5 @@
 import AVFoundation
+import FirebaseStorage
 import Foundation
 import Observation
 
@@ -8,37 +9,45 @@ final class LecturePlayerViewModel {
     static let availablePlaybackRates: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
     var isPlaying = false
+    var isPlaybackAvailable = false
     var playbackRate: Float = 1
     var currentTime: Duration = .zero
     var totalDuration: Duration = .zero
 
-    @ObservationIgnored private let player: AVPlayer?
+    @ObservationIgnored private var player: AVPlayer?
     @ObservationIgnored private let analyticsService: AppAnalyticsService?
-    @ObservationIgnored private let analyticsContext: LectureAnalyticsContext?
+    @ObservationIgnored private var analyticsContext: LectureAnalyticsContext?
     @ObservationIgnored private let audioSession = AVAudioSession.sharedInstance()
+    @ObservationIgnored private let fileManager: FileManager
+    @ObservationIgnored private let storage: Storage
     @ObservationIgnored private var timeObserver: Any?
     @ObservationIgnored private var durationTask: Task<Void, Never>?
+    @ObservationIgnored private var remoteURLTask: Task<Void, Never>?
+    @ObservationIgnored private var configuredLocalAudioURL: URL?
+    @ObservationIgnored private var configuredRemoteAudioPath: String?
 
     init(
         audioURL: URL?,
+        remoteAudioPath: String?,
         fallbackDuration: Duration,
         analyticsService: AppAnalyticsService? = nil,
-        analyticsContext: LectureAnalyticsContext? = nil
+        analyticsContext: LectureAnalyticsContext? = nil,
+        fileManager: FileManager = .default,
+        storage: Storage = .storage()
     ) {
-        if let audioURL {
-            self.player = AVPlayer(url: audioURL)
-        } else {
-            self.player = nil
-        }
-
-        self.totalDuration = fallbackDuration
         self.analyticsService = analyticsService
-        self.analyticsContext = analyticsContext
-        configurePlayer()
+        self.fileManager = fileManager
+        self.storage = storage
+        updateAudio(
+            localURL: audioURL,
+            remoteAudioPath: remoteAudioPath,
+            fallbackDuration: fallbackDuration,
+            analyticsContext: analyticsContext
+        )
     }
 
     var canPlay: Bool {
-        player != nil
+        isPlaybackAvailable
     }
 
     var progress: Double {
@@ -47,8 +56,30 @@ final class LecturePlayerViewModel {
         return min(1, currentSeconds / totalSeconds)
     }
 
+    func updateAudio(
+        localURL: URL?,
+        remoteAudioPath: String?,
+        fallbackDuration: Duration,
+        analyticsContext: LectureAnalyticsContext? = nil
+    ) {
+        totalDuration = fallbackDuration
+        self.analyticsContext = analyticsContext
+
+        let needsReconfiguration =
+            configuredLocalAudioURL != localURL ||
+            configuredRemoteAudioPath != remoteAudioPath
+
+        guard needsReconfiguration else {
+            return
+        }
+
+        configuredLocalAudioURL = localURL
+        configuredRemoteAudioPath = remoteAudioPath
+        configurePlaybackSource(localURL: localURL, remoteAudioPath: remoteAudioPath)
+    }
+
     func togglePlayback() {
-        guard let player else { return }
+        guard canPlay, let player else { return }
 
         if isPlaying {
             player.pause()
@@ -81,7 +112,7 @@ final class LecturePlayerViewModel {
     }
 
     func seek(to progress: Double) {
-        guard let player else { return }
+        guard canPlay, let player else { return }
 
         let totalSeconds = max(totalDuration.timeInterval, 0)
         let seconds = totalSeconds * min(1, max(0, progress))
@@ -90,7 +121,7 @@ final class LecturePlayerViewModel {
     }
 
     func seek(by offset: Duration) {
-        guard let player else { return }
+        guard canPlay, let player else { return }
 
         let targetSeconds = max(
             Double.zero,
@@ -106,7 +137,7 @@ final class LecturePlayerViewModel {
     func setPlaybackRate(_ rate: Float) {
         playbackRate = rate
 
-        guard let player, isPlaying else { return }
+        guard canPlay, let player, isPlaying else { return }
         player.rate = rate
     }
 
@@ -131,18 +162,86 @@ final class LecturePlayerViewModel {
     }
 
     func cleanup() {
+        tearDownPlayer()
+        configuredLocalAudioURL = nil
+        configuredRemoteAudioPath = nil
+        isPlaybackAvailable = false
+    }
+
+    private func configurePlaybackSource(localURL: URL?, remoteAudioPath: String?) {
+        remoteURLTask?.cancel()
+        remoteURLTask = nil
+
+        if isPlayableLocalFile(localURL) {
+            replacePlayerIfNeeded(with: localURL)
+            return
+        }
+
+        guard let remoteAudioPath, !remoteAudioPath.isEmpty else {
+            replacePlayerIfNeeded(with: nil)
+            return
+        }
+
+        replacePlayerIfNeeded(with: nil)
+        remoteURLTask = Task { [weak self] in
+            guard let self else {
+                return
+            }
+
+            do {
+                let remoteURL = try await storage.reference(withPath: remoteAudioPath).downloadURL()
+                guard !Task.isCancelled else {
+                    return
+                }
+
+                remoteURLTask = nil
+                replacePlayerIfNeeded(with: remoteURL)
+            } catch {
+                guard !Task.isCancelled else {
+                    return
+                }
+
+                remoteURLTask = nil
+                replacePlayerIfNeeded(with: nil)
+            }
+        }
+    }
+
+    private func replacePlayerIfNeeded(with audioURL: URL?) {
+        tearDownPlayer()
+        currentTime = .zero
+
+        guard let audioURL else {
+            isPlaybackAvailable = false
+            return
+        }
+
+        let player = AVPlayer(url: audioURL)
+        self.player = player
+        isPlaybackAvailable = true
+        configurePlayer(player)
+    }
+
+    private func tearDownPlayer() {
+        remoteURLTask?.cancel()
+        remoteURLTask = nil
         durationTask?.cancel()
         durationTask = nil
-        guard let timeObserver, let player else { return }
-        player.removeTimeObserver(timeObserver)
-        self.timeObserver = nil
-        player.pause()
+
+        if let timeObserver, let player {
+            player.removeTimeObserver(timeObserver)
+        }
+
+        timeObserver = nil
+        player?.pause()
+        player = nil
+        isPlaybackAvailable = false
         isPlaying = false
         deactivatePlaybackSessionIfNeeded()
     }
 
-    private func configurePlayer() {
-        guard let player else { return }
+    private func configurePlayer(_ player: AVPlayer) {
+        durationTask?.cancel()
 
         durationTask = Task { [weak self] in
             guard
@@ -190,6 +289,18 @@ final class LecturePlayerViewModel {
                 }
             }
         }
+    }
+
+    private func isPlayableLocalFile(_ url: URL?) -> Bool {
+        guard let url else {
+            return false
+        }
+
+        guard url.isFileURL else {
+            return false
+        }
+
+        return fileManager.fileExists(atPath: url.path(percentEncoded: false))
     }
 
     private func activatePlaybackSessionIfNeeded() {

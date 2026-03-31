@@ -172,6 +172,7 @@ struct Lecture: Identifiable, Hashable, Codable {
     var title: String
     var sourceType: LectureSourceType
     var audioURL: URL?
+    var remoteAudioPath: String?
     var pdfPageCount: Int?
     var sourceURL: URL?
     var youtubeVideoID: String?
@@ -191,6 +192,7 @@ struct Lecture: Identifiable, Hashable, Codable {
         title: String,
         sourceType: LectureSourceType = .audio,
         audioURL: URL? = nil,
+        remoteAudioPath: String? = nil,
         pdfPageCount: Int? = nil,
         sourceURL: URL? = nil,
         youtubeVideoID: String? = nil,
@@ -209,6 +211,7 @@ struct Lecture: Identifiable, Hashable, Codable {
         self.title = title
         self.sourceType = sourceType
         self.audioURL = audioURL
+        self.remoteAudioPath = remoteAudioPath
         self.pdfPageCount = pdfPageCount
         self.sourceURL = sourceURL
         self.youtubeVideoID = youtubeVideoID

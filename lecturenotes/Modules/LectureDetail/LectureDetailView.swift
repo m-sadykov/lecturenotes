@@ -82,7 +82,7 @@ struct LectureDetailView: View {
             viewModel.configureCrashContext()
         }
         .task {
-            viewModel.prepareAudioPlayerIfNeeded()
+            viewModel.syncAudioPlayer()
         }
         .task {
             await viewModel.startObservingLecture()

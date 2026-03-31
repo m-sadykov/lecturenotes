@@ -168,3 +168,7 @@ site/
 
 *.cer
 *.p8
+
+.agents/
+.skills-lock.json
+.docs/

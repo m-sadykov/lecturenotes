@@ -147,17 +147,31 @@ final class LectureDetailViewModel {
         crashReportingService?.setLectureContext(lecture)
     }
 
-    func prepareAudioPlayerIfNeeded() {
-        guard playerViewModel == nil, lecture.sourceType == .audio else {
+    func syncAudioPlayer() {
+        guard lecture.sourceType == .audio else {
+            playerViewModel?.cleanup()
+            playerViewModel = nil
             return
         }
 
-        playerViewModel = LecturePlayerViewModel(
-            audioURL: lecture.audioURL,
-            fallbackDuration: lecture.duration,
-            analyticsService: analyticsService,
-            analyticsContext: .init(lecture: lecture)
-        )
+        let analyticsContext = LectureAnalyticsContext(lecture: lecture)
+
+        if let playerViewModel {
+            playerViewModel.updateAudio(
+                localURL: lecture.audioURL,
+                remoteAudioPath: lecture.remoteAudioPath,
+                fallbackDuration: lecture.duration,
+                analyticsContext: analyticsContext
+            )
+        } else {
+            playerViewModel = LecturePlayerViewModel(
+                audioURL: lecture.audioURL,
+                remoteAudioPath: lecture.remoteAudioPath,
+                fallbackDuration: lecture.duration,
+                analyticsService: analyticsService,
+                analyticsContext: analyticsContext
+            )
+        }
     }
 
     func startProcessingIfNeeded() async {
@@ -176,6 +190,7 @@ final class LectureDetailViewModel {
                 }
 
                 lecture = updatedLecture
+                syncAudioPlayer()
                 onLectureUpdated(updatedLecture)
             }
         )
@@ -378,6 +393,7 @@ final class LectureDetailViewModel {
 
         folders = await fetchedFolders
         lecture = updatedLecture
+        syncAudioPlayer()
         processingViewModel?.applyCachedLecture(updatedLecture)
         onLectureUpdated(updatedLecture)
     }
