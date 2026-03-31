@@ -170,6 +170,7 @@ site/
 *.p8
 
 .agents/
-.skills-lock.json
-.docs/
+skills-lock.json
+docs/
 .claude/
+/metadata_preflight
