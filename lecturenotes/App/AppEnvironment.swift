@@ -103,32 +103,45 @@ final class AppState {
         }
     }
 
-    var selectedLanguage: AppLanguage {
+    var languageOverride: AppLanguage? {
         didSet {
-            userDefaults.set(selectedLanguage.rawValue, forKey: Self.selectedLanguageKey)
-            userDefaults.set([selectedLanguage.rawValue], forKey: Self.appleLanguagesKey)
-            Bundle.setAppLanguage(selectedLanguage)
-            AppInterfaceLayoutDirection.apply(for: selectedLanguage)
+            persistLanguageOverride()
+            applyLanguageConfiguration()
         }
     }
 
     @ObservationIgnored private let userDefaults: UserDefaults
 
     private static let needsOnboardingKey = "appState.needsOnboarding"
-    private static let selectedLanguageKey = "appState.selectedLanguage"
-    private static let appleLanguagesKey = "AppleLanguages"
+    private static let languageOverrideKey = "appState.languageOverride"
+    private static let legacySelectedLanguageKey = "appState.selectedLanguage"
+
+    var selectedLanguage: AppLanguage {
+        languageOverride ?? AppLanguage.systemPreferred()
+    }
+
+    var usesSystemLanguage: Bool {
+        languageOverride == nil
+    }
 
     var locale: Locale {
-        selectedLanguage.locale
+        languageOverride?.locale ?? .autoupdatingCurrent
+    }
+
+    var languageSettingsValue: String {
+        if usesSystemLanguage {
+            String(localized: "System")
+        } else {
+            selectedLanguage.nativeName
+        }
     }
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
         self.needsOnboarding = userDefaults.object(forKey: Self.needsOnboardingKey) as? Bool ?? true
-        self.selectedLanguage = AppLanguage(rawValue: userDefaults.string(forKey: Self.selectedLanguageKey) ?? "") ?? .english
-        userDefaults.set([selectedLanguage.rawValue], forKey: Self.appleLanguagesKey)
-        Bundle.setAppLanguage(selectedLanguage)
-        AppInterfaceLayoutDirection.apply(for: selectedLanguage)
+        self.languageOverride = AppLanguage(rawValue: userDefaults.string(forKey: Self.languageOverrideKey) ?? "")
+        userDefaults.removeObject(forKey: Self.legacySelectedLanguageKey)
+        applyLanguageConfiguration()
     }
 
     static func preview(
@@ -137,7 +150,28 @@ final class AppState {
     ) -> AppState {
         let state = AppState()
         state.needsOnboarding = needsOnboarding
-        state.selectedLanguage = selectedLanguage
+        state.setSelectedLanguage(selectedLanguage)
         return state
+    }
+
+    func setSelectedLanguage(_ language: AppLanguage) {
+        languageOverride = language
+    }
+
+    func useSystemLanguage() {
+        languageOverride = nil
+    }
+
+    private func persistLanguageOverride() {
+        if let languageOverride {
+            userDefaults.set(languageOverride.rawValue, forKey: Self.languageOverrideKey)
+        } else {
+            userDefaults.removeObject(forKey: Self.languageOverrideKey)
+        }
+    }
+
+    private func applyLanguageConfiguration() {
+        Bundle.setAppLanguage(languageOverride)
+        AppInterfaceLayoutDirection.apply(for: selectedLanguage)
     }
 }

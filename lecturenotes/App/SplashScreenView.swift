@@ -14,7 +14,7 @@ struct SplashScreenView: View {
     var body: some View {
         ZStack {
 //            AppBackgroundView()
-            Color(.systemGray6)
+            Color(.black)
                 .ignoresSafeArea()
 
 
@@ -27,12 +27,17 @@ struct SplashScreenView: View {
                     .frame(width: 110, height: 110)
                     .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                     .shadow(color: Color.black.opacity(0.2), radius: 16, x: 0, y: 8)
+                
+                Text("LectraAI")
+                    .font(.title)
+                    .foregroundStyle(.white)
+                    .bold()
 
                 Spacer()
 
                 ProgressView(value: progress)
                     .progressViewStyle(.linear)
-                    .tint(Color.black)
+                    .tint(Color.white)
                     .padding(.horizontal, 32)
                     .padding(.bottom, 24)
                     .frame(width: 180)

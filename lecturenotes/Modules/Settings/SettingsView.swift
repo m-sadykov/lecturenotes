@@ -101,7 +101,7 @@ struct SettingsView: View {
 
                 SettingsNavigationRow(
                     title: "App Language",
-                    value: appState.selectedLanguage.nativeName,
+                    value: appState.languageSettingsValue,
                     systemImage: "globe"
                 ) {
                     isLanguagePickerPresented = true

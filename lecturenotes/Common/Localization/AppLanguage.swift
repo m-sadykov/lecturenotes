@@ -194,4 +194,16 @@ enum AppLanguage: String, CaseIterable, Identifiable {
             "Vietnamese"
         }
     }
+
+    static func systemPreferred(
+        preferredLanguages: [String] = Locale.preferredLanguages
+    ) -> AppLanguage {
+        let supportedLanguages = Self.allCases.map(\.rawValue)
+        let preferredLanguage = Bundle.preferredLocalizations(
+            from: supportedLanguages,
+            forPreferences: preferredLanguages
+        ).first
+
+        return preferredLanguage.flatMap(Self.init(rawValue:)) ?? .english
+    }
 }
