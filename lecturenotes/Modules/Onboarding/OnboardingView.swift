@@ -110,37 +110,40 @@ private struct OnboardingPageView: View {
     let page: OnboardingPage
 
     var body: some View {
-        VStack(spacing: 20) {
-            Spacer(minLength: 12)
+        ScrollView {
+            VStack(spacing: 20) {
+                Spacer(minLength: 12)
 
-            OnboardingHeroView(
-                emoji: page.emoji
-            )
+                OnboardingHeroView(
+                    emoji: page.emoji
+                )
 
-            VStack(spacing: 12) {
-                Text(page.title)
-                    .font(.largeTitle)
-                    .bold()
-                    .frame(maxWidth: .infinity)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(spacing: 12) {
+                    Text(page.title)
+                        .font(.largeTitle)
+                        .bold()
+                        .frame(maxWidth: .infinity)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                Text(page.message)
-                    .font(.body)
-                    .frame(maxWidth: .infinity)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
+                    Text(page.message)
+                        .font(.body)
+                        .frame(maxWidth: .infinity)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                OnboardingBenefitsCard(benefits: page.benefits)
             }
-
-            OnboardingBenefitsCard(benefits: page.benefits)
-
-            Spacer(minLength: 12)
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 32)
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 0)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
-        .padding(.bottom, 32)
+        .scrollIndicators(.hidden)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }

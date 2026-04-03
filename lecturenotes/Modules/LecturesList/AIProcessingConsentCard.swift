@@ -46,8 +46,12 @@ struct AIProcessingConsentCard: View {
         .frame(maxWidth: 520, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .shadow(color: .black.opacity(0.12), radius: 28, y: 16)
+                .fill(Color(.systemBackground))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .stroke(.black.opacity(0.04), lineWidth: 1)
+                }
+                .shadow(color: .black.opacity(0.08), radius: 24, y: 12)
         )
     }
 }

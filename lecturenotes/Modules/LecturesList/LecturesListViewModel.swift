@@ -809,7 +809,7 @@ final class LecturesListViewModel {
         }
     }
 
-    func submitYouTubeImport(_ urlString: String) async -> String? {
+    func submitYouTubeImport(_ urlString: String) async -> YouTubeImportAlertError? {
         let result = await importYouTube(urlString: urlString)
 
         switch result {
@@ -818,8 +818,8 @@ final class LecturesListViewModel {
             pendingYouTubeImportLecture = lecture
             isYouTubeImportSheetPresented = false
             return nil
-        case .rejected(let message):
-            return message
+        case .rejected(let error):
+            return error
         }
     }
 
@@ -885,7 +885,7 @@ final class LecturesListViewModel {
         }
     }
 
-    func importYouTube(urlString: String) async -> SaveRecordingResult {
+    func importYouTube(urlString: String) async -> YouTubeImportResult {
         let trimmedURLString = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let sourceURL = URL(string: trimmedURLString), sourceURL.host() != nil else {
             analyticsService?.track(
@@ -896,7 +896,7 @@ final class LecturesListViewModel {
                     reason: String(localized: "Enter a valid YouTube link.")
                 )
             )
-            return .rejected(message: String(localized: "Enter a valid YouTube link."))
+            return .rejected(.invalidLink)
         }
 
         guard let videoID = importManager.parseYouTubeVideoID(from: sourceURL) else {
@@ -908,19 +908,19 @@ final class LecturesListViewModel {
                     reason: String(localized: "Enter a valid YouTube link.")
                 )
             )
-            return .rejected(message: String(localized: "Enter a valid YouTube link."))
+            return .rejected(.invalidLink)
         }
 
-        if let validationMessage = await validateProcessingAvailability() {
+        if let validationError = await validateYouTubeImportAvailability() {
             analyticsService?.track(
                 .contentCreateFailed(
                     sourceType: "youtube",
                     entryPoint: "youtube_import_sheet",
                     plan: currentPlan,
-                    reason: validationMessage
+                    reason: validationError.message
                 )
             )
-            return .rejected(message: validationMessage)
+            return .rejected(validationError)
         }
 
         let lectureStatus: LectureStatus = if processingService == nil {
@@ -976,7 +976,7 @@ final class LecturesListViewModel {
                     reason: String(localized: "Unable to save YouTube import right now.")
                 )
             )
-            return .rejected(message: String(localized: "Unable to save YouTube import right now."))
+            return .rejected(.saveFailed)
         }
     }
 
@@ -1592,6 +1592,34 @@ final class LecturesListViewModel {
         return nil
     }
 
+    private func validateYouTubeImportAvailability() async -> YouTubeImportAlertError? {
+        guard processingService != nil else {
+            return nil
+        }
+
+        let userProfile = await currentUserProfile()
+        guard userProfile?.canStartProcessing ?? true else {
+            processingLimitReachedToken += 1
+            let resolvedPlan = userProfile?.plan ?? .freemium
+            let remainingCount = max(userProfile?.processingQuota.remainingCount ?? 0, 0)
+            analyticsService?.track(
+                .contentLimitHit(
+                    sourceType: "processing",
+                    limitType: "quota",
+                    plan: userProfile?.plan,
+                    allowedValue: Double(userProfile?.processingQuota.totalCount ?? 0),
+                    actualValue: Double(userProfile?.processingQuota.usedCount ?? 0)
+                )
+            )
+            return .processingLimitReached(
+                remainingCount: remainingCount,
+                plan: resolvedPlan
+            )
+        }
+
+        return nil
+    }
+
     private func currentUserProfile() async -> AppUserProfile? {
         if let currentProfile = userProfileService?.currentProfile {
             return currentProfile
@@ -1642,6 +1670,11 @@ enum LecturesListActiveSheet: Identifiable {
             "folderPicker-\(lectureID)"
         }
     }
+}
+
+enum YouTubeImportResult {
+    case saved(Lecture)
+    case rejected(YouTubeImportAlertError)
 }
 
 enum LecturesListPendingConsentAction {

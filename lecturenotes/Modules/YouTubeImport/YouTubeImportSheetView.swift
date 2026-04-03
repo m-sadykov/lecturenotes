@@ -2,12 +2,13 @@ import SwiftUI
 import UIKit
 
 struct YouTubeImportSheetView: View {
+    @Environment(AppState.self) private var appState
     let onClose: () -> Void
-    let onSubmit: (String) async -> String?
+    let onSubmit: (String) async -> YouTubeImportAlertError?
 
     @State private var urlText = ""
     @State private var isSubmitting = false
-    @State private var alertMessage: String?
+    @State private var alertError: YouTubeImportAlertError?
     @State private var autofocusTrigger = 0
     @State private var submitFeedbackToken = 0
 
@@ -102,19 +103,22 @@ struct YouTubeImportSheetView: View {
             .alert(
                 "YouTube Import",
                 isPresented: Binding(
-                    get: { alertMessage != nil },
+                    get: { alertError != nil },
                     set: { isPresented in
                         if !isPresented {
-                            alertMessage = nil
+                            alertError = nil
                         }
                     }
                 )
             ) {
                 Button("OK") {
-                    alertMessage = nil
+                    alertError = nil
                 }
             } message: {
-                Text(alertMessage ?? "")
+                Text(alertError?.message ?? "")
+            }
+            .onChange(of: appState.selectedLanguage, initial: false) { _, _ in
+                refreshPresentedAlertIfNeeded()
             }
             .sensoryFeedback(.impact(weight: .light), trigger: submitFeedbackToken)
         }
@@ -130,17 +134,46 @@ struct YouTubeImportSheetView: View {
         }
 
         isSubmitting = true
-        alertMessage = nil
+        alertError = nil
 
         Task {
-            let errorMessage = await onSubmit(trimmedURL)
+            let error = await onSubmit(trimmedURL)
 
             await MainActor.run {
-                if let errorMessage {
-                    alertMessage = errorMessage
+                if let error {
+                    alertError = error
                     isSubmitting = false
                 }
             }
+        }
+    }
+
+    private func refreshPresentedAlertIfNeeded() {
+        guard let currentAlertError = alertError else {
+            return
+        }
+
+        alertError = nil
+
+        Task { @MainActor in
+            alertError = currentAlertError
+        }
+    }
+}
+
+enum YouTubeImportAlertError: Equatable {
+    case invalidLink
+    case processingLimitReached(remainingCount: Int, plan: AppUserPlan)
+    case saveFailed
+
+    var message: String {
+        switch self {
+        case .invalidLink:
+            String(localized: "Enter a valid YouTube link.")
+        case .processingLimitReached(let remainingCount, let plan):
+            String(localized: "You have \(remainingCount) processing attempts left on your \(plan.title) plan.")
+        case .saveFailed:
+            String(localized: "Unable to save YouTube import right now.")
         }
     }
 }

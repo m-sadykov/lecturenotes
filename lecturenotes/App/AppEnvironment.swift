@@ -128,14 +128,6 @@ final class AppState {
         languageOverride?.locale ?? .autoupdatingCurrent
     }
 
-    var languageSettingsValue: String {
-        if usesSystemLanguage {
-            String(localized: "System")
-        } else {
-            selectedLanguage.nativeName
-        }
-    }
-
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
         self.needsOnboarding = userDefaults.object(forKey: Self.needsOnboardingKey) as? Bool ?? true

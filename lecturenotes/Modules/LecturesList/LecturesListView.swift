@@ -211,7 +211,7 @@ struct LecturesListView: View {
                     Button {
                         viewModel.dismissAIConsent()
                     } label: {
-                        Color.black.opacity(0.28)
+                        Color.black.opacity(0.14)
                             .ignoresSafeArea()
                     }
                     .buttonStyle(.plain)
