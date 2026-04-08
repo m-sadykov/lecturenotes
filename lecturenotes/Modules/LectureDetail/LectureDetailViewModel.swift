@@ -384,14 +384,11 @@ final class LectureDetailViewModel {
     }
 
     private func reloadRepositoryData() async {
-        async let fetchedLecture = repository.fetchLecture(id: lecture.id)
-        async let fetchedFolders = repository.fetchFolders()
-
-        guard let updatedLecture = await fetchedLecture else {
+        guard let updatedLecture = await repository.fetchLecture(id: lecture.id) else {
             return
         }
 
-        folders = await fetchedFolders
+        folders = await repository.fetchFolders()
         lecture = updatedLecture
         syncAudioPlayer()
         processingViewModel?.applyCachedLecture(updatedLecture)

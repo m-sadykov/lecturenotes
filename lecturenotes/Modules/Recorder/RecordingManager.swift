@@ -227,8 +227,13 @@ final class RecordingManager: NSObject, AVAudioRecorderDelegate {
             object: session,
             queue: .main
         ) { [weak self] notification in
+            let interruptionTypeRawValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
+            let interruptionOptionsRawValue = notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt
             Task { @MainActor [weak self] in
-                self?.handleAudioSessionInterruption(notification)
+                self?.handleAudioSessionInterruption(
+                    interruptionTypeRawValue: interruptionTypeRawValue,
+                    interruptionOptionsRawValue: interruptionOptionsRawValue
+                )
             }
         }
 
@@ -237,8 +242,9 @@ final class RecordingManager: NSObject, AVAudioRecorderDelegate {
             object: session,
             queue: .main
         ) { [weak self] notification in
+            let routeChangeReasonRawValue = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
             Task { @MainActor [weak self] in
-                self?.handleAudioRouteChange(notification)
+                self?.handleAudioRouteChange(reasonRawValue: routeChangeReasonRawValue)
             }
         }
 
@@ -257,9 +263,12 @@ final class RecordingManager: NSObject, AVAudioRecorderDelegate {
         notificationObservers.append(mediaServicesResetObserver)
     }
 
-    private func handleAudioSessionInterruption(_ notification: Notification) {
+    private func handleAudioSessionInterruption(
+        interruptionTypeRawValue: UInt?,
+        interruptionOptionsRawValue: UInt?
+    ) {
         guard recorder != nil,
-              let interruptionTypeRawValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let interruptionTypeRawValue,
               let interruptionType = AVAudioSession.InterruptionType(rawValue: interruptionTypeRawValue) else {
             return
         }
@@ -270,7 +279,7 @@ final class RecordingManager: NSObject, AVAudioRecorderDelegate {
             recorder?.pause()
             onSystemPause?("Recording was paused by the system.")
         case .ended:
-            let optionsRawValue = notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+            let optionsRawValue = interruptionOptionsRawValue ?? 0
             let options = AVAudioSession.InterruptionOptions(rawValue: optionsRawValue)
 
             do {
@@ -288,9 +297,9 @@ final class RecordingManager: NSObject, AVAudioRecorderDelegate {
         }
     }
 
-    private func handleAudioRouteChange(_ notification: Notification) {
+    private func handleAudioRouteChange(reasonRawValue: UInt?) {
         guard recorder != nil,
-              let reasonRawValue = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
+              let reasonRawValue,
               let reason = AVAudioSession.RouteChangeReason(rawValue: reasonRawValue) else {
             return
         }

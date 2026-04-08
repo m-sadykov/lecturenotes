@@ -1233,11 +1233,11 @@ final class LecturesListViewModel {
 
     private func reloadRepositoryData() async {
         let previousLectures = lectures
-        async let fetchedFolders = repository.fetchFolders()
-        async let fetchedLectures = repository.fetchLectures()
+        let fetchedFolders = await repository.fetchFolders()
+        let fetchedLectures = await repository.fetchLectures()
 
-        folders = await fetchedFolders
-        lectures = await fetchedLectures
+        folders = fetchedFolders
+        lectures = fetchedLectures
         trackProcessingStatusChanges(from: previousLectures, to: lectures)
         if shouldRequestReview(previousLectures: previousLectures, updatedLectures: lectures) {
             reviewRequestToken += 1
@@ -1271,24 +1271,14 @@ final class LecturesListViewModel {
             return
         }
 
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { [weak self] in
-                await self?.waitUntilRepositoryUpdates()
-            }
-
-            group.addTask {
-                try? await Task.sleep(for: .seconds(2.5))
-            }
-
-            _ = await group.next()
-            group.cancelAll()
-        }
+        let deadline = ContinuousClock.now + .seconds(2.5)
+        await waitUntilRepositoryUpdates(deadline: deadline)
 
         await reloadRepositoryData()
     }
 
-    private func waitUntilRepositoryUpdates() async {
-        while !hasReceivedRepositoryUpdate {
+    private func waitUntilRepositoryUpdates(deadline: ContinuousClock.Instant) async {
+        while !hasReceivedRepositoryUpdate, ContinuousClock.now < deadline {
             if Task.isCancelled {
                 return
             }
