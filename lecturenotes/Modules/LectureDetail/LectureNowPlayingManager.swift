@@ -17,6 +17,7 @@ final class LectureNowPlayingManager: NSObject {
     override init() {
         super.init()
         configureRemoteCommands()
+        setRemoteCommandsEnabled(false)
     }
 
     deinit {
@@ -51,6 +52,9 @@ final class LectureNowPlayingManager: NSObject {
         playbackRate: Float,
         isPlaying: Bool
     ) {
+        UIApplication.shared.beginReceivingRemoteControlEvents()
+        setRemoteCommandsEnabled(true)
+
         var nowPlayingInfo = nowPlayingCenter.nowPlayingInfo ?? [:]
         nowPlayingInfo[MPMediaItemPropertyTitle] = title
         nowPlayingInfo[MPMediaItemPropertyArtist] = String(localized: "LectraAI")
@@ -71,18 +75,11 @@ final class LectureNowPlayingManager: NSObject {
     func clear() {
         nowPlayingCenter.nowPlayingInfo = nil
         nowPlayingCenter.playbackState = .stopped
+        setRemoteCommandsEnabled(false)
+        UIApplication.shared.endReceivingRemoteControlEvents()
     }
 
     private func configureRemoteCommands() {
-        remoteCommandCenter.playCommand.isEnabled = true
-        remoteCommandCenter.pauseCommand.isEnabled = true
-        remoteCommandCenter.togglePlayPauseCommand.isEnabled = true
-        remoteCommandCenter.skipForwardCommand.isEnabled = true
-        remoteCommandCenter.skipBackwardCommand.isEnabled = true
-        remoteCommandCenter.changePlaybackPositionCommand.isEnabled = true
-        remoteCommandCenter.nextTrackCommand.isEnabled = false
-        remoteCommandCenter.previousTrackCommand.isEnabled = false
-
         remoteCommandCenter.skipForwardCommand.preferredIntervals = [15]
         remoteCommandCenter.skipBackwardCommand.preferredIntervals = [15]
 
@@ -92,6 +89,17 @@ final class LectureNowPlayingManager: NSObject {
         remoteCommandCenter.skipForwardCommand.addTarget(self, action: #selector(handleSkipForwardCommand))
         remoteCommandCenter.skipBackwardCommand.addTarget(self, action: #selector(handleSkipBackwardCommand))
         remoteCommandCenter.changePlaybackPositionCommand.addTarget(self, action: #selector(handleChangePlaybackPositionCommand(_:)))
+    }
+
+    private func setRemoteCommandsEnabled(_ isEnabled: Bool) {
+        remoteCommandCenter.playCommand.isEnabled = isEnabled
+        remoteCommandCenter.pauseCommand.isEnabled = isEnabled
+        remoteCommandCenter.togglePlayPauseCommand.isEnabled = isEnabled
+        remoteCommandCenter.skipForwardCommand.isEnabled = isEnabled
+        remoteCommandCenter.skipBackwardCommand.isEnabled = isEnabled
+        remoteCommandCenter.changePlaybackPositionCommand.isEnabled = isEnabled
+        remoteCommandCenter.nextTrackCommand.isEnabled = false
+        remoteCommandCenter.previousTrackCommand.isEnabled = false
     }
 
     private func makeArtwork() -> MPMediaItemArtwork? {

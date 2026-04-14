@@ -11,8 +11,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             FirebaseApp.configure()
         }
 
-        application.beginReceivingRemoteControlEvents()
-
         return true
     }
 }
