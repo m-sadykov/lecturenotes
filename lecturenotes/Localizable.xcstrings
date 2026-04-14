@@ -10794,6 +10794,9 @@
         }
       }
     },
+    "Finishing" : {
+
+    },
     "Flashcards" : {
       "localizations" : {
         "ar" : {
@@ -15112,6 +15115,9 @@
           }
         }
       }
+    },
+    "In progress" : {
+
     },
     "Keep Going" : {
       "localizations" : {
@@ -27853,6 +27859,9 @@
         }
       }
     },
+    "Recording lecture" : {
+
+    },
     "Recording must be at least 3 seconds long." : {
       "localizations" : {
         "ar" : {
@@ -28048,6 +28057,9 @@
           }
         }
       }
+    },
+    "Recording paused" : {
+
     },
     "Recording Too Long" : {
       "localizations" : {
@@ -30991,6 +31003,9 @@
           }
         }
       }
+    },
+    "Saving recording..." : {
+
     },
     "Saving your PDF for processing." : {
       "localizations" : {

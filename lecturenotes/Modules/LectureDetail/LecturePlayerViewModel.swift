@@ -20,25 +20,33 @@ final class LecturePlayerViewModel {
     @ObservationIgnored private let audioSession = AVAudioSession.sharedInstance()
     @ObservationIgnored private let fileManager: FileManager
     @ObservationIgnored private let storage: Storage
+    @ObservationIgnored private let nowPlayingManager: LectureNowPlayingManager
     @ObservationIgnored private var timeObserver: Any?
     @ObservationIgnored private var durationTask: Task<Void, Never>?
     @ObservationIgnored private var remoteURLTask: Task<Void, Never>?
     @ObservationIgnored private var configuredLocalAudioURL: URL?
     @ObservationIgnored private var configuredRemoteAudioPath: String?
+    @ObservationIgnored private var lectureTitle: String
 
     init(
+        lectureTitle: String,
         audioURL: URL?,
         remoteAudioPath: String?,
         fallbackDuration: Duration,
         analyticsService: AppAnalyticsService? = nil,
         analyticsContext: LectureAnalyticsContext? = nil,
         fileManager: FileManager = .default,
-        storage: Storage = .storage()
+        storage: Storage = .storage(),
+        nowPlayingManager: LectureNowPlayingManager? = nil
     ) {
         self.analyticsService = analyticsService
+        self.lectureTitle = lectureTitle
         self.fileManager = fileManager
         self.storage = storage
+        self.nowPlayingManager = nowPlayingManager ?? LectureNowPlayingManager()
+        configureNowPlayingManager()
         updateAudio(
+            lectureTitle: lectureTitle,
             localURL: audioURL,
             remoteAudioPath: remoteAudioPath,
             fallbackDuration: fallbackDuration,
@@ -57,17 +65,21 @@ final class LecturePlayerViewModel {
     }
 
     func updateAudio(
+        lectureTitle: String,
         localURL: URL?,
         remoteAudioPath: String?,
         fallbackDuration: Duration,
         analyticsContext: LectureAnalyticsContext? = nil
     ) {
         totalDuration = fallbackDuration
+        self.lectureTitle = lectureTitle
         self.analyticsContext = analyticsContext
 
         let needsReconfiguration =
             configuredLocalAudioURL != localURL ||
             configuredRemoteAudioPath != remoteAudioPath
+
+        updateNowPlaying()
 
         guard needsReconfiguration else {
             return
@@ -85,6 +97,7 @@ final class LecturePlayerViewModel {
             player.pause()
             isPlaying = false
             deactivatePlaybackSessionIfNeeded()
+            updateNowPlaying()
             if let analyticsContext {
                 analyticsService?.track(
                     .audioPlayPaused(
@@ -106,6 +119,7 @@ final class LecturePlayerViewModel {
 
         player.playImmediately(atRate: playbackRate)
         isPlaying = true
+        updateNowPlaying()
         if let analyticsContext {
             analyticsService?.track(.audioPlayStarted(context: analyticsContext))
         }
@@ -118,6 +132,8 @@ final class LecturePlayerViewModel {
         let seconds = totalSeconds * min(1, max(0, progress))
         let time = CMTime(seconds: seconds, preferredTimescale: 600)
         player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
+        currentTime = .seconds(seconds)
+        updateNowPlaying()
     }
 
     func seek(by offset: Duration) {
@@ -132,6 +148,8 @@ final class LecturePlayerViewModel {
         )
         let time = CMTime(seconds: targetSeconds, preferredTimescale: 600)
         player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
+        currentTime = .seconds(targetSeconds)
+        updateNowPlaying()
     }
 
     func setPlaybackRate(_ rate: Float) {
@@ -139,6 +157,7 @@ final class LecturePlayerViewModel {
 
         guard canPlay, let player, isPlaying else { return }
         player.rate = rate
+        updateNowPlaying()
     }
 
     func cyclePlaybackRate() {
@@ -159,6 +178,7 @@ final class LecturePlayerViewModel {
         player.pause()
         isPlaying = false
         deactivatePlaybackSessionIfNeeded()
+        updateNowPlaying()
     }
 
     func cleanup() {
@@ -238,6 +258,7 @@ final class LecturePlayerViewModel {
         isPlaybackAvailable = false
         isPlaying = false
         deactivatePlaybackSessionIfNeeded()
+        nowPlayingManager.clear()
     }
 
     private func configurePlayer(_ player: AVPlayer) {
@@ -258,6 +279,7 @@ final class LecturePlayerViewModel {
                     return
                 }
                 totalDuration = .seconds(seconds)
+                updateNowPlaying()
             } catch {
                 // Keep the fallback duration if asset loading fails.
             }
@@ -277,6 +299,7 @@ final class LecturePlayerViewModel {
                 }
 
                 currentTime = .seconds(time.seconds)
+                updateNowPlaying()
 
                 let totalSeconds = totalDuration.timeInterval
                 if totalSeconds > 0, time.seconds >= totalSeconds {
@@ -286,9 +309,63 @@ final class LecturePlayerViewModel {
                     }
                     currentTime = .zero
                     player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero)
+                    nowPlayingManager.clear()
+                    deactivatePlaybackSessionIfNeeded()
                 }
             }
         }
+    }
+
+    private func configureNowPlayingManager() {
+        nowPlayingManager.configureHandlers(
+            onTogglePlayback: { [weak self] in
+                self?.togglePlayback()
+            },
+            onPlay: { [weak self] in
+                guard let self, !self.isPlaying else {
+                    return
+                }
+
+                self.togglePlayback()
+            },
+            onPause: { [weak self] in
+                self?.pausePlayback()
+            },
+            onSkipForward: { [weak self] in
+                self?.seek(by: .seconds(15))
+            },
+            onSkipBackward: { [weak self] in
+                self?.seek(by: .seconds(-15))
+            },
+            onSeek: { [weak self] position in
+                guard let self else {
+                    return
+                }
+
+                let clampedProgress: Double
+                if self.totalDuration.timeInterval > 0 {
+                    clampedProgress = position / self.totalDuration.timeInterval
+                } else {
+                    clampedProgress = 0
+                }
+                self.seek(to: clampedProgress)
+            }
+        )
+    }
+
+    private func updateNowPlaying() {
+        guard isPlaybackAvailable else {
+            nowPlayingManager.clear()
+            return
+        }
+
+        nowPlayingManager.update(
+            title: lectureTitle,
+            currentTime: currentTime,
+            totalDuration: totalDuration,
+            playbackRate: playbackRate,
+            isPlaying: isPlaying
+        )
     }
 
     private func isPlayableLocalFile(_ url: URL?) -> Bool {
@@ -305,7 +382,12 @@ final class LecturePlayerViewModel {
 
     private func activatePlaybackSessionIfNeeded() {
         do {
-            try audioSession.setCategory(.playback, mode: .default)
+            try audioSession.setCategory(
+                .playback,
+                mode: .spokenAudio,
+                policy: .longFormAudio,
+                options: []
+            )
             try audioSession.setActive(true)
         } catch {
             // Playback can still be attempted even if session activation fails.

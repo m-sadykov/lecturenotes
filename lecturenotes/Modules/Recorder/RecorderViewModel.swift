@@ -36,6 +36,7 @@ final class RecorderViewModel {
     @ObservationIgnored private let recordingManager: RecordingManager
     @ObservationIgnored private let analyticsService: AppAnalyticsService?
     @ObservationIgnored private let crashReportingService: CrashReportingService?
+    @ObservationIgnored private let recordingLiveActivityManager: RecordingLiveActivityManager
     @ObservationIgnored private let plan: AppUserPlan?
     @ObservationIgnored private var timerTask: Task<Void, Never>?
 
@@ -43,11 +44,13 @@ final class RecorderViewModel {
         limit: Duration = .seconds(300),
         analyticsService: AppAnalyticsService? = nil,
         crashReportingService: CrashReportingService? = nil,
+        recordingLiveActivityManager: RecordingLiveActivityManager? = nil,
         plan: AppUserPlan? = nil
     ) {
         self.limit = limit
         self.analyticsService = analyticsService
         self.crashReportingService = crashReportingService
+        self.recordingLiveActivityManager = recordingLiveActivityManager ?? RecordingLiveActivityManager()
         self.plan = plan
         self.recordingManager = RecordingManager()
         bindRecordingManager()
@@ -58,11 +61,13 @@ final class RecorderViewModel {
         recordingManager: RecordingManager,
         analyticsService: AppAnalyticsService? = nil,
         crashReportingService: CrashReportingService? = nil,
+        recordingLiveActivityManager: RecordingLiveActivityManager? = nil,
         plan: AppUserPlan? = nil
     ) {
         self.limit = limit
         self.analyticsService = analyticsService
         self.crashReportingService = crashReportingService
+        self.recordingLiveActivityManager = recordingLiveActivityManager ?? RecordingLiveActivityManager()
         self.plan = plan
         self.recordingManager = recordingManager
         bindRecordingManager()
@@ -95,6 +100,7 @@ final class RecorderViewModel {
 
         mode = .paused
         errorMessage = String(localized: "Recording was paused by the system.")
+        syncLiveActivity()
         crashReportingService?.breadcrumb(
             "recording_session_interrupted",
             metadata: [
@@ -142,6 +148,7 @@ final class RecorderViewModel {
     func record() {
         mode = .recording
         startTimerIfNeeded()
+        syncLiveActivity()
     }
 
     func pause() {
@@ -149,6 +156,7 @@ final class RecorderViewModel {
         recordingManager.pauseRecording()
         syncElapsedWithRecording()
         mode = .paused
+        syncLiveActivity()
         analyticsService?.track(.recordPaused(elapsedSeconds: elapsed.secondsValue))
     }
 
@@ -157,6 +165,7 @@ final class RecorderViewModel {
         recordingManager.resumeRecording()
         mode = .recording
         startTimerIfNeeded()
+        syncLiveActivity()
         analyticsService?.track(.recordResumed(elapsedSeconds: elapsed.secondsValue))
     }
 
@@ -177,6 +186,7 @@ final class RecorderViewModel {
         timerTask?.cancel()
         timerTask = nil
         _ = recordingManager.stopRecording()
+        endLiveActivity()
         analyticsService?.track(
             .recordFinished(
                 elapsedSeconds: elapsed.secondsValue,
@@ -195,6 +205,7 @@ final class RecorderViewModel {
             return nil
         }
 
+        endLiveActivity(elapsed: recording.duration)
         analyticsService?.track(
             .recordFinished(
                 elapsedSeconds: recording.duration.secondsValue,
@@ -215,6 +226,7 @@ final class RecorderViewModel {
         timerTask?.cancel()
         timerTask = nil
         recordingManager.discardRecording()
+        endLiveActivity()
         analyticsService?.track(
             .recordFinished(
                 elapsedSeconds: elapsed.secondsValue,
@@ -242,6 +254,7 @@ final class RecorderViewModel {
                             "interruption_reason": "recording_manager_not_recording",
                         ]
                     )
+                    syncLiveActivity()
                     continue
                 }
                 if elapsed >= limit {
@@ -264,12 +277,47 @@ final class RecorderViewModel {
             }
 
             self.errorMessage = message
+            self.syncLiveActivity()
             self.crashReportingService?.breadcrumb(
                 "recording_session_interrupted",
                 metadata: [
                     "elapsed_seconds": self.elapsed.secondsValue,
                     "interruption_reason": message,
                 ]
+            )
+        }
+    }
+
+    private func syncLiveActivity() {
+        let phase: RecordingLiveActivityPhase
+
+        switch mode {
+        case .idle, .finished:
+            return
+        case .recording:
+            phase = .recording
+        case .paused:
+            phase = .paused
+        }
+
+        let elapsed = self.elapsed
+        let limit = self.limit
+        Task {
+            await recordingLiveActivityManager.startOrUpdate(
+                phase: phase,
+                elapsed: elapsed,
+                limit: limit
+            )
+        }
+    }
+
+    private func endLiveActivity(elapsed: Duration? = nil) {
+        let resolvedElapsed = elapsed ?? self.elapsed
+        let limit = self.limit
+        Task {
+            await recordingLiveActivityManager.end(
+                elapsed: resolvedElapsed,
+                limit: limit
             )
         }
     }

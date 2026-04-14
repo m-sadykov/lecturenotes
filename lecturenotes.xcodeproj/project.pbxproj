@@ -18,11 +18,37 @@
 		79B294A62F66D385009D5EF6 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 79B294A52F66D385009D5EF6 /* FirebaseFunctions */; };
 		79B294A82F66D385009D5EF6 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 79B294A72F66D385009D5EF6 /* FirebaseStorage */; };
 		79B294AA2F66F363009D5EF6 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 79B294A92F66F363009D5EF6 /* AppIcon.icon */; };
+		79F0010B2F90000100A03B6B /* LectraRecordingWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 79F001012F90000100A03B6B /* LectraRecordingWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		79F001082F90000100A03B6B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 79D51D672F58B1CD00F515B1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 79F001022F90000100A03B6B;
+			remoteInfo = LectraRecordingWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		79F0010A2F90000100A03B6B /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				79F0010B2F90000100A03B6B /* LectraRecordingWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		79B294A92F66F363009D5EF6 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		79D51D6F2F58B1CD00F515B1 /* lecturenotes.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = lecturenotes.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		79F001012F90000100A03B6B /* LectraRecordingWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LectraRecordingWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -33,6 +59,13 @@
 			);
 			target = 79D51D6E2F58B1CD00F515B1 /* lecturenotes */;
 		};
+		79F001072F90000100A03B6B /* Exceptions for "LectraRecordingWidget" folder in "LectraRecordingWidget" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 79F001022F90000100A03B6B /* LectraRecordingWidget */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -42,6 +75,19 @@
 				79DF3B402F76F97900A03B6B /* Exceptions for "lecturenotes" folder in "lecturenotes" target */,
 			);
 			path = lecturenotes;
+			sourceTree = "<group>";
+		};
+		79F001052F90000100A03B6B /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		79F001062F90000100A03B6B /* LectraRecordingWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				79F001072F90000100A03B6B /* Exceptions for "LectraRecordingWidget" folder in "LectraRecordingWidget" target */,
+			);
+			path = LectraRecordingWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -64,6 +110,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		79F001032F90000100A03B6B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -71,6 +124,8 @@
 			isa = PBXGroup;
 			children = (
 				79B294A92F66F363009D5EF6 /* AppIcon.icon */,
+				79F001052F90000100A03B6B /* Shared */,
+				79F001062F90000100A03B6B /* LectraRecordingWidget */,
 				79D51D712F58B1CD00F515B1 /* lecturenotes */,
 				79D51D702F58B1CD00F515B1 /* Products */,
 			);
@@ -80,6 +135,7 @@
 			isa = PBXGroup;
 			children = (
 				79D51D6F2F58B1CD00F515B1 /* lecturenotes.app */,
+				79F001012F90000100A03B6B /* LectraRecordingWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -94,14 +150,17 @@
 				79D51D6B2F58B1CD00F515B1 /* Sources */,
 				79D51D6C2F58B1CD00F515B1 /* Frameworks */,
 				79D51D6D2F58B1CD00F515B1 /* Resources */,
+				79F0010A2F90000100A03B6B /* Embed Foundation Extensions */,
 				79DF3DEF2F798CCF00A03B6B /* ShellScript */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				79F001092F90000100A03B6B /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				79D51D712F58B1CD00F515B1 /* lecturenotes */,
+				79F001052F90000100A03B6B /* Shared */,
 			);
 			name = lecturenotes;
 			packageProductDependencies = (
@@ -120,6 +179,29 @@
 			productReference = 79D51D6F2F58B1CD00F515B1 /* lecturenotes.app */;
 			productType = "com.apple.product-type.application";
 		};
+		79F001022F90000100A03B6B /* LectraRecordingWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 79F0010F2F90000100A03B6B /* Build configuration list for PBXNativeTarget "LectraRecordingWidget" */;
+			buildPhases = (
+				79F001042F90000100A03B6B /* Sources */,
+				79F001032F90000100A03B6B /* Frameworks */,
+				79F0010C2F90000100A03B6B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				79F001052F90000100A03B6B /* Shared */,
+				79F001062F90000100A03B6B /* LectraRecordingWidget */,
+			);
+			name = LectraRecordingWidget;
+			packageProductDependencies = (
+			);
+			productName = LectraRecordingWidget;
+			productReference = 79F001012F90000100A03B6B /* LectraRecordingWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -131,6 +213,9 @@
 				LastUpgradeCheck = 2640;
 				TargetAttributes = {
 					79D51D6E2F58B1CD00F515B1 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					79F001022F90000100A03B6B = {
 						CreatedOnToolsVersion = 26.3;
 					};
 				};
@@ -186,6 +271,7 @@
 			projectRoot = "";
 			targets = (
 				79D51D6E2F58B1CD00F515B1 /* lecturenotes */,
+				79F001022F90000100A03B6B /* LectraRecordingWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -196,6 +282,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				79B294AA2F66F363009D5EF6 /* AppIcon.icon in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		79F0010C2F90000100A03B6B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -235,7 +328,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		79F001042F90000100A03B6B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		79F001092F90000100A03B6B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 79F001022F90000100A03B6B /* LectraRecordingWidget */;
+			targetProxy = 79F001082F90000100A03B6B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		79D51D782F58B1CF00F515B1 /* Debug */ = {
@@ -243,6 +351,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -308,6 +417,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -364,6 +474,7 @@
 		79D51D7B2F58B1CF00F515B1 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APP_BUNDLE_IDENTIFIER = com.marat.lecturenotesai;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
@@ -389,7 +500,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.marat.lecturenotesai;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_IDENTIFIER)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -404,6 +515,7 @@
 		79D51D7C2F58B1CF00F515B1 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APP_BUNDLE_IDENTIFIER = com.marat.lecturenotesai;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
@@ -429,7 +541,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.marat.lecturenotesai;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_IDENTIFIER)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -438,6 +550,58 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		79F0010D2F90000100A03B6B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				APP_BUNDLE_IDENTIFIER = com.marat.lecturenotesai;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = KKRU34GVP4;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LectraRecordingWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_IDENTIFIER).recordingwidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		79F0010E2F90000100A03B6B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				APP_BUNDLE_IDENTIFIER = com.marat.lecturenotesai;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = KKRU34GVP4;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LectraRecordingWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_IDENTIFIER).recordingwidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -458,6 +622,15 @@
 			buildConfigurations = (
 				79D51D7B2F58B1CF00F515B1 /* Debug */,
 				79D51D7C2F58B1CF00F515B1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		79F0010F2F90000100A03B6B /* Build configuration list for PBXNativeTarget "LectraRecordingWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				79F0010D2F90000100A03B6B /* Debug */,
+				79F0010E2F90000100A03B6B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

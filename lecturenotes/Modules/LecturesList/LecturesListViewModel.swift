@@ -84,6 +84,7 @@ final class LecturesListViewModel {
     @ObservationIgnored private let userProfileService: FirebaseUserProfileService?
     @ObservationIgnored private let analyticsService: AppAnalyticsService?
     @ObservationIgnored private let crashReportingService: CrashReportingService?
+    @ObservationIgnored private let recordingLiveActivityManager: RecordingLiveActivityManager
     @ObservationIgnored private var repositoryObservationTask: Task<Void, Never>?
     @ObservationIgnored private var searchTask: Task<Void, Never>?
     @ObservationIgnored private var loadingIndicatorTask: Task<Void, Never>?
@@ -161,13 +162,15 @@ final class LecturesListViewModel {
         processingService: FirebaseLectureProcessingService? = nil,
         userProfileService: FirebaseUserProfileService? = nil,
         analyticsService: AppAnalyticsService? = nil,
-        crashReportingService: CrashReportingService? = nil
+        crashReportingService: CrashReportingService? = nil,
+        recordingLiveActivityManager: RecordingLiveActivityManager? = nil
     ) {
         self.repository = repository
         self.processingService = processingService
         self.userProfileService = userProfileService
         self.analyticsService = analyticsService
         self.crashReportingService = crashReportingService
+        self.recordingLiveActivityManager = recordingLiveActivityManager ?? RecordingLiveActivityManager()
         importManager = LectureImportManager()
         visibleLectureCount = Self.lecturePageSize
     }
@@ -178,7 +181,8 @@ final class LecturesListViewModel {
         importManager: LectureImportManager,
         userProfileService: FirebaseUserProfileService? = nil,
         analyticsService: AppAnalyticsService? = nil,
-        crashReportingService: CrashReportingService? = nil
+        crashReportingService: CrashReportingService? = nil,
+        recordingLiveActivityManager: RecordingLiveActivityManager? = nil
     ) {
         self.repository = repository
         self.processingService = processingService
@@ -186,6 +190,7 @@ final class LecturesListViewModel {
         self.userProfileService = userProfileService
         self.analyticsService = analyticsService
         self.crashReportingService = crashReportingService
+        self.recordingLiveActivityManager = recordingLiveActivityManager ?? RecordingLiveActivityManager()
         visibleLectureCount = Self.lecturePageSize
     }
 
@@ -490,6 +495,7 @@ final class LecturesListViewModel {
             recorderViewModel = RecorderViewModel(
                 analyticsService: analyticsService,
                 crashReportingService: crashReportingService,
+                recordingLiveActivityManager: recordingLiveActivityManager,
                 plan: currentPlan
             )
             return
@@ -642,6 +648,19 @@ final class LecturesListViewModel {
             selectedLecture = savedLecture
         case .rejected(let message):
             presentErrorAlert(message)
+        }
+    }
+
+    func finishActiveRecordingFromSystemUI() {
+        guard let recorderViewModel,
+              let recording = recorderViewModel.finishRecording() else {
+            return
+        }
+
+        self.recorderViewModel = nil
+
+        Task {
+            await saveRecordingDraft(recording)
         }
     }
 
@@ -1448,6 +1467,7 @@ final class LecturesListViewModel {
                 limit: currentRecordingLimit,
                 analyticsService: analyticsService,
                 crashReportingService: crashReportingService,
+                recordingLiveActivityManager: recordingLiveActivityManager,
                 plan: currentPlan
             )
         case .importAudio:

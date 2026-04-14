@@ -13,6 +13,7 @@ final class PaywallPresentationModel {
     }
 
     static let defaultOfferingIdentifier = "default"
+    static let premiumMonthlyExitOfferingIdentifier = "premium_monthly_exit_offer"
     static let proYearlyDiscountOfferingIdentifier = "pro_yearly_discount_offer"
 
     var presentedOffering: Offering?
@@ -30,6 +31,8 @@ final class PaywallPresentationModel {
     private static let scheduledOfferPresentationInterval: TimeInterval = 3 * 60 * 60
     static let scheduledOfferPollingInterval: Duration = .seconds(60)
     private static let scheduledOfferLastPresentedAtKey = "paywall.proYearlyDiscountOffer.lastPresentedAt"
+    private static let defaultPaywallDismissCountKey = "paywall.default.dismissCount"
+    private static let premiumMonthlyExitOfferThreshold = 2
 
     init(
         userDefaults: UserDefaults = .standard,
@@ -42,12 +45,7 @@ final class PaywallPresentationModel {
     }
 
     func presentDefaultPaywall() async {
-        _ = await presentPaywall(
-            offeringIdentifier: Self.defaultOfferingIdentifier,
-            fallbackToCurrentOffering: true,
-            showsError: true,
-            source: .manualDefault
-        )
+        _ = await presentDefaultStylePaywall(source: .manualDefault)
     }
 
     func presentDefaultPaywallIfNeeded(
@@ -65,12 +63,7 @@ final class PaywallPresentationModel {
         guard shouldAllowPaywallPresentation(for: subscriptionManager.currentPlan) else { return }
         guard presentedOffering == nil else { return }
 
-        _ = await presentPaywall(
-            offeringIdentifier: Self.defaultOfferingIdentifier,
-            fallbackToCurrentOffering: true,
-            showsError: true,
-            source: .postOnboarding
-        )
+        _ = await presentDefaultStylePaywall(source: .postOnboarding)
     }
 
     func presentScheduledProYearlyDiscountPaywallIfNeeded(
@@ -209,6 +202,10 @@ final class PaywallPresentationModel {
             return
         }
 
+        if shouldCountDefaultPaywallDismissal {
+            incrementDefaultPaywallDismissCount()
+        }
+
         switch activePresentationSource {
         case .postOnboarding, .scheduledDiscount:
             markScheduledOfferAnchorNow()
@@ -218,8 +215,25 @@ final class PaywallPresentationModel {
     }
 
     @discardableResult
+    private func presentDefaultStylePaywall(source: PresentationSource) async -> Bool {
+        let primaryOfferingIdentifier = preferredDefaultStyleOfferingIdentifier
+        let fallbackOfferingIdentifier = primaryOfferingIdentifier == Self.defaultOfferingIdentifier
+            ? nil
+            : Self.defaultOfferingIdentifier
+
+        return await presentPaywall(
+            offeringIdentifier: primaryOfferingIdentifier,
+            fallbackOfferingIdentifier: fallbackOfferingIdentifier,
+            fallbackToCurrentOffering: true,
+            showsError: true,
+            source: source
+        )
+    }
+
+    @discardableResult
     private func presentPaywall(
         offeringIdentifier: String,
+        fallbackOfferingIdentifier: String? = nil,
         fallbackToCurrentOffering: Bool,
         showsError: Bool,
         source: PresentationSource
@@ -239,9 +253,10 @@ final class PaywallPresentationModel {
         do {
             let offerings = try await Purchases.shared.offerings()
             let resolvedOffering = offerings.offering(identifier: offeringIdentifier)
+            let resolvedFallbackOffering = fallbackOfferingIdentifier.flatMap { offerings.offering(identifier: $0) }
             let fallbackOffering = fallbackToCurrentOffering ? offerings.current : nil
 
-            guard let offering = resolvedOffering ?? fallbackOffering else {
+            guard let offering = resolvedOffering ?? resolvedFallbackOffering ?? fallbackOffering else {
                 if showsError {
                     paywallErrorMessage = String(localized: "Paywall is unavailable right now.")
                 }
@@ -250,6 +265,8 @@ final class PaywallPresentationModel {
 
             activePresentationSource = source
             didUnlockInActivePresentation = false
+            activeOfferingIdentifier = offering.identifier
+            activeProductIdentifier = nil
             presentedOffering = offering
             analyticsService?.track(
                 .paywallShown(
@@ -293,8 +310,31 @@ final class PaywallPresentationModel {
         userDefaults.object(forKey: Self.scheduledOfferLastPresentedAtKey) as? Date
     }
 
+    private var defaultPaywallDismissCount: Int {
+        userDefaults.integer(forKey: Self.defaultPaywallDismissCountKey)
+    }
+
+    private var preferredDefaultStyleOfferingIdentifier: String {
+        defaultPaywallDismissCount >= Self.premiumMonthlyExitOfferThreshold
+            ? Self.premiumMonthlyExitOfferingIdentifier
+            : Self.defaultOfferingIdentifier
+    }
+
+    private var shouldCountDefaultPaywallDismissal: Bool {
+        switch activePresentationSource {
+        case .manualDefault, .postOnboarding:
+            activeOfferingIdentifier == Self.defaultOfferingIdentifier
+        case .scheduledDiscount, .none:
+            false
+        }
+    }
+
     private func shouldAllowPaywallPresentation(for currentPlan: AppUserPlan) -> Bool {
         currentPlan == .freemium
+    }
+
+    private func incrementDefaultPaywallDismissCount() {
+        userDefaults.set(defaultPaywallDismissCount + 1, forKey: Self.defaultPaywallDismissCountKey)
     }
 
     private func markScheduledOfferAnchorNow() {

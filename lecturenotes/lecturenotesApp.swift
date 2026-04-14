@@ -11,6 +11,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             FirebaseApp.configure()
         }
 
+        application.beginReceivingRemoteControlEvents()
+
         return true
     }
 }
@@ -139,6 +141,22 @@ struct lecturenotesApp: App {
             .environment(\.locale, appState.locale)
             .environment(\.layoutDirection, appState.selectedLanguage.layoutDirection)
             .id(appState.selectedLanguage.id)
+            .onOpenURL { url in
+                handleIncomingURL(url)
+            }
+        }
+    }
+
+    private func handleIncomingURL(_ url: URL) {
+        guard let action = RecordingLiveActivityRoute.action(from: url) else {
+            return
+        }
+
+        switch action {
+        case .show:
+            return
+        case .finish:
+            lecturesListViewModel.finishActiveRecordingFromSystemUI()
         }
     }
 }

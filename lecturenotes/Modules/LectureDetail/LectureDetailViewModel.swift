@@ -158,6 +158,7 @@ final class LectureDetailViewModel {
 
         if let playerViewModel {
             playerViewModel.updateAudio(
+                lectureTitle: lecture.displayTitle,
                 localURL: lecture.audioURL,
                 remoteAudioPath: lecture.remoteAudioPath,
                 fallbackDuration: lecture.duration,
@@ -165,6 +166,7 @@ final class LectureDetailViewModel {
             )
         } else {
             playerViewModel = LecturePlayerViewModel(
+                lectureTitle: lecture.displayTitle,
                 audioURL: lecture.audioURL,
                 remoteAudioPath: lecture.remoteAudioPath,
                 fallbackDuration: lecture.duration,
