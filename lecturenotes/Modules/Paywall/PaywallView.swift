@@ -32,6 +32,7 @@ final class PaywallPresentationModel {
     static let scheduledOfferPollingInterval: Duration = .seconds(60)
     private static let scheduledOfferLastPresentedAtKey = "paywall.proYearlyDiscountOffer.lastPresentedAt"
     private static let defaultPaywallDismissCountKey = "paywall.default.dismissCount"
+    private static let premiumMonthlyExitOfferShownKey = "paywall.premiumMonthlyExitOffer.hasShown"
     private static let premiumMonthlyExitOfferThreshold = 2
 
     init(
@@ -268,6 +269,11 @@ final class PaywallPresentationModel {
             activeOfferingIdentifier = offering.identifier
             activeProductIdentifier = nil
             presentedOffering = offering
+
+            if offering.identifier == Self.premiumMonthlyExitOfferingIdentifier {
+                markPremiumMonthlyExitOfferShown()
+            }
+
             analyticsService?.track(
                 .paywallShown(
                     source: analyticsValue(for: source),
@@ -314,8 +320,12 @@ final class PaywallPresentationModel {
         userDefaults.integer(forKey: Self.defaultPaywallDismissCountKey)
     }
 
+    private var hasShownPremiumMonthlyExitOffer: Bool {
+        userDefaults.bool(forKey: Self.premiumMonthlyExitOfferShownKey)
+    }
+
     private var preferredDefaultStyleOfferingIdentifier: String {
-        defaultPaywallDismissCount >= Self.premiumMonthlyExitOfferThreshold
+        defaultPaywallDismissCount >= Self.premiumMonthlyExitOfferThreshold && !hasShownPremiumMonthlyExitOffer
             ? Self.premiumMonthlyExitOfferingIdentifier
             : Self.defaultOfferingIdentifier
     }
@@ -335,6 +345,10 @@ final class PaywallPresentationModel {
 
     private func incrementDefaultPaywallDismissCount() {
         userDefaults.set(defaultPaywallDismissCount + 1, forKey: Self.defaultPaywallDismissCountKey)
+    }
+
+    private func markPremiumMonthlyExitOfferShown() {
+        userDefaults.set(true, forKey: Self.premiumMonthlyExitOfferShownKey)
     }
 
     private func markScheduledOfferAnchorNow() {
