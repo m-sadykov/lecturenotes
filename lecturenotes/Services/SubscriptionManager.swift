@@ -21,15 +21,19 @@ final class SubscriptionManager: NSObject, ObservableObject {
 
     private let userProfileService: FirebaseUserProfileService?
     private let crashReportingService: CrashReportingService?
+    private let trialExpirationNotificationService: TrialExpirationNotificationService
     private var started = false
     private var cancellables = Set<AnyCancellable>()
 
     init(
         userProfileService: FirebaseUserProfileService? = nil,
-        crashReportingService: CrashReportingService? = nil
+        crashReportingService: CrashReportingService? = nil,
+        trialExpirationNotificationService: TrialExpirationNotificationService? = nil
     ) {
         self.userProfileService = userProfileService
         self.crashReportingService = crashReportingService
+        self.trialExpirationNotificationService = trialExpirationNotificationService
+            ?? TrialExpirationNotificationService(crashReportingService: crashReportingService)
         super.init()
     }
 
@@ -108,6 +112,10 @@ final class SubscriptionManager: NSObject, ObservableObject {
             await userProfileService?.syncSubscriptionPlan(currentPlan)
         }
         crashReportingService?.setCustomValue(resolvedPlan.rawValue, forKey: "plan")
+
+        Task {
+            await trialExpirationNotificationService.sync(with: customerInfo)
+        }
     }
 
     private func resolvePlan(from customerInfo: CustomerInfo) -> AppUserPlan {

@@ -144,6 +144,11 @@ struct LectureNotesRootView: View {
                 )
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .trialExpirationReminderTapped)) { _ in
+            Task {
+                await paywallPresentationModel.presentDefaultPaywallIfNeeded(for: subscriptionManager)
+            }
+        }
         .onChange(of: scenePhase, initial: true) { _, newPhase in
             switch newPhase {
             case .active:
