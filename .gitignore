@@ -173,4 +173,5 @@ site/
 skills-lock.json
 docs/
 .claude/
-/metadata_preflight
+/metadata
+/marketing
