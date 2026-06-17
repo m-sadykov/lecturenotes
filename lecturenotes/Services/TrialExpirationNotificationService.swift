@@ -13,6 +13,21 @@ struct TrialExpirationReminderSchedule {
     }
 
     static let reminderLeadTime: TimeInterval = 24 * 60 * 60
+    static let minimumFallbackLeadTime: TimeInterval = 60 * 60
+
+    #if DEBUG
+    /// Short lead time for StoreKit local testing so reminders fire within the trial window.
+    static let debugReminderLeadTime: TimeInterval = 2 * 60
+    #endif
+
+    static func isIntroductoryPeriod(_ entitlement: EntitlementInfo) -> Bool {
+        switch entitlement.periodType {
+        case .trial, .intro:
+            true
+        default:
+            false
+        }
+    }
 
     static func activeTrial(in customerInfo: CustomerInfo) -> ActiveTrial? {
         let entitlementChecks: [(String, AppUserPlan)] = [
@@ -23,7 +38,7 @@ struct TrialExpirationReminderSchedule {
         for (entitlementIdentifier, plan) in entitlementChecks {
             guard let entitlement = customerInfo.entitlements[entitlementIdentifier],
                   entitlement.isActive,
-                  entitlement.periodType == .trial,
+                  isIntroductoryPeriod(entitlement),
                   let expirationDate = entitlement.expirationDate else {
                 continue
             }
@@ -37,11 +52,32 @@ struct TrialExpirationReminderSchedule {
     static func reminderDate(
         expirationDate: Date,
         now: Date = .now,
-        leadTime: TimeInterval = reminderLeadTime
+        leadTime: TimeInterval? = nil
     ) -> Date? {
-        let reminderDate = expirationDate.addingTimeInterval(-leadTime)
-        guard reminderDate > now else { return nil }
-        return reminderDate
+        let timeUntilExpiration = expirationDate.timeIntervalSince(now)
+        guard timeUntilExpiration > 0 else { return nil }
+
+        #if DEBUG
+        if timeUntilExpiration <= 7 * 24 * 60 * 60 {
+            let soonReminderDate = now.addingTimeInterval(debugReminderLeadTime)
+            if soonReminderDate < expirationDate {
+                return soonReminderDate
+            }
+        }
+        #endif
+
+        let resolvedLeadTime = leadTime ?? reminderLeadTime
+        let idealReminderDate = expirationDate.addingTimeInterval(-resolvedLeadTime)
+        if idealReminderDate > now {
+            return idealReminderDate
+        }
+
+        let fallbackReminderDate = expirationDate.addingTimeInterval(-minimumFallbackLeadTime)
+        if fallbackReminderDate > now {
+            return fallbackReminderDate
+        }
+
+        return nil
     }
 }
 
@@ -65,6 +101,7 @@ final class TrialExpirationNotificationService {
 
         guard let activeTrial = TrialExpirationReminderSchedule.activeTrial(in: customerInfo) else {
             await cancelReminder()
+            crashReportingService?.breadcrumb("trial_reminder_cleared_no_active_trial")
             return
         }
 
@@ -90,7 +127,11 @@ final class TrialExpirationNotificationService {
             return
         }
 
-        await scheduleReminder(at: reminderDate, plan: activeTrial.plan)
+        await scheduleReminder(
+            at: reminderDate,
+            plan: activeTrial.plan,
+            expirationDate: activeTrial.expirationDate
+        )
     }
 
     func cancelReminder() async {
@@ -122,7 +163,7 @@ final class TrialExpirationNotificationService {
         }
     }
 
-    private func scheduleReminder(at date: Date, plan: AppUserPlan) async {
+    private func scheduleReminder(at date: Date, plan: AppUserPlan, expirationDate: Date) async {
         notificationCenter.removePendingNotificationRequests(
             withIdentifiers: [Self.notificationIdentifier]
         )
@@ -134,11 +175,8 @@ final class TrialExpirationNotificationService {
         )
         content.sound = .default
 
-        let components = Calendar.current.dateComponents(
-            [.year, .month, .day, .hour, .minute, .second],
-            from: date
-        )
-        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        let interval = max(date.timeIntervalSinceNow, 60)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
         let request = UNNotificationRequest(
             identifier: Self.notificationIdentifier,
             content: content,
@@ -152,8 +190,23 @@ final class TrialExpirationNotificationService {
                 metadata: [
                     "plan": plan.rawValue,
                     "reminder_date": ISO8601DateFormatter().string(from: date),
+                    "expiration_date": ISO8601DateFormatter().string(from: expirationDate),
+                    "fire_in_seconds": String(format: "%.0f", interval),
+                    "period_type": "intro_or_trial",
                 ]
             )
+
+            #if DEBUG
+            let pending = await notificationCenter.pendingNotificationRequests()
+            if let scheduled = pending.first(where: { $0.identifier == Self.notificationIdentifier }) {
+                print(
+                    "[TrialReminder] Scheduled for \(date.formatted()) " +
+                    "(fires in \(Int(interval))s). Trigger: \(String(describing: scheduled.trigger))"
+                )
+            } else {
+                print("[TrialReminder] WARNING: request added but not found in pending queue")
+            }
+            #endif
         } catch {
             crashReportingService?.breadcrumb(
                 "trial_reminder_schedule_failed",
@@ -162,6 +215,10 @@ final class TrialExpirationNotificationService {
                     "error": error.localizedDescription,
                 ]
             )
+
+            #if DEBUG
+            print("[TrialReminder] Schedule failed: \(error.localizedDescription)")
+            #endif
         }
     }
 }
