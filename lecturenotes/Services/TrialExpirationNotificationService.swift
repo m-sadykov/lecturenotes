@@ -84,16 +84,53 @@ struct TrialExpirationReminderSchedule {
 @MainActor
 final class TrialExpirationNotificationService {
     static let notificationIdentifier = "subscription.trial-expiration-reminder"
+    static let scheduledExpirationUserInfoKey = "trialExpirationTimestamp"
+    private static let scheduledExpirationDefaultsKey = "trialReminder.scheduledExpiration"
 
     private let notificationCenter: UNUserNotificationCenter
     private let crashReportingService: CrashReportingService?
+    private let userDefaults: UserDefaults
 
     init(
         notificationCenter: UNUserNotificationCenter = .current(),
-        crashReportingService: CrashReportingService? = nil
+        crashReportingService: CrashReportingService? = nil,
+        userDefaults: UserDefaults = .standard
     ) {
         self.notificationCenter = notificationCenter
         self.crashReportingService = crashReportingService
+        self.userDefaults = userDefaults
+    }
+
+    static func expirationMarker(for expirationDate: Date) -> String {
+        String(Int(expirationDate.timeIntervalSince1970))
+    }
+
+    static func markReminderHandled(
+        for expirationDate: Date,
+        userDefaults: UserDefaults = .standard
+    ) {
+        userDefaults.set(
+            expirationMarker(for: expirationDate),
+            forKey: scheduledExpirationDefaultsKey
+        )
+    }
+
+    static func handleDeliveredNotification(_ notification: UNNotification) {
+        guard notification.request.identifier == notificationIdentifier,
+              let marker = notification.request.content.userInfo[scheduledExpirationUserInfoKey] as? String else {
+            return
+        }
+
+        UserDefaults.standard.set(marker, forKey: scheduledExpirationDefaultsKey)
+    }
+
+    private func hasScheduledReminder(for expirationDate: Date) -> Bool {
+        userDefaults.string(forKey: Self.scheduledExpirationDefaultsKey)
+            == Self.expirationMarker(for: expirationDate)
+    }
+
+    private func clearScheduledReminderMarker() {
+        userDefaults.removeObject(forKey: Self.scheduledExpirationDefaultsKey)
     }
 
     func sync(with customerInfo: CustomerInfo) async {
@@ -101,7 +138,23 @@ final class TrialExpirationNotificationService {
 
         guard let activeTrial = TrialExpirationReminderSchedule.activeTrial(in: customerInfo) else {
             await cancelReminder()
+            clearScheduledReminderMarker()
             crashReportingService?.breadcrumb("trial_reminder_cleared_no_active_trial")
+            return
+        }
+
+        if hasScheduledReminder(for: activeTrial.expirationDate) {
+            crashReportingService?.breadcrumb(
+                "trial_reminder_already_scheduled",
+                metadata: [
+                    "plan": activeTrial.plan.rawValue,
+                    "expiration_date": ISO8601DateFormatter().string(from: activeTrial.expirationDate),
+                ]
+            )
+
+            #if DEBUG
+            print("[TrialReminder] Skipping duplicate schedule for the same trial expiration")
+            #endif
             return
         }
 
@@ -109,6 +162,7 @@ final class TrialExpirationNotificationService {
             expirationDate: activeTrial.expirationDate
         ) else {
             await cancelReminder()
+            Self.markReminderHandled(for: activeTrial.expirationDate, userDefaults: userDefaults)
             crashReportingService?.breadcrumb(
                 "trial_reminder_skipped_too_late",
                 metadata: [
@@ -174,6 +228,9 @@ final class TrialExpirationNotificationService {
             localized: "Subscribe to keep your \(plan.title) features."
         )
         content.sound = .default
+        content.userInfo = [
+            Self.scheduledExpirationUserInfoKey: Self.expirationMarker(for: expirationDate),
+        ]
 
         let interval = max(date.timeIntervalSinceNow, 60)
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
@@ -185,6 +242,7 @@ final class TrialExpirationNotificationService {
 
         do {
             try await notificationCenter.add(request)
+            Self.markReminderHandled(for: expirationDate, userDefaults: userDefaults)
             crashReportingService?.breadcrumb(
                 "trial_reminder_scheduled",
                 metadata: [

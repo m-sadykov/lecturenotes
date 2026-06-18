@@ -22,6 +22,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        TrialExpirationNotificationService.handleDeliveredNotification(notification)
         completionHandler([.banner, .sound])
     }
 
@@ -30,7 +31,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        guard response.notification.request.identifier == TrialExpirationNotificationService.notificationIdentifier else {
+        let notification = response.notification
+        TrialExpirationNotificationService.handleDeliveredNotification(notification)
+
+        guard notification.request.identifier == TrialExpirationNotificationService.notificationIdentifier else {
             completionHandler()
             return
         }
