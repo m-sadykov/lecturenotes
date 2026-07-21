@@ -23,7 +23,7 @@ struct HomeHeaderView: View {
                 Image(systemName: "gearshape")
                     .font(.title3)
                     .frame(width: 44, height: 44)
-                    .background(.black.opacity(0.05))
+                    .background(AppColor.fillSubtle)
                     .clipShape(.circle)
             }
             .buttonStyle(.plain)

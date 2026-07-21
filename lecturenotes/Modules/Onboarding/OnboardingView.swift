@@ -14,7 +14,7 @@ struct OnboardingView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(.systemGray6)
+                AppColor.canvas
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {
@@ -171,12 +171,12 @@ private struct OnboardingBenefitsCard: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.background, in: .rect(cornerRadius: 24))
+        .background(AppColor.surface, in: .rect(cornerRadius: 24))
         .overlay {
             RoundedRectangle(cornerRadius: 24)
-                .stroke(.black.opacity(0.04), lineWidth: 1)
+                .stroke(AppColor.hairline, lineWidth: 1)
         }
-        .shadow(color: .black.opacity(0.04), radius: 10, y: 4)
+        .shadow(color: AppColor.shadow, radius: 10, y: 4)
     }
 }
 
@@ -187,7 +187,7 @@ private struct OnboardingBenefitRow: View {
         HStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(.black.opacity(0.06))
+                    .fill(AppColor.fillSubtle)
                     .frame(width: 28, height: 28)
 
                 Image(systemName: "checkmark")
@@ -230,8 +230,8 @@ private struct OnboardingFooterView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical)
-                .foregroundStyle(.white)
-                .background(.primary)
+                .foregroundStyle(AppColor.onInk)
+                .background(AppColor.ink)
                 .clipShape(.rect(cornerRadius: 18))
             }
             .buttonStyle(.plain)
@@ -239,10 +239,10 @@ private struct OnboardingFooterView: View {
         .padding(.horizontal, 20)
         .padding(.top, 14)
         .padding(.bottom, 16)
-        .background(.background)
+        .background(AppColor.surface)
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(.black.opacity(0.06))
+                .fill(AppColor.fillSubtle)
                 .frame(height: 1)
         }
     }

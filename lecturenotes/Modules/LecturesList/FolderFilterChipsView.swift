@@ -37,10 +37,10 @@ private struct FolderFilterChip: View {
         Button(action: action) {
             chipLabel
                 .font(.caption)
-                .foregroundStyle(isSelected ? .white : .primary)
+                .foregroundStyle(isSelected ? AppColor.onInk : .primary)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .background(isSelected ? .black : .white)
+                .background(isSelected ? AppColor.ink : AppColor.surface)
                 .clipShape(.rect(cornerRadius: 16))
         }
         .buttonStyle(.plain)

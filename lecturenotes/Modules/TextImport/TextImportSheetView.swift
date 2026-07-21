@@ -16,7 +16,7 @@ struct TextImportSheetView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .topLeading) {
-                Color(.systemGray6)
+                AppColor.canvas
                     .ignoresSafeArea()
 
                 TextImportEditorView(
@@ -74,7 +74,7 @@ struct TextImportSheetView: View {
                         HStack(spacing: 10) {
                             if isSubmitting {
                                 ProgressView()
-                                    .tint(.white)
+                                    .tint(AppColor.onInk)
                             }
 
                             if isSubmitting {
@@ -85,11 +85,13 @@ struct TextImportSheetView: View {
                                     .bold()
                             }
                         }
+                        .foregroundStyle(AppColor.onInk)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
+                        .background(AppColor.ink, in: .capsule)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.black)
+                    .buttonStyle(.plain)
+                    .opacity(trimmedText.isEmpty || isSubmitting ? 0.45 : 1)
                     .disabled(trimmedText.isEmpty || isSubmitting)
                 }
                 .padding(.horizontal, 20)
@@ -142,7 +144,7 @@ private struct TextImportEditorView: UIViewRepresentable {
     func makeUIView(context: Context) -> UITextView {
         let textView = UITextView()
         textView.delegate = context.coordinator
-        textView.backgroundColor = .systemBackground
+        textView.backgroundColor = AppUIColor.surface.resolvedColor(with: textView.traitCollection)
         textView.textColor = .label
         textView.font = .preferredFont(forTextStyle: .body)
         textView.adjustsFontForContentSizeCategory = true
@@ -156,7 +158,7 @@ private struct TextImportEditorView: UIViewRepresentable {
         textView.textContainerInset = UIEdgeInsets(top: 22, left: 16, bottom: 22, right: 16)
         textView.layer.cornerRadius = 24
         textView.layer.borderWidth = 1
-        textView.layer.borderColor = UIColor.black.withAlphaComponent(0.05).cgColor
+        textView.layer.borderColor = AppUIColor.hairline.resolvedColor(with: textView.traitCollection).cgColor
         textView.enablesReturnKeyAutomatically = false
         textView.allowsEditingTextAttributes = false
         textView.inputAssistantItem.leadingBarButtonGroups = []
@@ -170,6 +172,10 @@ private struct TextImportEditorView: UIViewRepresentable {
         if textView.text != text {
             textView.text = text
         }
+
+        let traits = textView.traitCollection
+        textView.backgroundColor = AppUIColor.surface.resolvedColor(with: traits)
+        textView.layer.borderColor = AppUIColor.hairline.resolvedColor(with: traits).cgColor
 
         context.coordinator.attach(to: textView)
         context.coordinator.handleEditorActionTriggers(

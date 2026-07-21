@@ -8,7 +8,7 @@ struct QuizView: View {
 
     var body: some View {
         ZStack {
-            Color(.systemGray6)
+            AppColor.canvas
                 .ignoresSafeArea()
 
             if !viewModel.hasQuestions {
@@ -119,11 +119,11 @@ private struct QuizProgressHeaderView: View {
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(.black.opacity(0.06))
+                        .fill(AppColor.fillSubtle)
                         .frame(height: 10)
 
                     Capsule()
-                        .fill(.black.opacity(0.85))
+                        .fill(AppColor.ink.opacity(0.85))
                         .frame(width: max(geometry.size.width * progressValue, 10), height: 10)
                 }
             }
@@ -150,7 +150,7 @@ private struct QuizQuestionCardView: View {
                     .font(.headline)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .background(Color.black.opacity(0.03))
+                    .background(AppColor.fillSubtle)
                     .clipShape(.rect(cornerRadius: 8))
 
                 Spacer()
@@ -188,9 +188,9 @@ private struct QuizQuestionCardView: View {
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(.white)
+        .background(AppColor.surface)
         .clipShape(.rect(cornerRadius: 30))
-        .shadow(color: .black.opacity(0.06), radius: 18, y: 6)
+        .shadow(color: AppColor.shadow, radius: 18, y: 6)
     }
 
     private func optionState(for index: Int) -> QuizOptionState {

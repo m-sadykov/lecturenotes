@@ -28,7 +28,7 @@ struct AIProcessingConsentCard: View {
                 Button("Cancel", action: onCancel)
                     .buttonStyle(
                         AIConsentButtonStyle(
-                            background: Color.black.opacity(0.06),
+                            background: AppColor.fillSubtle,
                             usesPrimaryForeground: true
                         )
                     )
@@ -46,12 +46,12 @@ struct AIProcessingConsentCard: View {
         .frame(maxWidth: 520, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .fill(Color(.systemBackground))
+                .fill(AppColor.surface)
                 .overlay {
                     RoundedRectangle(cornerRadius: 30, style: .continuous)
-                        .stroke(.black.opacity(0.04), lineWidth: 1)
+                        .stroke(AppColor.hairline, lineWidth: 1)
                 }
-                .shadow(color: .black.opacity(0.08), radius: 24, y: 12)
+                .shadow(color: AppColor.shadow, radius: 24, y: 12)
         )
     }
 }
@@ -63,7 +63,7 @@ private struct AIConsentButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.headline)
-            .foregroundStyle(usesPrimaryForeground ? Color.primary : Color.white)
+            .foregroundStyle(usesPrimaryForeground ? Color.primary : AppColor.onInk)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 18)
             .background(
@@ -77,7 +77,7 @@ private struct AIConsentButtonStyle: ButtonStyle {
 
 #Preview {
     ZStack {
-        Color.black.opacity(0.1)
+        AppColor.overlayScrim
             .ignoresSafeArea()
 
         AIProcessingConsentCard(onCancel: {}, onContinue: {})

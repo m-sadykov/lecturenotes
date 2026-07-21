@@ -23,17 +23,10 @@ struct QuizResultView: View {
 
             Button("Finish", action: onDone)
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(AppColor.onInk)
                 .frame(maxWidth: 320)
                 .padding(.vertical, 18)
-                .background(
-                    LinearGradient(
-                        colors: [Color.black, Color(red: 0.18, green: 0.20, blue: 0.24)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .clipShape(.capsule)
+                .background(AppColor.ink, in: .capsule)
                 .buttonStyle(.plain)
                 .padding(.bottom, 44)
         }
@@ -55,10 +48,10 @@ struct QuizResultView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 28)
-        .background(.white)
+        .background(AppColor.surface)
         .overlay {
             RoundedRectangle(cornerRadius: 22)
-                .stroke(.black.opacity(0.10), lineWidth: 1)
+                .stroke(AppColor.hairline, lineWidth: 1)
         }
         .clipShape(.rect(cornerRadius: 22))
     }

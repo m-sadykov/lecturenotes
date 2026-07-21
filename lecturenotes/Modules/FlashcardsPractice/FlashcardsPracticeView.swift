@@ -6,7 +6,7 @@ struct FlashcardsPracticeView: View {
 
     var body: some View {
         ZStack {
-            Color(.systemGray6)
+            AppColor.canvas
                 .ignoresSafeArea()
 
             if viewModel.hasCards {
@@ -135,9 +135,9 @@ private struct FlashcardFaceView: View {
                 .padding(.bottom, 40)
         }
         .frame(maxWidth: .infinity, minHeight: 520, maxHeight: .infinity)
-        .background(.white)
+        .background(AppColor.surface)
         .clipShape(.rect(cornerRadius: 32))
-        .shadow(color: .black.opacity(0.06), radius: 20, y: 6)
+        .shadow(color: AppColor.shadow, radius: 20, y: 6)
     }
 }
 
@@ -149,7 +149,7 @@ private struct FlashcardsPageIndicator: View {
         HStack(spacing: 10) {
             ForEach(0..<pageCount, id: \.self) { index in
                 Circle()
-                    .fill(index == currentIndex ? .black : .black.opacity(0.12))
+                    .fill(index == currentIndex ? AppColor.ink : AppColor.fillSubtle)
                     .frame(width: 10, height: 10)
             }
         }

@@ -28,7 +28,7 @@ struct MiniRecorderSheetView: View {
         .frame(minHeight: 340, alignment: .top)
         .background(.thinMaterial)
         .clipShape(.rect(topLeadingRadius: 28, topTrailingRadius: 28))
-        .shadow(color: .black.opacity(0.18), radius: 20, y: -4)
+        .shadow(color: AppColor.shadow, radius: 20, y: -4)
         .ignoresSafeArea(edges: .bottom)
         .task {
             await viewModel.start()
@@ -101,9 +101,9 @@ struct MiniRecorderSheetView: View {
                     .font(.title2)
                     .foregroundStyle(.primary)
                     .frame(width: 56, height: 56)
-                    .background(.regularMaterial)
+                    .background(AppColor.fillElevated)
                     .clipShape(.circle)
-                    .shadow(color: .black.opacity(0.08), radius: 10, y: 4)
+                    .shadow(color: AppColor.shadow, radius: 10, y: 4)
             }
             .buttonStyle(.plain)
 
@@ -132,9 +132,9 @@ struct MiniRecorderSheetView: View {
                     .font(.title2)
                     .foregroundStyle(.primary)
                     .frame(width: 56, height: 56)
-                    .background(.regularMaterial)
+                    .background(AppColor.fillElevated)
                     .clipShape(.circle)
-                    .shadow(color: .black.opacity(0.08), radius: 10, y: 4)
+                    .shadow(color: AppColor.shadow, radius: 10, y: 4)
             }
             .buttonStyle(.plain)
             .disabled(!viewModel.canTogglePause)

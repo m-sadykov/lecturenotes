@@ -11,7 +11,7 @@ struct QuickActionButtonView: View {
                 Image(systemName: systemImage)
                     .font(.title3)
                     .frame(width: 80, height: 70)
-                    .background(.black.opacity(0.05))
+                    .background(AppColor.fillSubtle)
                     .clipShape(.rect(cornerRadius: 14))
                 Text(title)
                     .font(.footnote)
