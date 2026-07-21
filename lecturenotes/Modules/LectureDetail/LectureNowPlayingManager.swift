@@ -103,7 +103,9 @@ final class LectureNowPlayingManager: NSObject {
     }
 
     private func makeArtwork() -> MPMediaItemArtwork? {
-        guard let image = UIImage(named: "AppIcon") else {
+        // App icon assets cannot be loaded via UIImage(named: "AppIcon") —
+        // UIKit throws NSInternalInconsistencyException ("Need an imageRef").
+        guard let image = UIImage(named: "NowPlayingArtwork") ?? UIImage(systemName: "headphones.circle.fill") else {
             return nil
         }
 

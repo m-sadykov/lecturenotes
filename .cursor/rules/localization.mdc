@@ -1,0 +1,78 @@
+---
+description: In-app localization for SwiftUI, String Catalog, and language switching
+globs: doablehabits/**/*.swift,doablehabitsWidgets/**/*.swift,**/Localizable.xcstrings,scripts/*localization*.py
+alwaysApply: true
+---
+
+# Localization (Doable Habits)
+
+This app supports **in-app language switching** (`AppSettings.appLanguageKey` → `AppLocaleModifier`). System locale and SwiftUI `\.locale` alone are not enough for user-visible strings.
+
+## Golden rules
+
+1. **Never resolve UI copy with bare `String(localized:)`** — it ignores the app language and freezes at first render.
+2. **Prefer `Text("Catalog key")` / `LocalizedStringKey`** in SwiftUI — respects `\.locale` from `AppLocaleModifier`.
+3. **For `String` output** (labels passed as `String`, notifications, widgets): use `LocalizedFormat` + `AppLocale.current`.
+4. **Never store localized `String` in ViewModels** — store catalog **keys**; localize in the view layer.
+5. **Never bake localized text into snapshots/models** — store keys or enums; format at display time.
+
+## APIs to use
+
+```swift
+// Static UI label (preferred)
+Text("Daily goal")
+
+// Label + dynamic suffix
+Text("Goal") + Text(verbatim: ": \(habit.targetValue)")
+
+// Formatted String when Text is not an option
+LocalizedFormat.format("%lld habit", arguments: [count])
+LocalizedFormat.string("Skipped today")
+
+// App language source of truth
+AppLocale.current
+AppLocale.identifier
+```
+
+Do **not** add a second localization helper unless `LocalizedFormat` / `AppLocale` is insufficient.
+
+## SwiftUI refresh on language change
+
+- Add `@AppStorage(AppSettings.appLanguageKey)` to views that show pre-formatted `String` values.
+- Pass locale into **sheets**: `.environment(\.locale, sheetLocale)`.
+- Force List rebuild when needed: `.id(appLanguageRawValue)` on the list/section.
+- `sheetLocale`: use `Locale(identifier: appLanguageRawValue)` when not `.system`, else `\.locale`.
+
+## String Catalog (`Localizable.xcstrings`)
+
+- Main app: `doablehabits/Localizable.xcstrings`
+- Widgets: `doablehabitsWidgets/Localizable.xcstrings`
+- **Empty entries `{}` fall back to English** — fill all 33 locales:  
+  `ar, ca, cs, da, de, el, en, es-MX, fi, fr, he, hi, hr, hu, id, it, ja, ko, ms, nb, nl, pl, pt-BR, ro, ru, sk, sv, th, tr, uk, vi, zh-Hans, zh-Hant`
+- Use **plural variations** in the catalog for count strings (`one` / `few` / `many` / `other`) — do not hardcode Russian/Polish plurals in Swift `if count == 1`.
+- After adding keys, verify with a script or audit — no `<ph id='…'/>` placeholders; keep `%lld` in format keys.
+
+## Anti-patterns
+
+```swift
+// BAD — frozen system locale
+Text(habit.goalSummaryText)
+String(localized: "Goal")
+viewModel.message = String(localized: "Nice job")
+
+// BAD — split localized sentence across views without catalog plural rules
+Text("To record:") + Text("\(n)") + Text("days")
+
+// GOOD
+HabitGoalSummaryLabel(habit: habit)
+LocalizedFormat.format("To record: %lld days", arguments: [n])
+GentleFeedbackView(messageKey: "Nice job")
+```
+
+## Checklist before finishing localization work
+
+- [ ] New keys exist in the correct `.xcstrings` with all 33 locales
+- [ ] UI uses `Text`/`LocalizedStringKey` or `LocalizedFormat` + `AppLocale`
+- [ ] ViewModels expose keys, not localized strings
+- [ ] Sheets/lists update after language change (`@AppStorage`, `.id`, sheet locale)
+- [ ] Build succeeds; manually switch ru ↔ en on affected screens

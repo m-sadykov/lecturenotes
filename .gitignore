@@ -162,10 +162,6 @@ Temporary Items
 docs/_build/
 site/
 
-# Cursor AI specific
-.cursor/
-.cursorrules
-
 *.cer
 *.p8
 
