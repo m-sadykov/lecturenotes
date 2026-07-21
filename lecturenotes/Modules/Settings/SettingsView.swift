@@ -1,9 +1,7 @@
-import StoreKit
 import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.openURL) private var openURL
-    @Environment(\.requestReview) private var requestReview
     @Environment(AppState.self) private var appState
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @State private var viewModel: SettingsViewModel
@@ -41,8 +39,16 @@ struct SettingsView: View {
                     title: .localized("Rate the app"),
                     systemImage: "star.bubble"
                 ) {
-                    requestReview()
+                    openExternalURL(SettingsSupportConfiguration.writeReviewURL)
                 }
+
+                SettingsRowDivider()
+
+                SettingsShareRow(
+                    title: "Share",
+                    systemImage: "square.and.arrow.up",
+                    url: SettingsSupportConfiguration.appStoreURL
+                )
 
                 SettingsRowDivider()
 
@@ -224,6 +230,33 @@ private struct SettingsActionRow: View {
         .buttonStyle(.plain)
         .disabled(isDisabled)
         .opacity(isDisabled ? 0.6 : 1)
+    }
+}
+
+private struct SettingsShareRow: View {
+    let title: LocalizedStringResource
+    let systemImage: String
+    let url: URL
+
+    var body: some View {
+        ShareLink(item: url) {
+            HStack(spacing: 12) {
+                Image(systemName: systemImage)
+                    .foregroundStyle(.primary)
+                    .frame(width: 44, height: 44)
+                    .background(.black.opacity(0.05))
+                    .clipShape(.rect(cornerRadius: 12))
+
+                Text(title)
+                    .foregroundStyle(.primary)
+
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
     }
 }
 
