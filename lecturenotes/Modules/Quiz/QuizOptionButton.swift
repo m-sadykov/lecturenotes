@@ -28,21 +28,19 @@ struct QuizOptionButton: View {
 
     private var backgroundStyle: Color {
         switch state {
-        case .idle:
-            .white
+        case .idle, .revealedCorrect:
+            Color.primary.opacity(0.14)
         case .correct:
             Color(red: 0.46, green: 0.88, blue: 0.76)
         case .incorrect:
             Color(red: 0.94, green: 0.65, blue: 0.67)
-        case .revealedCorrect:
-            .white
         }
     }
 
     private var borderColor: Color {
         switch state {
         case .idle:
-            .black.opacity(0.10)
+            Color.primary.opacity(0.22)
         case .correct, .revealedCorrect:
             Color(red: 0.22, green: 0.83, blue: 0.67)
         case .incorrect:

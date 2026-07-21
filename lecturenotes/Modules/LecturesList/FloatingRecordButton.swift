@@ -11,11 +11,11 @@ struct FloatingRecordButton: View {
         } label: {
             Image(systemName: "mic.fill")
                 .font(.title2)
-                .foregroundStyle(.white)
+                .foregroundStyle(AppColor.onInk)
                 .frame(width: 72, height: 72)
-                .background(.black)
+                .background(AppColor.ink)
                 .clipShape(.circle)
-                .shadow(radius: 8)
+                .shadow(color: AppColor.shadow, radius: 8)
         }
         .buttonStyle(.plain)
         .sensoryFeedback(.impact(weight: .light), trigger: feedbackTrigger)

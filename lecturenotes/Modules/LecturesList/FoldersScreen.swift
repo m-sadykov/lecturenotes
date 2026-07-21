@@ -11,7 +11,7 @@ struct FoldersScreen: View {
             folders: viewModel.folders,
             selectedFolderID: viewModel.selectedFolderID,
             closeButton: nil,
-            backgroundStyle: Color(.systemGray6),
+            backgroundStyle: AppColor.canvas,
             onCreateFolder: { folderName in
                 viewModel.createFolder(named: folderName)
             },

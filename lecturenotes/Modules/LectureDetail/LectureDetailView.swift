@@ -77,7 +77,7 @@ struct LectureDetailView: View {
                 }
             }
         }
-        .background(Color(.systemGray6))
+        .background(AppColor.canvas)
         .task {
             viewModel.configureCrashContext()
         }
@@ -327,13 +327,13 @@ private struct LectureDetailSectionChip: View {
                     .foregroundStyle(.primary)
             }
             .frame(width: 108, height: 88)
-            .background(.black.opacity(0.05))
+            .background(AppColor.fillSubtle)
             .clipShape(.rect(cornerRadius: 12))
             .overlay {
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.black.opacity(0.10) : Color.black.opacity(0.03), lineWidth: 1)
+                    .stroke(isSelected ? AppColor.hairline : AppColor.hairline.opacity(0.6), lineWidth: 1)
             }
-            .shadow(color: .black.opacity(isSelected ? 0.07 : 0.04), radius: isSelected ? 14 : 12, y: 4)
+            .shadow(color: AppColor.shadow.opacity(isSelected ? 1 : 0.7), radius: isSelected ? 14 : 12, y: 4)
         }
         .buttonStyle(.plain)
     }
@@ -364,12 +364,12 @@ private struct LectureDetailToastView: View {
 
     var body: some View {
         Text(message)
-            .foregroundStyle(.white)
+            .foregroundStyle(AppColor.onInk)
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(.black.opacity(0.88))
+            .background(AppColor.ink.opacity(0.88))
             .clipShape(.rect(cornerRadius: 14))
-            .shadow(radius: 10, y: 4)
+            .shadow(color: AppColor.shadow, radius: 10, y: 4)
     }
 }
 

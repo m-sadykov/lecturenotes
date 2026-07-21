@@ -135,7 +135,7 @@ struct SettingsView: View {
             }
             .padding(.bottom, 32)
         }
-        .background(Color(.systemGray6))
+        .background(AppColor.canvas)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -215,7 +215,7 @@ private struct SettingsActionRow: View {
                 Image(systemName: systemImage)
                     .foregroundStyle(.primary)
                     .frame(width: 44, height: 44)
-                    .background(.black.opacity(0.05))
+                    .background(AppColor.fillSubtle)
                     .clipShape(.rect(cornerRadius: 12))
 
                 SettingsRowTitleView(title: title)
@@ -244,7 +244,7 @@ private struct SettingsShareRow: View {
                 Image(systemName: systemImage)
                     .foregroundStyle(.primary)
                     .frame(width: 44, height: 44)
-                    .background(.black.opacity(0.05))
+                    .background(AppColor.fillSubtle)
                     .clipShape(.rect(cornerRadius: 12))
 
                 Text(title)
@@ -270,7 +270,7 @@ private struct SettingsUserIDRow: View {
             Image(systemName: "person.text.rectangle")
                 .foregroundStyle(.primary)
                 .frame(width: 44, height: 44)
-                .background(.black.opacity(0.05))
+                .background(AppColor.fillSubtle)
                 .clipShape(.rect(cornerRadius: 12))
 
             VStack(alignment: .leading, spacing: 4) {
@@ -307,7 +307,7 @@ private struct SettingsNavigationRow: View {
                 Image(systemName: systemImage)
                     .foregroundStyle(.primary)
                     .frame(width: 44, height: 44)
-                    .background(.black.opacity(0.05))
+                    .background(AppColor.fillSubtle)
                     .clipShape(.rect(cornerRadius: 12))
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -342,7 +342,7 @@ private struct SettingsStaticRow: View {
             Image(systemName: systemImage)
                 .foregroundStyle(.primary)
                 .frame(width: 44, height: 44)
-                .background(.black.opacity(0.05))
+                .background(AppColor.fillSubtle)
                 .clipShape(.rect(cornerRadius: 12))
 
             VStack(alignment: .leading, spacing: 4) {

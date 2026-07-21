@@ -162,7 +162,6 @@ struct lecturenotesApp: App {
                     )
                 }
             }
-            .preferredColorScheme(.light)
             .environmentObject(subscriptionManager)
             .environment(appState)
             .environment(\.locale, appState.locale)

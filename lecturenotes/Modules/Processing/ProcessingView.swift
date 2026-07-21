@@ -31,7 +31,7 @@ struct ProcessingView: View {
                     HStack(spacing: 10) {
                         if isRetrying {
                             ProgressView()
-                                .tint(.white)
+                                .tint(AppColor.onInk)
                         } else {
                             Image(systemName: "arrow.clockwise")
                         }
@@ -43,12 +43,12 @@ struct ProcessingView: View {
                         }
                     }
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppColor.onInk)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 14)
                     .background(
                         Capsule()
-                            .fill(.black)
+                            .fill(AppColor.ink)
                     )
                 }
                 .buttonStyle(.plain)
@@ -61,7 +61,7 @@ struct ProcessingView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.bottom, 32)
-        .background(Color(.systemGray6))
+        .background(AppColor.canvas)
     }
 
     private var statusMessage: LocalizedStringResource {
@@ -246,7 +246,7 @@ private struct ProcessingHeroView: View {
             } else {
                 ProgressView()
                     .controlSize(.regular)
-                    .tint(.black)
+                    .tint(AppColor.ink)
                     .scaleEffect(1.65)
                     .padding(.top, 8)
             }
@@ -266,10 +266,10 @@ private struct ProcessingHeroView: View {
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
                         Capsule()
-                            .fill(.black.opacity(0.08))
+                            .fill(AppColor.fillSubtle)
 
                         Capsule()
-                            .fill(.black)
+                            .fill(AppColor.ink)
                             .frame(width: max(geometry.size.width * progress, 20))
                     }
                 }

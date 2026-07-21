@@ -155,7 +155,7 @@ struct LecturesListView: View {
                         }
                 )
             }
-            .background(Color(.systemGray6))
+            .background(AppColor.canvas)
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(item: $viewModel.selectedLecture) { lecture in
                 LectureDetailView(
@@ -200,7 +200,7 @@ struct LecturesListView: View {
                     Button {
                         viewModel.recorderViewModel = nil
                     } label: {
-                        Color.black.opacity(0.18)
+                        AppColor.overlayScrim
                             .ignoresSafeArea()
                     }
                     .buttonStyle(.plain)
@@ -211,7 +211,7 @@ struct LecturesListView: View {
                     Button {
                         viewModel.dismissAIConsent()
                     } label: {
-                        Color.black.opacity(0.14)
+                        AppColor.overlayScrim
                             .ignoresSafeArea()
                     }
                     .buttonStyle(.plain)
@@ -618,12 +618,12 @@ private struct ToastBannerView: View {
                 Text(verbatim: string)
             }
         }
-        .foregroundStyle(.white)
+        .foregroundStyle(AppColor.onInk)
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(.black.opacity(0.88))
+        .background(AppColor.ink.opacity(0.88))
         .clipShape(.rect(cornerRadius: 14))
-        .shadow(radius: 10, y: 4)
+        .shadow(color: AppColor.shadow, radius: 10, y: 4)
     }
 }
 
@@ -720,7 +720,7 @@ private struct LecturesListPreviewCanvas: View {
                 .padding(.bottom, 100)
             }
         }
-        .background(Color(.systemGray6))
+        .background(AppColor.canvas)
     }
 
     private var previewHeader: some View {
@@ -732,7 +732,7 @@ private struct LecturesListPreviewCanvas: View {
             Image(systemName: "gearshape")
                 .font(.title3)
                 .frame(width: 44, height: 44)
-                .background(.black.opacity(0.05))
+                .background(AppColor.fillSubtle)
                 .clipShape(.circle)
         }
     }
@@ -769,10 +769,10 @@ private struct LecturesListPreviewCanvas: View {
     private func previewChip(title: String, isSelected: Bool) -> some View {
         Text(title)
             .font(.caption)
-            .foregroundStyle(isSelected ? .white : .primary)
+            .foregroundStyle(isSelected ? AppColor.onInk : .primary)
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(isSelected ? .black : .white)
+            .background(isSelected ? AppColor.ink : AppColor.surface)
             .clipShape(.rect(cornerRadius: 16))
     }
 }

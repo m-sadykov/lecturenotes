@@ -20,7 +20,7 @@ struct LectureAudioPlayerView: View {
                         .font(.title3)
                         .foregroundStyle(.primary)
                         .frame(width: 52, height: 52)
-                        .background(Color.black.opacity(0.08))
+                        .background(AppColor.fillSubtle)
                         .clipShape(.circle)
                 }
                 .buttonStyle(.plain)
@@ -109,17 +109,17 @@ private struct PlayerProgressBarView: View {
 
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(.black.opacity(0.08))
+                    .fill(AppColor.fillSubtle)
                     .frame(height: 6)
 
                 Capsule()
-                    .fill(.black)
+                    .fill(AppColor.ink)
                     .frame(width: max(thumbOffset, 6), height: 6)
 
                 Circle()
-                    .fill(.black)
+                    .fill(AppColor.ink)
                     .frame(width: 18, height: 18)
-                    .shadow(color: .black.opacity(0.12), radius: 8, y: 2)
+                    .shadow(color: AppColor.shadow, radius: 8, y: 2)
                     .offset(x: min(max(thumbOffset - 9, 0), width - 18))
             }
             .frame(height: 24)

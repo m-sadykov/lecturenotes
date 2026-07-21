@@ -47,7 +47,7 @@ struct FolderListContentView: View {
                         Image(systemName: "plus")
                             .foregroundStyle(.primary)
                             .frame(width: 44, height: 44)
-                            .background(.black.opacity(0.05))
+                            .background(AppColor.fillSubtle)
                             .clipShape(.rect(cornerRadius: 12))
 
                         Text("Create new folder")
@@ -141,7 +141,7 @@ struct FolderRowButton: View {
                     Image(systemName: "folder")
                         .foregroundStyle(.primary)
                         .frame(width: 44, height: 44)
-                        .background(.black.opacity(0.05))
+                        .background(AppColor.fillSubtle)
                         .clipShape(.rect(cornerRadius: 12))
 
                     Text(folder.name)

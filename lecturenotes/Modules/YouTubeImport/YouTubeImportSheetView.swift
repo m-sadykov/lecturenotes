@@ -15,7 +15,7 @@ struct YouTubeImportSheetView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .topLeading) {
-                Color(.systemGray6)
+                AppColor.canvas
                     .ignoresSafeArea()
 
                 VStack(alignment: .leading, spacing: 18) {
@@ -35,11 +35,11 @@ struct YouTubeImportSheetView: View {
                     )
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(.white)
+                    .background(AppColor.surface)
                     .clipShape(.rect(cornerRadius: 20))
                     .overlay {
                         RoundedRectangle(cornerRadius: 20)
-                            .stroke(.black.opacity(0.05), lineWidth: 1)
+                            .stroke(AppColor.hairline, lineWidth: 1)
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
@@ -74,7 +74,7 @@ struct YouTubeImportSheetView: View {
                         HStack(spacing: 10) {
                             if isSubmitting {
                                 ProgressView()
-                                    .tint(.white)
+                                    .tint(AppColor.onInk)
                             }
 
                             if isSubmitting {
@@ -85,11 +85,13 @@ struct YouTubeImportSheetView: View {
                                     .bold()
                             }
                         }
+                        .foregroundStyle(AppColor.onInk)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
+                        .background(AppColor.ink, in: .capsule)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.black)
+                    .buttonStyle(.plain)
+                    .opacity(trimmedURL.isEmpty || isSubmitting ? 0.45 : 1)
                     .disabled(trimmedURL.isEmpty || isSubmitting)
                 }
                 .padding(.horizontal, 20)
