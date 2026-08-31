@@ -13,8 +13,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-PROJECT="HalalAiScanner.xcodeproj"
-SCHEME="HalalAiScanner"
+PROJECT="lecturenotes.xcodeproj"
+SCHEME="lecturenotes"
 PBX="$PROJECT/project.pbxproj"
 OPTIONAL_MARKETING_VERSION="${1:-}"
 
@@ -74,7 +74,7 @@ echo "→ Version ${MARKETING_VERSION} (${BUILD_NUMBER})"
 ARCHIVE_DAY="$(date +%Y-%m-%d)"
 ARCHIVE_DIR="${HOME}/Library/Developer/Xcode/Archives/${ARCHIVE_DAY}"
 mkdir -p "$ARCHIVE_DIR"
-ARCHIVE_PATH="${ARCHIVE_DIR}/HalalAiScanner ${ARCHIVE_DAY} ${BUILD_NUMBER}.xcarchive"
+ARCHIVE_PATH="${ARCHIVE_DIR}/Lectra ${ARCHIVE_DAY} ${BUILD_NUMBER}.xcarchive"
 
 echo "→ Archiving ${SCHEME} (Release) → ${ARCHIVE_PATH}"
 xcodebuild \

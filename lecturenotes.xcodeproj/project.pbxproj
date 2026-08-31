@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7993187630457A740050A728 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 7993187530457A740050A728 /* AppIcon.icon */; };
+		7993187730457A740050A728 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 7993187530457A740050A728 /* AppIcon.icon */; };
 		79B294952F66D31F009D5EF6 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 79B294942F66D31F009D5EF6 /* RevenueCat */; };
 		79B294972F66D31F009D5EF6 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 79B294962F66D31F009D5EF6 /* RevenueCatUI */; };
 		79B2949A2F66D385009D5EF6 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 79B294992F66D385009D5EF6 /* FirebaseAnalytics */; };
@@ -17,7 +19,6 @@
 		79B294A42F66D385009D5EF6 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 79B294A32F66D385009D5EF6 /* FirebaseFirestore */; };
 		79B294A62F66D385009D5EF6 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 79B294A52F66D385009D5EF6 /* FirebaseFunctions */; };
 		79B294A82F66D385009D5EF6 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 79B294A72F66D385009D5EF6 /* FirebaseStorage */; };
-		79B294AA2F66F363009D5EF6 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 79B294A92F66F363009D5EF6 /* AppIcon.icon */; };
 		79F0010B2F90000100A03B6B /* LectraRecordingWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 79F001012F90000100A03B6B /* LectraRecordingWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -46,7 +47,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		79B294A92F66F363009D5EF6 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		7993187530457A740050A728 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		79D51D6F2F58B1CD00F515B1 /* lecturenotes.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = lecturenotes.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		79F001012F90000100A03B6B /* LectraRecordingWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LectraRecordingWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -123,7 +124,7 @@
 		79D51D662F58B1CD00F515B1 = {
 			isa = PBXGroup;
 			children = (
-				79B294A92F66F363009D5EF6 /* AppIcon.icon */,
+				7993187530457A740050A728 /* AppIcon.icon */,
 				79F001052F90000100A03B6B /* Shared */,
 				79F001062F90000100A03B6B /* LectraRecordingWidget */,
 				79D51D712F58B1CD00F515B1 /* lecturenotes */,
@@ -281,7 +282,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				79B294AA2F66F363009D5EF6 /* AppIcon.icon in Resources */,
+				7993187730457A740050A728 /* AppIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -289,6 +290,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7993187630457A740050A728 /* AppIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -479,7 +481,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = KKRU34GVP4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -498,7 +500,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_IDENTIFIER)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -519,7 +521,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = KKRU34GVP4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -538,7 +540,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_IDENTIFIER)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -557,7 +559,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				APP_BUNDLE_IDENTIFIER = com.marat.lecturenotesai;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = KKRU34GVP4;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = LectraRecordingWidget/Info.plist;
@@ -567,7 +569,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_IDENTIFIER).recordingwidget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -583,7 +585,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				APP_BUNDLE_IDENTIFIER = com.marat.lecturenotesai;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = KKRU34GVP4;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = LectraRecordingWidget/Info.plist;
@@ -593,7 +595,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_IDENTIFIER).recordingwidget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

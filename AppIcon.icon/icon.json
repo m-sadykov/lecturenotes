@@ -1,100 +1,58 @@
 {
-  "fill" : {
-    "solid" : "display-p3:0.94325,0.95250,0.95250,1.00000"
-  },
+  "fill-specializations" : [
+    {
+      "value" : {
+        "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
+      }
+    },
+    {
+      "appearance" : "dark",
+      "value" : {
+        "solid" : "srgb:0.00000,0.00000,0.00000,1.00000"
+      }
+    }
+  ],
   "groups" : [
     {
-      "blur-material" : null,
-      "hidden" : true,
-      "layers" : [
+      "blend-mode-specializations" : [
         {
-          "blend-mode" : "normal",
-          "glass" : true,
-          "hidden" : false,
-          "image-name" : "notepads_4106001.png",
-          "name" : "notepads_4106001",
-          "position" : {
-            "scale" : 1.5,
-            "translation-in-points" : [
-              0,
-              0
-            ]
-          }
+          "value" : "normal"
+        },
+        {
+          "appearance" : "tinted",
+          "value" : "normal"
         }
       ],
-      "shadow" : {
-        "kind" : "layer-color",
-        "opacity" : 0.5
-      },
-      "translucency" : {
-        "enabled" : false,
-        "value" : 0.5
-      }
-    },
-    {
-      "blend-mode" : "normal",
-      "blur-material" : null,
-      "hidden" : true,
-      "layers" : [
-        {
-          "fill" : {
-            "solid" : "display-p3:0.19176,0.44771,1.00000,0.67254"
-          },
-          "glass" : false,
-          "hidden" : false,
-          "image-name" : "file_14361842.png",
-          "name" : "file_14361842",
-          "position" : {
-            "scale" : 1.75,
-            "translation-in-points" : [
-              0,
-              0
-            ]
-          }
-        }
-      ],
-      "lighting" : "individual",
-      "position" : {
-        "scale" : 1,
-        "translation-in-points" : [
-          0,
-          0
-        ]
-      },
-      "shadow" : {
-        "kind" : "layer-color",
-        "opacity" : 0.5
-      },
-      "translucency" : {
-        "enabled" : true,
-        "value" : 0.5
-      }
-    },
-    {
-      "blend-mode" : "normal",
       "blur-material" : null,
       "hidden" : false,
       "layers" : [
         {
-          "fill" : {
-            "linear-gradient" : [
-              "display-p3:0.32535,0.35291,0.43558,1.00000",
-              "display-p3:0.04402,0.07167,0.15033,1.00000"
-            ],
-            "orientation" : {
-              "start" : {
-                "x" : 0.5,
-                "y" : 0
-              },
-              "stop" : {
-                "x" : 0.5,
-                "y" : 0.7
+          "fill-specializations" : [
+            {
+              "value" : {
+                "solid" : "srgb:0.00000,0.00000,0.00000,1.00000"
+              }
+            },
+            {
+              "appearance" : "dark",
+              "value" : "none"
+            },
+            {
+              "appearance" : "tinted",
+              "value" : {
+                "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
               }
             }
-          },
+          ],
           "glass" : false,
           "image-name" : "sound-setting_11121313.png",
           "name" : "sound-setting_11121313",
+          "opacity-specializations" : [
+            {
+              "appearance" : "tinted",
+              "value" : 0.9
+            }
+          ],
           "position" : {
             "scale" : 1.45,
             "translation-in-points" : [
@@ -105,13 +63,19 @@
         }
       ],
       "lighting" : "individual",
+      "opacity-specializations" : [
+        {
+          "appearance" : "tinted",
+          "value" : 1
+        }
+      ],
       "shadow" : {
-        "kind" : "layer-color",
+        "kind" : "neutral",
         "opacity" : 0.35
       },
-      "specular" : true,
+      "specular" : false,
       "translucency" : {
-        "enabled" : true,
+        "enabled" : false,
         "value" : 0.5
       }
     }
