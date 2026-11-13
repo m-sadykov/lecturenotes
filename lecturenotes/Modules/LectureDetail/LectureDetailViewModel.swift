@@ -378,7 +378,7 @@ final class LectureDetailViewModel {
             do {
                 try await repository.saveLecture(updatedLecture)
                 let message = if let folderName = folders.first(where: { $0.id == folderID })?.name {
-                    String(localized: "Added to \(folderName).")
+                    String(appLocalized: "Added to \(folderName).")
                 } else if folderID == nil {
                     String(localized: "Removed from folder.")
                 } else {

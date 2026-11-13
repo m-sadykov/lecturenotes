@@ -84,7 +84,7 @@ final class SettingsViewModel {
                     restoredPlan: restoredPlan
                 )
             )
-            return String(localized: "Purchases restored. Your \(restoredPlan.title) plan is active.")
+            return String(appLocalized: "Purchases restored. Your \(restoredPlan.title) plan is active.")
         } catch {
             crashReportingService?.recordNonFatal(
                 error,

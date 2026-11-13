@@ -309,7 +309,7 @@ struct LecturesListView: View {
                                 viewModel.closeActiveSheet()
                                 viewModel.removalFeedbackToken += 1
                                 viewModel.showToast(
-                                    folderName.map { String(localized: "Removed from \($0).") } ?? String(localized: "Removed from folder.")
+                                    folderName.map { String(appLocalized: "Removed from \($0).") } ?? String(localized: "Removed from folder.")
                                 )
                             },
                             onEditTitle: {

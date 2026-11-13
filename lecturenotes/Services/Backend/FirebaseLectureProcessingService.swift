@@ -253,9 +253,9 @@ enum FirebaseLectureProcessingError: LocalizedError {
         case .missingLectureDocument:
             return String(localized: "Lecture document is unavailable.")
         case .processingLimitExceeded(let remainingCount):
-            return String(localized: "Not enough processing attempts left. Remaining: \(max(remainingCount, 0)).")
+            return String(appLocalized: "Not enough processing attempts left. Remaining: \(max(remainingCount, 0)).")
         case .audioLimitExceeded(let limit):
-            return String(localized: "Audio is too long for your current plan. Limit: \(LectureFormatters.durationText(limit)).")
+            return String(appLocalized: "Audio is too long for your current plan. Limit: \(LectureFormatters.durationText(limit)).")
         }
     }
 }

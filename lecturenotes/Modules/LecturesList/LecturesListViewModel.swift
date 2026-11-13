@@ -1065,7 +1065,7 @@ final class LecturesListViewModel {
             let importResult = await importAudio(from: url)
             handleImportResult(importResult)
         case .failure(let error):
-            presentImportError(String(localized: "Import failed: \(error.localizedDescription)"))
+            presentImportError(String(appLocalized: "Import failed: \(error.localizedDescription)"))
         }
     }
 
@@ -1081,7 +1081,7 @@ final class LecturesListViewModel {
             let importResult = await importPDF(from: url)
             handleImportResult(importResult)
         case .failure(let error):
-            presentImportError(String(localized: "Import failed: \(error.localizedDescription)"))
+            presentImportError(String(appLocalized: "Import failed: \(error.localizedDescription)"))
         }
     }
 

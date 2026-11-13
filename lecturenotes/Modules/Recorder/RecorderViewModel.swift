@@ -10,7 +10,7 @@ final class RecorderViewModel {
         var errorDescription: String? {
             switch self {
             case .tooShort(let minimumDuration):
-                String(localized: "Record at least \(Int(minimumDuration.components.seconds)) seconds to save.")
+                String(appLocalized: "Record at least \(Int(minimumDuration.components.seconds)) seconds to save.")
             }
         }
     }

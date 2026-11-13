@@ -173,7 +173,7 @@ enum YouTubeImportAlertError: Equatable {
         case .invalidLink:
             String(localized: "Enter a valid YouTube link.")
         case .processingLimitReached(let remainingCount, let plan):
-            String(localized: "You have \(remainingCount) processing attempts left on your \(plan.title) plan.")
+            String(appLocalized: "You have \(remainingCount) processing attempts left on your \(plan.title) plan.")
         case .saveFailed:
             String(localized: "Unable to save YouTube import right now.")
         }

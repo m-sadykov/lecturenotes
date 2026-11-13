@@ -1,9 +1,16 @@
 import Foundation
 import ObjectiveC.runtime
 
-private var localizedBundleAssociationKey: UInt8 = 0
+// Only its address is used, as the associated-object key.
+nonisolated(unsafe) private var localizedBundleAssociationKey: UInt8 = 0
 
 extension Bundle {
+    /// The `.lproj` bundle of the in-app language, or `nil` when the app follows the
+    /// system language.
+    nonisolated static var appLanguageBundle: Bundle? {
+        objc_getAssociatedObject(Bundle.main, &localizedBundleAssociationKey) as? Bundle
+    }
+
     static func setAppLanguage(_ language: AppLanguage?) {
         object_setClass(Bundle.main, LocalizedBundle.self)
 

@@ -71,7 +71,7 @@ enum LectureDetailContent: Hashable, CaseIterable {
 
     /// Short status line for the action tile, e.g. "12 cards". Returned as a resource and
     /// resolved by `Text`, so it follows the in-app language override like other labels
-    /// (`String(localized:)` would use the system language for these plural strings).
+    /// (`String(localized:)` would use the system language).
     func detailText(for lecture: Lecture) -> LocalizedStringResource? {
         switch self {
         case .flashcards:
