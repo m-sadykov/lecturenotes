@@ -1,50 +1,23 @@
 import SwiftUI
 
-/// Visual content of a tile in the lecture detail action grid or the transcript row.
-/// The caller wraps it in a `Button` or `NavigationLink`.
+/// Compact tile in the lecture detail study-tools grid: icon, title with an optional
+/// status line such as "10 cards", and a chevron. The caller wraps it in a `Button`.
 struct LectureDetailActionTile: View {
-    enum Accessory {
-        case checkmark
-        case chevron
-    }
-
     let content: LectureDetailContent
     let detailText: String?
-    let accessory: Accessory
-
-    var layout: Layout = .row
-
-    enum Layout {
-        /// Icon, title and accessory on one line. Used for the full-width transcript row.
-        case row
-        /// Icon and accessory on top, title below. Used in the two-column grid so titles
-        /// keep their full width at large Dynamic Type sizes.
-        case grid
-    }
 
     var body: some View {
-        Group {
-            switch layout {
-            case .row:
-                HStack(spacing: 12) {
-                    LectureDetailActionIcon(systemImage: content.systemImage)
-                    LectureDetailActionTitle(title: content.titleResource, detailText: detailText)
-                    Spacer(minLength: 0)
-                    LectureDetailActionAccessory(accessory: accessory)
-                }
-            case .grid:
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(alignment: .top) {
-                        LectureDetailActionIcon(systemImage: content.systemImage)
-                        Spacer(minLength: 0)
-                        LectureDetailActionAccessory(accessory: accessory)
-                    }
-                    LectureDetailActionTitle(title: content.titleResource, detailText: detailText)
-                }
-            }
+        HStack(spacing: 10) {
+            LectureDetailActionIcon(systemImage: content.systemImage)
+            LectureDetailActionTitle(title: content.titleResource, detailText: detailText)
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(.caption.bold())
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
         }
         .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .background(AppColor.fillSubtle)
         .clipShape(.rect(cornerRadius: 16))
         .contentShape(.rect(cornerRadius: 16))
@@ -54,11 +27,11 @@ struct LectureDetailActionTile: View {
 private struct LectureDetailActionIcon: View {
     let systemImage: String
 
-    @ScaledMetric(relativeTo: .body) private var iconSize: CGFloat = 40
+    @ScaledMetric(relativeTo: .subheadline) private var iconSize: CGFloat = 32
 
     var body: some View {
         Image(systemName: systemImage)
-            .font(.body)
+            .font(.subheadline)
             .foregroundStyle(.primary)
             .frame(width: iconSize, height: iconSize)
             .background(AppColor.fillSubtle)
@@ -71,9 +44,9 @@ private struct LectureDetailActionTitle: View {
     let detailText: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 1) {
             Text(title)
-                .font(.body)
+                .font(.subheadline)
                 .foregroundStyle(.primary)
                 .lineLimit(2)
 
@@ -87,20 +60,11 @@ private struct LectureDetailActionTitle: View {
     }
 }
 
-private struct LectureDetailActionAccessory: View {
-    let accessory: LectureDetailActionTile.Accessory
-
-    var body: some View {
-        switch accessory {
-        case .checkmark:
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(.primary)
-                .accessibilityLabel(Text("Ready"))
-        case .chevron:
-            Image(systemName: "chevron.right")
-                .font(.footnote.bold())
-                .foregroundStyle(.tertiary)
-                .accessibilityHidden(true)
-        }
+#Preview {
+    HStack {
+        LectureDetailActionTile(content: .flashcards, detailText: "10 cards")
+        LectureDetailActionTile(content: .keyPoints, detailText: nil)
     }
+    .fixedSize(horizontal: false, vertical: true)
+    .padding()
 }
