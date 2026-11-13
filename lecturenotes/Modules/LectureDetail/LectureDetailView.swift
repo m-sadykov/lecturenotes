@@ -99,14 +99,11 @@ struct LectureDetailView: View {
         .onChange(of: viewModel.processingLecture?.status) { oldValue, newValue in
             viewModel.handleProcessingStatusChange(oldValue: oldValue, newValue: newValue)
         }
+        .circleBackButton()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
+                ToolbarCircleButton("Actions", systemImage: "ellipsis") {
                     isActionsPopoverPresented = true
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .font(.title3)
-                        .foregroundStyle(.primary)
                 }
                 .popover(isPresented: $isActionsPopoverPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
                     LectureDetailActionsSheet(
@@ -126,6 +123,7 @@ struct LectureDetailView: View {
                     .presentationCompactAdaptation(.popover)
                 }
             }
+            .hiddenSharedBackground()
         }
         .navigationDestination(item: $viewModel.activeRoute) { route in
             switch route {

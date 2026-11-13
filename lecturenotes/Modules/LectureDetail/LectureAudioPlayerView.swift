@@ -65,7 +65,7 @@ struct LectureAudioPlayerView: View {
             .disabled(!viewModel.canPlay)
         }
         .padding()
-        .background(AppColor.surface)
+        .background(AppColor.fillSubtle)
         .clipShape(.rect(cornerRadius: 20))
     }
 
@@ -107,7 +107,7 @@ private struct PlayerProgressBarView: View {
 
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(AppColor.fillSubtle)
+                    .fill(AppColor.accent.opacity(0.18))
                     .frame(height: 6)
 
                 Capsule()
