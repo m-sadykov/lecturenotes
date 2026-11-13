@@ -19,18 +19,20 @@ struct LectureDetailHeaderView: View {
                 .lineLimit(3)
 
             if showsFolderChip, let folderName {
-                // Chip and metadata share one row, with the metadata wrapping to a second
-                // line if needed. At accessibility text sizes they stack instead.
+                // Chip and metadata split the row into two equal columns, with the
+                // metadata wrapping inside its half. At accessibility text sizes they stack.
                 if dynamicTypeSize.isAccessibilitySize {
                     VStack(alignment: .leading, spacing: 10) {
                         LectureDetailMetadataText(lecture: lecture)
                         LectureDetailFolderChip(folderName: folderName, action: onFolderTap)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                 } else {
                     HStack(spacing: 12) {
                         LectureDetailFolderChip(folderName: folderName, action: onFolderTap)
-                            .fixedSize()
+                            .frame(maxWidth: .infinity)
                         LectureDetailMetadataText(lecture: lecture)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             } else {
@@ -58,7 +60,10 @@ private struct LectureDetailFolderChip: View {
             .foregroundStyle(.primary)
             .padding(.horizontal)
             .padding(.vertical, 8)
+            // Fills whatever width the parent offers, so the chip can stretch to its column.
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(AppColor.fillSubtle, in: .capsule)
+            .contentShape(.capsule)
         }
         .buttonStyle(.plain)
     }
