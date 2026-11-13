@@ -18,6 +18,17 @@ enum AppUserPlan: String, CaseIterable, Codable, Identifiable {
         }
     }
 
+    /// Whether the plan includes importing lectures from YouTube links.
+    /// Freemium users can open the import sheet but are sent to the paywall on submit.
+    var canImportFromYouTube: Bool {
+        switch self {
+        case .freemium:
+            false
+        case .premium, .pro:
+            true
+        }
+    }
+
     var processingLimitTotalCount: Int? {
         switch self {
         case .freemium:

@@ -8,6 +8,7 @@ struct LecturesListView: View {
 
     @AppStorage("hasConfirmedAIProcessingConsent") private var hasConfirmedAIProcessingConsent = false
     @Environment(\.requestReview) private var requestReview
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @State var viewModel: LecturesListViewModel
     let paywallPresentationModel: PaywallPresentationModel
     let repository: LectureRepository
@@ -386,6 +387,12 @@ struct LecturesListView: View {
                 isPresented: $viewModel.isYouTubeImportSheetPresented,
                 onDismiss: {
                     viewModel.finishYouTubeImportDismissal()
+
+                    if viewModel.consumeYouTubeImportPaywallRequest() {
+                        Task {
+                            await paywallPresentationModel.presentYouTubeImportPaywall()
+                        }
+                    }
                 }
             ) {
                 YouTubeImportSheetView(
@@ -393,7 +400,10 @@ struct LecturesListView: View {
                         viewModel.dismissYouTubeImportSheet()
                     },
                     onSubmit: { urlString in
-                        await viewModel.submitYouTubeImport(urlString)
+                        await viewModel.submitYouTubeImport(
+                            urlString,
+                            plan: subscriptionManager.currentPlan
+                        )
                     }
                 )
             }

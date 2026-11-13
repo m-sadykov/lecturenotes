@@ -154,6 +154,8 @@ final class LecturesListViewModel {
     var pendingConsentAction: LecturesListPendingConsentAction?
     var pendingTextImportLecture: Lecture?
     var pendingYouTubeImportLecture: Lecture?
+    /// Set when a plan without YouTube import submits the sheet; the paywall is shown once the sheet dismisses.
+    var isYouTubeImportPaywallPending = false
     var visibleLectureCount: Int
     private var hasReceivedRepositoryUpdate = false
 
@@ -443,6 +445,16 @@ final class LecturesListViewModel {
 
         pendingTextImportLecture = nil
         selectedLecture = lecture
+    }
+
+    /// Returns `true` once if the YouTube import sheet was dismissed to show the paywall.
+    func consumeYouTubeImportPaywallRequest() -> Bool {
+        guard isYouTubeImportPaywallPending else {
+            return false
+        }
+
+        isYouTubeImportPaywallPending = false
+        return true
     }
 
     func finishYouTubeImportDismissal() {
@@ -828,7 +840,17 @@ final class LecturesListViewModel {
         }
     }
 
-    func submitYouTubeImport(_ urlString: String) async -> YouTubeImportAlertError? {
+    /// Submits a YouTube link from the import sheet.
+    ///
+    /// Plans without YouTube import skip the import entirely: the sheet is dismissed and
+    /// ``isYouTubeImportPaywallPending`` is raised so the paywall can be presented afterwards.
+    func submitYouTubeImport(_ urlString: String, plan: AppUserPlan) async -> YouTubeImportAlertError? {
+        guard plan.canImportFromYouTube else {
+            isYouTubeImportPaywallPending = true
+            isYouTubeImportSheetPresented = false
+            return nil
+        }
+
         let result = await importYouTube(urlString: urlString)
 
         switch result {
