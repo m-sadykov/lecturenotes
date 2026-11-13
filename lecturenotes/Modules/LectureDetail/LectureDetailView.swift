@@ -321,7 +321,7 @@ private struct LectureDetailTopContentView: View {
             LectureDetailHeaderView(
                 lecture: viewModel.lecture,
                 folderName: viewModel.folderName,
-                showsFolderButton: !isProcessing,
+                showsFolderChip: !isProcessing,
                 onFolderTap: viewModel.presentFolderPicker
             )
 

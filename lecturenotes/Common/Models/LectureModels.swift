@@ -29,7 +29,7 @@ enum LectureStatus: String, CaseIterable, Identifiable, Codable {
     }
 
     var title: String {
-        String(localized: titleResource)
+        String(appLocalizedResource: titleResource)
     }
 }
 
@@ -55,7 +55,7 @@ enum LectureSourceType: String, CaseIterable, Identifiable, Codable {
     }
 
     var title: String {
-        String(localized: titleResource)
+        String(appLocalizedResource: titleResource)
     }
 
     var processingStartStatus: LectureStatus {
@@ -251,6 +251,6 @@ struct Lecture: Identifiable, Hashable, Codable {
             return title
         }
 
-        return String(localized: localizedDisplayTitleKey.resource)
+        return String(appLocalizedResource: localizedDisplayTitleKey.resource)
     }
 }

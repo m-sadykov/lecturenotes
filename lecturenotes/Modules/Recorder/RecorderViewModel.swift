@@ -10,7 +10,7 @@ final class RecorderViewModel {
         var errorDescription: String? {
             switch self {
             case .tooShort(let minimumDuration):
-                String(localized: "Record at least \(Int(minimumDuration.components.seconds)) seconds to save.")
+                String(appLocalized: "Record at least \(Int(minimumDuration.components.seconds)) seconds to save.")
             }
         }
     }
@@ -99,7 +99,7 @@ final class RecorderViewModel {
         }
 
         mode = .paused
-        errorMessage = String(localized: "Recording was paused by the system.")
+        errorMessage = String(appLocalized: "Recording was paused by the system.")
         syncLiveActivity()
         crashReportingService?.breadcrumb(
             "recording_session_interrupted",
@@ -246,7 +246,7 @@ final class RecorderViewModel {
                 guard mode == .recording else { continue }
                 guard recordingManager.isRecording else {
                     mode = .paused
-                    errorMessage = String(localized: "Recording was paused by the system.")
+                    errorMessage = String(appLocalized: "Recording was paused by the system.")
                     crashReportingService?.breadcrumb(
                         "recording_session_interrupted",
                         metadata: [

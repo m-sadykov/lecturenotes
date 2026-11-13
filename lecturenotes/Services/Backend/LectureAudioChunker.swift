@@ -196,11 +196,11 @@ enum LectureAudioChunkerError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unableToCreateExportSession:
-            String(localized: "Unable to prepare audio for processing.")
+            String(appLocalized: "Unable to prepare audio for processing.")
         case .exportFailed:
-            String(localized: "Unable to split the audio into processing chunks.")
+            String(appLocalized: "Unable to split the audio into processing chunks.")
         case .exportCancelled:
-            String(localized: "Audio splitting was cancelled.")
+            String(appLocalized: "Audio splitting was cancelled.")
         }
     }
 }

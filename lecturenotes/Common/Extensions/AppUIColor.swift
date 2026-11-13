@@ -19,6 +19,14 @@ enum AppUIColor {
             : UIColor.black.withAlphaComponent(0.06)
     }
 
+    /// Background for an icon badge placed on a `fillSubtle` tile: white in light mode,
+    /// a lighter gray in dark mode, so the badge stands out from the tile.
+    static let fillOnSubtle = UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.white.withAlphaComponent(0.14)
+            : .white
+    }
+
     static let ink = UIColor { traits in
         traits.userInterfaceStyle == .dark ? .white : .black
     }

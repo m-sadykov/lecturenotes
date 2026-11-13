@@ -24,9 +24,9 @@ struct LectureImportManager {
         var errorDescription: String? {
             switch self {
             case .unableToImportAudio:
-                String(localized: "Unable to import this audio file.")
+                String(appLocalized: "Unable to import this audio file.")
             case .missingAudioDuration:
-                String(localized: "Unable to read the audio duration from file metadata.")
+                String(appLocalized: "Unable to read the audio duration from file metadata.")
             }
         }
     }

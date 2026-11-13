@@ -17,9 +17,9 @@ final class RecordingManager: NSObject, AVAudioRecorderDelegate {
         var errorDescription: String? {
             switch self {
             case .microphoneAccessDenied:
-                String(localized: "Microphone access is required to start recording.")
+                String(appLocalized: "Microphone access is required to start recording.")
             case .recorderUnavailable:
-                String(localized: "Unable to create an audio recorder.")
+                String(appLocalized: "Unable to create an audio recorder.")
             }
         }
     }
@@ -162,7 +162,7 @@ final class RecordingManager: NSObject, AVAudioRecorderDelegate {
                 return
             }
 
-            self.onSystemPause?(String(localized: "Recording was stopped by the system."))
+            self.onSystemPause?(String(appLocalized: "Recording was stopped by the system."))
         }
     }
 

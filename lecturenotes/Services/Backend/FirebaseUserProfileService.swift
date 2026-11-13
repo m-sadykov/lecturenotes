@@ -231,7 +231,7 @@ enum FirebaseUserProfileServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingUserDocument:
-            String(localized: "User profile is unavailable.")
+            String(appLocalized: "User profile is unavailable.")
         }
     }
 }

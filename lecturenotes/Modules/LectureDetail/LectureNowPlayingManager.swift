@@ -57,7 +57,7 @@ final class LectureNowPlayingManager: NSObject {
 
         var nowPlayingInfo = nowPlayingCenter.nowPlayingInfo ?? [:]
         nowPlayingInfo[MPMediaItemPropertyTitle] = title
-        nowPlayingInfo[MPMediaItemPropertyArtist] = String(localized: "LectraAI")
+        nowPlayingInfo[MPMediaItemPropertyArtist] = String(appLocalized: "LectraAI")
         nowPlayingInfo[MPNowPlayingInfoPropertyMediaType] = MPNowPlayingInfoMediaType.audio.rawValue
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = totalDuration.timeInterval
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime.timeInterval

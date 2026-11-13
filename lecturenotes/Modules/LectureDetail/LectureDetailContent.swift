@@ -69,16 +69,24 @@ enum LectureDetailContent: Hashable, CaseIterable {
         return text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : text
     }
 
-    /// Short status line for the action tile, e.g. "12 cards".
-    func detailText(for lecture: Lecture) -> String? {
+    /// Short status line for the action tile, e.g. "12 cards". Returned as a resource and
+    /// resolved by `Text`, so it follows the in-app language override like other labels
+    /// (`String(localized:)` would use the system language).
+    func detailText(for lecture: Lecture) -> LocalizedStringResource? {
         switch self {
         case .flashcards:
-            lecture.flashcards.isEmpty ? nil : String(localized: "\(lecture.flashcards.count) cards")
+            lecture.flashcards.isEmpty ? nil : "\(lecture.flashcards.count) cards"
         case .quiz:
-            lecture.quiz.isEmpty ? nil : String(localized: "\(lecture.quiz.count) questions")
+            lecture.quiz.isEmpty ? nil : "\(lecture.quiz.count) questions"
         case .keyPoints, .summary, .transcript:
             nil
         }
+    }
+
+    /// Study tools shown in the lecture detail grid, in display order, without the ones
+    /// the lecture has no content for.
+    static func studyTools(for lecture: Lecture) -> [LectureDetailContent] {
+        [.transcript, .flashcards, .quiz, .keyPoints].filter { $0.isAvailable(for: lecture) }
     }
 
     func isAvailable(for lecture: Lecture) -> Bool {

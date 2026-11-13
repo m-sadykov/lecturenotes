@@ -1,11 +1,15 @@
 import SwiftUI
 
-/// Title, metadata and folder button at the top of the lecture detail screen.
+/// Title, metadata and folder chip at the top of the lecture detail screen.
+/// The chip appears only when the lecture is in a folder; adding to a folder lives in
+/// the actions menu, so the header does not repeat it.
 struct LectureDetailHeaderView: View {
     let lecture: Lecture
     let folderName: String?
-    var showsFolderButton = true
+    var showsFolderChip = true
     let onFolderTap: () -> Void
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -14,16 +18,21 @@ struct LectureDetailHeaderView: View {
                 .bold()
                 .lineLimit(3)
 
-            if showsFolderButton {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 12) {
-                        LectureDetailFolderButton(folderName: folderName, action: onFolderTap)
+            if showsFolderChip, let folderName {
+                // Chip and metadata split the row into two equal columns, with the
+                // metadata wrapping inside its half. At accessibility text sizes they stack.
+                if dynamicTypeSize.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: 10) {
                         LectureDetailMetadataText(lecture: lecture)
+                        LectureDetailFolderChip(folderName: folderName, action: onFolderTap)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
-
-                    VStack(alignment: .leading, spacing: 8) {
+                } else {
+                    HStack(spacing: 12) {
+                        LectureDetailFolderChip(folderName: folderName, action: onFolderTap)
+                            .frame(maxWidth: .infinity)
                         LectureDetailMetadataText(lecture: lecture)
-                        LectureDetailFolderButton(folderName: folderName, action: onFolderTap)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             } else {
@@ -34,27 +43,27 @@ struct LectureDetailHeaderView: View {
     }
 }
 
-private struct LectureDetailFolderButton: View {
-    let folderName: String?
+/// Shows the lecture's folder; tapping it opens the folder picker to move the lecture.
+private struct LectureDetailFolderChip: View {
+    let folderName: String
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Label {
-                if let folderName {
-                    Text(folderName)
-                } else {
-                    Text("Add to Folder")
-                }
+                Text(folderName)
             } icon: {
-                Image(systemName: folderName == nil ? "folder.badge.plus" : "folder")
+                Image(systemName: "folder")
             }
             .font(.subheadline)
             .lineLimit(1)
             .foregroundStyle(.primary)
             .padding(.horizontal)
             .padding(.vertical, 8)
+            // Fills whatever width the parent offers, so the chip can stretch to its column.
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(AppColor.fillSubtle, in: .capsule)
+            .contentShape(.capsule)
         }
         .buttonStyle(.plain)
     }

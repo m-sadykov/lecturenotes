@@ -30,7 +30,7 @@ final class SettingsViewModel {
 
     var maskedUserID: String {
         guard let currentUserID else {
-            return String(localized: "Preparing...")
+            return String(appLocalized: "Preparing...")
         }
 
         return SettingsUserIDFormatter.shortened(currentUserID)
@@ -46,7 +46,7 @@ final class SettingsViewModel {
 
     func restorePurchases(using subscriptionManager: SubscriptionManager) async -> String {
         guard !isRestoringPurchases else {
-            return String(localized: "Purchase restore is already in progress.")
+            return String(appLocalized: "Purchase restore is already in progress.")
         }
 
         crashReportingService?.breadcrumb("restore_purchases_started")
@@ -68,7 +68,7 @@ final class SettingsViewModel {
                         restoredPlan: restoredPlan
                     )
                 )
-                return String(localized: "No active purchases were found to restore.")
+                return String(appLocalized: "No active purchases were found to restore.")
             }
 
             crashReportingService?.breadcrumb(
@@ -84,7 +84,7 @@ final class SettingsViewModel {
                     restoredPlan: restoredPlan
                 )
             )
-            return String(localized: "Purchases restored. Your \(restoredPlan.title) plan is active.")
+            return String(appLocalized: "Purchases restored. Your \(restoredPlan.title) plan is active.")
         } catch {
             crashReportingService?.recordNonFatal(
                 error,
@@ -99,7 +99,7 @@ final class SettingsViewModel {
                     restoredPlan: nil
                 )
             )
-            return error.localizedDescription.isEmpty ? String(localized: "Unable to restore purchases right now.") : error.localizedDescription
+            return error.localizedDescription.isEmpty ? String(appLocalized: "Unable to restore purchases right now.") : error.localizedDescription
         }
     }
 
@@ -116,11 +116,11 @@ final class SettingsViewModel {
     }
 
     func makeSupportEmailDraft() -> SupportEmailDraft {
-        let userIDText = currentUserID ?? String(localized: "Unavailable")
+        let userIDText = currentUserID ?? String(appLocalized: "Unavailable")
 
         return SupportEmailDraft(
             recipient: SettingsSupportConfiguration.supportEmailAddress,
-            subject: String(localized: "LectraAI support request"),
+            subject: String(appLocalized: "LectraAI support request"),
             body: String(
                 localized: """
                 Hi Support,
@@ -136,8 +136,8 @@ final class SettingsViewModel {
     }
 
     private static var appVersionText: String {
-        let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? String(localized: "Unknown")
-        let buildNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? String(localized: "Unknown")
+        let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? String(appLocalized: "Unknown")
+        let buildNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? String(appLocalized: "Unknown")
         return "\(shortVersion) (\(buildNumber))"
     }
 
