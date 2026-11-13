@@ -188,6 +188,8 @@ export const upsertLecture = onCall(
         transcript: sourceType === "text" || sourceType === "pdf" ? transcript : "",
         summaryShort: "",
         summaryLong: "",
+        summaryNote: "",
+        keyPoints: "",
         flashcards: [],
         quiz: [],
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -294,6 +296,8 @@ export const startLectureProcessing = onCall(
     const baseUpdate: admin.firestore.UpdateData = {
       summaryShort: "",
       summaryLong: "",
+      summaryNote: "",
+      keyPoints: "",
       flashcards: [],
       quiz: [],
       errorMessage: admin.firestore.FieldValue.delete(),
