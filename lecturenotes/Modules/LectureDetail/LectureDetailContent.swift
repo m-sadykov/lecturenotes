@@ -81,6 +81,12 @@ enum LectureDetailContent: Hashable, CaseIterable {
         }
     }
 
+    /// Study tools shown in the lecture detail grid, in display order, without the ones
+    /// the lecture has no content for.
+    static func studyTools(for lecture: Lecture) -> [LectureDetailContent] {
+        [.transcript, .flashcards, .quiz, .keyPoints].filter { $0.isAvailable(for: lecture) }
+    }
+
     func isAvailable(for lecture: Lecture) -> Bool {
         switch self {
         case .summary:
