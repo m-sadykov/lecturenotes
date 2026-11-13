@@ -69,13 +69,15 @@ enum LectureDetailContent: Hashable, CaseIterable {
         return text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : text
     }
 
-    /// Short status line for the action tile, e.g. "12 cards".
-    func detailText(for lecture: Lecture) -> String? {
+    /// Short status line for the action tile, e.g. "12 cards". Returned as a resource and
+    /// resolved by `Text`, so it follows the in-app language override like other labels
+    /// (`String(localized:)` would use the system language for these plural strings).
+    func detailText(for lecture: Lecture) -> LocalizedStringResource? {
         switch self {
         case .flashcards:
-            lecture.flashcards.isEmpty ? nil : String(localized: "\(lecture.flashcards.count) cards")
+            lecture.flashcards.isEmpty ? nil : "\(lecture.flashcards.count) cards"
         case .quiz:
-            lecture.quiz.isEmpty ? nil : String(localized: "\(lecture.quiz.count) questions")
+            lecture.quiz.isEmpty ? nil : "\(lecture.quiz.count) questions"
         case .keyPoints, .summary, .transcript:
             nil
         }

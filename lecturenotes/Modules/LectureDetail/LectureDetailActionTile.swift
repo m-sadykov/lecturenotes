@@ -4,7 +4,7 @@ import SwiftUI
 /// status line such as "10 cards", and a chevron. The caller wraps it in a `Button`.
 struct LectureDetailActionTile: View {
     let content: LectureDetailContent
-    let detailText: String?
+    let detailText: LocalizedStringResource?
 
     var body: some View {
         HStack(spacing: 10) {
@@ -41,7 +41,7 @@ private struct LectureDetailActionIcon: View {
 
 private struct LectureDetailActionTitle: View {
     let title: LocalizedStringResource
-    let detailText: String?
+    let detailText: LocalizedStringResource?
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -67,7 +67,7 @@ private struct LectureDetailActionTitle: View {
 
 #Preview {
     HStack {
-        LectureDetailActionTile(content: .flashcards, detailText: "10 cards")
+        LectureDetailActionTile(content: .flashcards, detailText: "\(10) cards")
         LectureDetailActionTile(content: .keyPoints, detailText: nil)
     }
     .fixedSize(horizontal: false, vertical: true)
