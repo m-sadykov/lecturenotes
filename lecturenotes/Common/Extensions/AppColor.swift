@@ -5,6 +5,7 @@ enum AppColor {
     static let surface = Color(uiColor: AppUIColor.surface)
     static let fillSubtle = Color(uiColor: AppUIColor.fillSubtle)
     static let fillElevated = Color(uiColor: AppUIColor.fillElevated)
+    static let fillOnSubtle = Color(uiColor: AppUIColor.fillOnSubtle)
     static let ink = Color(uiColor: AppUIColor.ink)
     static let onInk = Color(uiColor: AppUIColor.onInk)
     static let hairline = Color(uiColor: AppUIColor.hairline)
