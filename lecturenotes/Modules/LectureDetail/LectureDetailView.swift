@@ -3,7 +3,6 @@ import SwiftUI
 struct LectureDetailView: View {
     @State private var viewModel: LectureDetailViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var isActionsPopoverPresented = false
 
     init(
         lecture: Lecture,
@@ -99,31 +98,23 @@ struct LectureDetailView: View {
         .onChange(of: viewModel.processingLecture?.status) { oldValue, newValue in
             viewModel.handleProcessingStatusChange(oldValue: oldValue, newValue: newValue)
         }
-        .circleBackButton()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                ToolbarCircleButton("Actions", systemImage: "ellipsis") {
-                    isActionsPopoverPresented = true
-                }
-                .popover(isPresented: $isActionsPopoverPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
-                    LectureDetailActionsSheet(
-                        onAddToFolder: {
-                            viewModel.presentFolderPicker()
-                        },
-                        onRemoveFromFolder: viewModel.lecture.folderID == nil ? nil : {
-                            viewModel.removeLectureFromFolder()
-                        },
-                        onEditTitle: {
-                            viewModel.presentRename()
-                        },
-                        onDelete: {
-                            viewModel.requestDelete()
-                        }
-                    )
-                    .presentationCompactAdaptation(.popover)
-                }
+                LectureDetailActionsMenu(
+                    onAddToFolder: {
+                        viewModel.presentFolderPicker()
+                    },
+                    onRemoveFromFolder: viewModel.lecture.folderID == nil ? nil : {
+                        viewModel.removeLectureFromFolder()
+                    },
+                    onEditTitle: {
+                        viewModel.presentRename()
+                    },
+                    onDelete: {
+                        viewModel.requestDelete()
+                    }
+                )
             }
-            .hiddenSharedBackground()
         }
         .navigationDestination(item: $viewModel.activeRoute) { route in
             switch route {
