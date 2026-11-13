@@ -15,6 +15,8 @@ export async function saveStudyPack(
       title: studyPack.title,
       summaryShort: studyPack.summaryShort,
       summaryLong: studyPack.summaryLong,
+      summaryNote: studyPack.summaryNote,
+      keyPoints: studyPack.keyPoints,
       flashcards: studyPack.flashcards.map(card => ({
         id: crypto.randomUUID(),
         question: card.question,
@@ -34,6 +36,37 @@ export async function saveStudyPack(
   );
 }
 
+// summaryNote and keyPoints are Markdown rendered by the iOS app (1.4+), which supports
+// headings (#, ##, ###), bullet and numbered lists (nested with two spaces),
+// horizontal rules (---), **bold** and *italic*. Keep the prompt within that subset.
+// summaryLong stays plain text because app versions before 1.4 display it verbatim.
+const STUDY_PACK_INSTRUCTIONS = [
+  "You create study materials for lecture content.",
+  "Write every field in the same language as the transcript.",
+  "Return valid JSON only.",
+  "",
+  "title: a short, specific title for the lecture.",
+  "summaryShort: one or two plain-text sentences without Markdown.",
+  "summaryLong: a detailed summary of one to three paragraphs in plain text. Do not use any Markdown symbols (#, *, -, ---); separate paragraphs with a blank line.",
+  "",
+  "summaryNote: a well-structured study note in Markdown:",
+  "- Start with a level-1 heading (#) with the lecture title.",
+  "- Then a horizontal rule (---).",
+  "- Then an introduction of 2-4 sentences explaining what the lecture covers and its main argument.",
+  "- Then 3-6 sections, each starting with a level-2 heading (##).",
+  "- Inside sections use bullet lists; nest supporting details under a bullet with two spaces of indentation.",
+  "- Put **bold** on key terms, names, dates and definitions, a few per section, not whole sentences.",
+  "- Do not use tables, code blocks, links or images.",
+  "",
+  "keyPoints: the most important takeaways in Markdown:",
+  "- Group them under 2-4 level-2 headings (##).",
+  "- Each takeaway is one bullet that starts with a short **bold label:** followed by one or two sentences.",
+  "- 6-12 bullets in total.",
+  "",
+  "flashcards: at least 10 question-answer pairs in plain text.",
+  "quiz: at least 10 multiple-choice questions with exactly 4 plain-text options.",
+].join("\n");
+
 export async function generateStudyPack(
   transcript: string,
   apiKey: string,
@@ -46,9 +79,7 @@ export async function generateStudyPack(
     },
     body: JSON.stringify({
       model: "gpt-4.1-mini",
-      instructions:
-        "You create concise study materials for lecture content. " +
-        "Return valid JSON only with a helpful title, a short summary, a detailed summary, at least 10 flashcards, and at least 10 quiz questions.",
+      instructions: STUDY_PACK_INSTRUCTIONS,
       input: `Transcript:\n${transcript}`,
       text: {
         format: {
@@ -62,6 +93,8 @@ export async function generateStudyPack(
               title: { type: "string" },
               summaryShort: { type: "string" },
               summaryLong: { type: "string" },
+              summaryNote: { type: "string" },
+              keyPoints: { type: "string" },
               flashcards: {
                 type: "array",
                 minItems: 10,
@@ -103,6 +136,8 @@ export async function generateStudyPack(
               "title",
               "summaryShort",
               "summaryLong",
+              "summaryNote",
+              "keyPoints",
               "flashcards",
               "quiz",
             ],
@@ -170,6 +205,8 @@ function normalizeStudyPack(
       studyPack.summaryShort.trim() || fallbackSummary(transcript, 180),
     summaryLong:
       studyPack.summaryLong.trim() || fallbackSummary(transcript, 600),
+    summaryNote: studyPack.summaryNote?.trim() ?? "",
+    keyPoints: studyPack.keyPoints?.trim() ?? "",
     flashcards: ensureMinimumFlashcards(cleanedFlashcards, transcript),
     quiz: ensureMinimumQuiz(cleanedQuiz, transcript),
   };

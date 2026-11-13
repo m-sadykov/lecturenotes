@@ -8,6 +8,7 @@ enum AppColor {
     static let ink = Color(uiColor: AppUIColor.ink)
     static let onInk = Color(uiColor: AppUIColor.onInk)
     static let hairline = Color(uiColor: AppUIColor.hairline)
+    static let accent = Color(uiColor: AppUIColor.accent)
     static let overlayScrim = Color(uiColor: AppUIColor.overlayScrim)
     static let shadow = Color(uiColor: AppUIColor.shadow)
 }

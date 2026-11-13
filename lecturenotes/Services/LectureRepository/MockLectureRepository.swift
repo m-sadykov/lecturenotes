@@ -107,9 +107,33 @@ enum MockLectures {
                 createdAt: lecture1Date,
                 duration: .seconds(2_440),
                 status: .ready,
-                transcript: "Today we covered photosynthesis, chloroplasts, and ATP synthesis in plants.",
+                transcript: "Today we covered photosynthesis, chloroplasts, and ATP synthesis in plants. Light is absorbed by chlorophyll. Water is split and oxygen is released. ATP and NADPH power the Calvin cycle. The Calvin cycle fixes carbon dioxide into sugar. Finally we looked at examples from crop science.",
                 summaryShort: "Lecture introduced photosynthesis and how plants convert sunlight into energy.",
                 summaryLong: "We explored photosynthesis stages, light-dependent reactions, ATP production, and practical examples about plant metabolism.",
+                summaryNote: """
+                # Plant Physiology Basics
+                ---
+                This lecture explains how plants turn **light energy** into chemical energy and why \
+                **photosynthesis** underpins almost every food chain.
+
+                ## Light-Dependent Reactions
+                - Take place in the **thylakoid membranes** of chloroplasts.
+                  - **Chlorophyll** absorbs red and blue light.
+                - Water is split, releasing **oxygen** as a by-product.
+
+                ## Calvin Cycle
+                - Uses **ATP** and **NADPH** to fix carbon dioxide into sugar.
+                - Runs in the **stroma** and does not need light directly.
+                """,
+                keyPoints: """
+                ## Core Ideas
+                - **Energy conversion:** Plants store light energy as chemical energy in sugar.
+                - **Location:** Photosynthesis happens in chloroplasts.
+
+                ## Two Stages
+                - **Light reactions:** Produce ATP, NADPH and oxygen.
+                - **Calvin cycle:** Uses that energy to build glucose from CO₂.
+                """,
                 flashcards: [
                     Flashcard(id: flashcard1ID, question: "What is photosynthesis?", answer: "A process where plants convert light into chemical energy."),
                     Flashcard(id: flashcard2ID, question: "Where does photosynthesis occur?", answer: "In chloroplasts.")

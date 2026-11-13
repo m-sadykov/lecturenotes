@@ -183,6 +183,9 @@ struct Lecture: Identifiable, Hashable, Codable {
     var transcript: String
     var summaryShort: String
     var summaryLong: String
+    /// Markdown study note (backend 1.4+). Empty for lectures processed earlier.
+    var summaryNote: String
+    var keyPoints: String
     var flashcards: [Flashcard]
     var quiz: [QuizQuestion]
     var processingErrorMessage: String?
@@ -203,6 +206,8 @@ struct Lecture: Identifiable, Hashable, Codable {
         transcript: String,
         summaryShort: String,
         summaryLong: String,
+        summaryNote: String = "",
+        keyPoints: String = "",
         flashcards: [Flashcard],
         quiz: [QuizQuestion],
         processingErrorMessage: String? = nil
@@ -222,6 +227,8 @@ struct Lecture: Identifiable, Hashable, Codable {
         self.transcript = transcript
         self.summaryShort = summaryShort
         self.summaryLong = summaryLong
+        self.summaryNote = summaryNote
+        self.keyPoints = keyPoints
         self.flashcards = flashcards
         self.quiz = quiz
         self.processingErrorMessage = processingErrorMessage

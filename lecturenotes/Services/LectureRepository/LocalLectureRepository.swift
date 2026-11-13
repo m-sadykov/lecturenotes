@@ -23,6 +23,8 @@ final class LocalLectureRepository: LectureRepository {
         var transcript: String
         var summaryShort: String
         var summaryLong: String
+        var summaryNote: String
+        var keyPoints: String
         var flashcards: [Flashcard]
         var quiz: [QuizQuestion]
         var processingErrorMessage: String?
@@ -43,6 +45,8 @@ final class LocalLectureRepository: LectureRepository {
             case transcript
             case summaryShort
             case summaryLong
+            case summaryNote
+            case keyPoints
             case flashcards
             case quiz
             case processingErrorMessage
@@ -69,6 +73,8 @@ final class LocalLectureRepository: LectureRepository {
             transcript = lecture.transcript
             summaryShort = lecture.summaryShort
             summaryLong = lecture.summaryLong
+            summaryNote = lecture.summaryNote
+            keyPoints = lecture.keyPoints
             flashcards = lecture.flashcards
             quiz = lecture.quiz
             processingErrorMessage = lecture.processingErrorMessage
@@ -91,6 +97,8 @@ final class LocalLectureRepository: LectureRepository {
             transcript = try container.decode(String.self, forKey: .transcript)
             summaryShort = try container.decode(String.self, forKey: .summaryShort)
             summaryLong = try container.decode(String.self, forKey: .summaryLong)
+            summaryNote = try container.decodeIfPresent(String.self, forKey: .summaryNote) ?? ""
+            keyPoints = try container.decodeIfPresent(String.self, forKey: .keyPoints) ?? ""
             flashcards = try container.decode([Flashcard].self, forKey: .flashcards)
             quiz = try container.decode([QuizQuestion].self, forKey: .quiz)
             processingErrorMessage = try container.decodeIfPresent(String.self, forKey: .processingErrorMessage)
@@ -113,6 +121,8 @@ final class LocalLectureRepository: LectureRepository {
             try container.encode(transcript, forKey: .transcript)
             try container.encode(summaryShort, forKey: .summaryShort)
             try container.encode(summaryLong, forKey: .summaryLong)
+            try container.encode(summaryNote, forKey: .summaryNote)
+            try container.encode(keyPoints, forKey: .keyPoints)
             try container.encode(flashcards, forKey: .flashcards)
             try container.encode(quiz, forKey: .quiz)
             try container.encodeIfPresent(processingErrorMessage, forKey: .processingErrorMessage)
@@ -135,6 +145,8 @@ final class LocalLectureRepository: LectureRepository {
                 transcript: transcript,
                 summaryShort: summaryShort,
                 summaryLong: summaryLong,
+                summaryNote: summaryNote,
+                keyPoints: keyPoints,
                 flashcards: flashcards,
                 quiz: quiz,
                 processingErrorMessage: processingErrorMessage

@@ -50,12 +50,23 @@ struct ImportLimitSheetView: View {
 }
 
 private struct ImportLimitSheetIcon: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    private static let iconRed = Color(red: 0.83, green: 0.25, blue: 0.28)
+
     var body: some View {
         Image(systemName: "info.circle")
             .font(.system(size: 42, weight: .semibold))
-            .foregroundStyle(Color(red: 0.83, green: 0.25, blue: 0.28))
+            .foregroundStyle(Self.iconRed)
             .frame(width: 84, height: 84)
-            .background(
+            .background(background, in: .circle)
+    }
+
+    private var background: AnyShapeStyle {
+        if colorScheme == .dark {
+            AnyShapeStyle(Self.iconRed.opacity(0.18))
+        } else {
+            AnyShapeStyle(
                 LinearGradient(
                     colors: [
                         Color(red: 0.99, green: 0.90, blue: 0.91),
@@ -63,23 +74,31 @@ private struct ImportLimitSheetIcon: View {
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
-                ),
-                in: .circle
+                )
             )
+        }
     }
 }
 
+/// In light mode keeps the soft blue card; in dark mode switches to the app's
+/// monochrome surface so the `.primary` text stays readable.
 private struct ImportLimitUpgradeCard: View {
     let title: String
     let message: String
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var isDark: Bool {
+        colorScheme == .dark
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: "crown.fill")
                 .font(.subheadline)
-                .foregroundStyle(Color(red: 0.29, green: 0.40, blue: 0.92))
+                .foregroundStyle(isDark ? AppColor.ink : Color(red: 0.29, green: 0.40, blue: 0.92))
                 .frame(width: 34, height: 34)
-                .background(Color.white.opacity(0.78), in: .rect(cornerRadius: 12))
+                .background(isDark ? AppColor.fillElevated : Color.white.opacity(0.78), in: .rect(cornerRadius: 12))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
@@ -95,20 +114,30 @@ private struct ImportLimitUpgradeCard: View {
             Spacer(minLength: 0)
         }
         .padding(16)
-        .background(
-            LinearGradient(
-                colors: [
-                    Color(red: 0.95, green: 0.97, blue: 1),
-                    Color(red: 0.98, green: 0.99, blue: 1)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+        .background(cardBackground)
         .clipShape(.rect(cornerRadius: 20))
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(Color(red: 0.82, green: 0.87, blue: 1), lineWidth: 1)
+                .strokeBorder(isDark ? AppColor.hairline : Color(red: 0.82, green: 0.87, blue: 1), lineWidth: 1)
+        }
+    }
+}
+
+private extension ImportLimitUpgradeCard {
+    var cardBackground: AnyShapeStyle {
+        if isDark {
+            AnyShapeStyle(AppColor.fillSubtle)
+        } else {
+            AnyShapeStyle(
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.95, green: 0.97, blue: 1),
+                        Color(red: 0.98, green: 0.99, blue: 1)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
         }
     }
 }
@@ -117,10 +146,10 @@ private struct ImportLimitPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.headline)
-            .foregroundStyle(.white)
+            .foregroundStyle(AppColor.onInk)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 18)
-            .background(Color.black)
+            .background(AppColor.ink)
             .clipShape(.rect(cornerRadius: 18))
             .scaleEffect(configuration.isPressed ? 0.985 : 1)
             .animation(.easeOut(duration: 0.16), value: configuration.isPressed)

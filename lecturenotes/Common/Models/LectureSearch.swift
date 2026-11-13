@@ -9,6 +9,8 @@ extension Lecture {
         return title.localizedStandardContains(query)
             || summaryShort.localizedStandardContains(query)
             || summaryLong.localizedStandardContains(query)
+            || summaryNote.localizedStandardContains(query)
+            || keyPoints.localizedStandardContains(query)
             || transcript.localizedStandardContains(query)
     }
 }

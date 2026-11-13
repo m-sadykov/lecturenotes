@@ -30,21 +30,13 @@ struct LectureDetailView: View {
     var body: some View {
         @Bindable var viewModel = viewModel
 
-        VStack(spacing: 0) {
-            VStack(spacing: 18) {
-                if viewModel.lecture.sourceType != .audio {
-                    LectureTextHeaderView(lecture: viewModel.lecture)
-                }
+        Group {
+            if viewModel.shouldShowProcessing, let processingLecture = viewModel.processingLecture {
+                VStack(spacing: 16) {
+                    LectureDetailTopContentView(viewModel: viewModel, isProcessing: true)
+                        .padding(.horizontal)
+                        .padding(.top, 8)
 
-                if let playerViewModel = viewModel.playerViewModel {
-                    LectureAudioPlayerView(lecture: viewModel.lecture, viewModel: playerViewModel)
-                }
-            }
-            .padding(.horizontal)
-            .padding(.top, 8)
-
-            ZStack {
-                if viewModel.shouldShowProcessing, let processingLecture = viewModel.processingLecture {
                     ProcessingView(
                         lecture: processingLecture,
                         isRetrying: viewModel.processingViewModel?.isRetrying == true,
@@ -55,26 +47,37 @@ struct LectureDetailView: View {
                         } : nil
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+            } else {
+                ScrollViewReader { scrollProxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 20) {
+                            LectureDetailTopContentView(viewModel: viewModel, isProcessing: false)
 
-                if !viewModel.shouldShowProcessing {
-                    VStack(spacing: 0) {
-                        LectureDetailSectionChipsView(
-                            selectedSection: $viewModel.selectedSection,
-                            onSelectSection: viewModel.selectSection
-                        )
-                        .padding(.top, 16)
-                        .padding(.bottom, 8)
+                            LectureDetailActionsGridView(
+                                lecture: viewModel.lecture,
+                                onOpen: viewModel.open
+                            )
 
-                        LectureDetailSectionContentView(
-                            lecture: viewModel.lecture,
-                            selectedSection: viewModel.selectedSection
-                        )
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            LectureSummarySectionView(
+                                summaryText: viewModel.summaryText,
+                                briefText: viewModel.summaryBriefText,
+                                onCopy: { viewModel.copy(.summary) },
+                                onSelectSection: { item in
+                                    withAnimation {
+                                        scrollProxy.scrollTo(MarkdownOutline.anchor(for: item.blockIndex), anchor: .top)
+                                    }
+                                }
+                            )
+                            .padding(.top, 8)
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                        .padding(.bottom, 32)
                     }
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
         .background(AppColor.canvas)
@@ -97,13 +100,6 @@ struct LectureDetailView: View {
             viewModel.handleProcessingStatusChange(oldValue: oldValue, newValue: newValue)
         }
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Copy", systemImage: "doc.on.doc") {
-                    viewModel.copyActiveSectionText()
-                }
-                .disabled(viewModel.copyableText == nil)
-            }
-
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     isActionsPopoverPresented = true
@@ -129,6 +125,20 @@ struct LectureDetailView: View {
                     )
                     .presentationCompactAdaptation(.popover)
                 }
+            }
+        }
+        .navigationDestination(item: $viewModel.activeRoute) { route in
+            switch route {
+            case .transcript:
+                LectureTranscriptScreen(
+                    transcript: viewModel.lecture.transcript,
+                    onCopy: { viewModel.copy(.transcript) }
+                )
+            case .keyPoints:
+                LectureKeyPointsScreen(
+                    keyPoints: viewModel.lecture.keyPoints,
+                    onCopy: { viewModel.copy(.keyPoints) }
+                )
             }
         }
         .sheet(
@@ -287,78 +297,6 @@ private let failedProcessingPreviewLecture = Lecture(
     processingErrorMessage: "No speech detected. Try speaking louder or recording for longer."
 )
 
-private struct LectureDetailSectionChipsView: View {
-    @Binding var selectedSection: LectureDetailSection
-    let onSelectSection: (LectureDetailSection) -> Void
-
-    var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 10) {
-                ForEach(LectureDetailSection.allCases) { section in
-                    LectureDetailSectionChip(
-                        title: section.titleResource,
-                        emoji: section.emoji,
-                        isSelected: selectedSection == section
-                    ) {
-                        onSelectSection(section)
-                    }
-                }
-            }
-            .padding(.horizontal, 20)
-        }
-        .scrollIndicators(.hidden)
-    }
-}
-
-private struct LectureDetailSectionChip: View {
-    let title: LocalizedStringResource
-    let emoji: String
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 12) {
-                Text(emoji)
-                    .font(.title2)
-
-                Text(title)
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-            }
-            .frame(width: 108, height: 88)
-            .background(AppColor.fillSubtle)
-            .clipShape(.rect(cornerRadius: 12))
-            .overlay {
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? AppColor.hairline : AppColor.hairline.opacity(0.6), lineWidth: 1)
-            }
-            .shadow(color: AppColor.shadow.opacity(isSelected ? 1 : 0.7), radius: isSelected ? 14 : 12, y: 4)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-private struct LectureDetailSectionContentView: View {
-    let lecture: Lecture
-    let selectedSection: LectureDetailSection
-
-    var body: some View {
-        Group {
-            switch selectedSection {
-            case .summary:
-                SummarySectionView(lecture: lecture)
-            case .transcript:
-                TranscriptSectionView(lecture: lecture)
-            case .flashcards:
-                SummarySectionView(lecture: lecture)
-            case .quiz:
-                SummarySectionView(lecture: lecture)
-            }
-        }
-    }
-}
-
 private struct LectureDetailToastView: View {
     let message: String
 
@@ -373,40 +311,25 @@ private struct LectureDetailToastView: View {
     }
 }
 
-private struct LectureTextHeaderView: View {
-    let lecture: Lecture
+/// Header and, for audio lectures, the player card. While the lecture is still processing
+/// only the title and metadata are shown: the audio is not uploaded yet and the lecture
+/// is not ready to be organized.
+private struct LectureDetailTopContentView: View {
+    let viewModel: LectureDetailViewModel
+    let isProcessing: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            lectureTitleView
+        VStack(alignment: .leading, spacing: 16) {
+            LectureDetailHeaderView(
+                lecture: viewModel.lecture,
+                folderName: viewModel.folderName,
+                showsFolderButton: !isProcessing,
+                onFolderTap: viewModel.presentFolderPicker
+            )
 
-            metadataText
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            if !isProcessing, let playerViewModel = viewModel.playerViewModel {
+                LectureAudioPlayerView(lecture: viewModel.lecture, viewModel: playerViewModel)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 4)
-        .padding(.vertical, 6)
-    }
-
-    @ViewBuilder
-    private var lectureTitleView: some View {
-        if let localizedDisplayTitleKey = lecture.localizedDisplayTitleKey {
-            Text(localizedDisplayTitleKey.resource)
-                .font(.title)
-                .bold()
-                .lineLimit(2)
-        } else {
-            Text(lecture.title)
-                .font(.title)
-                .bold()
-                .lineLimit(2)
-        }
-    }
-
-    private var metadataText: Text {
-        Text(lecture.createdAt, format: LectureFormatters.date)
-        + Text(" · ")
-        + Text(lecture.sourceType.titleResource)
     }
 }

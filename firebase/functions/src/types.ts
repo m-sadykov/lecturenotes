@@ -7,6 +7,8 @@ export type StudyPack = {
   title: string;
   summaryShort: string;
   summaryLong: string;
+  summaryNote: string;
+  keyPoints: string;
   flashcards: Array<{
     question: string;
     answer: string;
