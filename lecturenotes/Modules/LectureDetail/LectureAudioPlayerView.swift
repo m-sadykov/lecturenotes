@@ -28,7 +28,7 @@ struct LectureAudioPlayerView: View {
             }
 
             HStack {
-                LectureAudioShareButton(audioURL: lecture.audioURL)
+                LectureAudioShareButton(lecture: lecture)
                     .frame(maxWidth: .infinity)
 
                 Button("Back 10 seconds", systemImage: "gobackward.10") {
@@ -78,12 +78,15 @@ struct LectureAudioPlayerView: View {
     }
 }
 
+/// Shares the recording, from the device or downloaded from the cloud on demand.
+/// Keeps its slot (hidden) only when the lecture has no audio at all, so the play
+/// button stays centered.
 private struct LectureAudioShareButton: View {
-    let audioURL: URL?
+    let lecture: Lecture
 
     var body: some View {
-        if let audioURL {
-            ShareLink(item: audioURL) {
+        if let item = LectureAudioShareItem(lecture: lecture) {
+            ShareLink(item: item, preview: SharePreview(lecture.displayTitle)) {
                 Label("Share Audio", systemImage: "square.and.arrow.up")
             }
         } else {
