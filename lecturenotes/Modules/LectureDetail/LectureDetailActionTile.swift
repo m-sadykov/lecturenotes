@@ -34,7 +34,7 @@ private struct LectureDetailActionIcon: View {
             .font(.subheadline)
             .foregroundStyle(.primary)
             .frame(width: iconSize, height: iconSize)
-            .background(AppColor.fillSubtle)
+            .background(AppColor.fillOnSubtle)
             .clipShape(.circle)
     }
 }
