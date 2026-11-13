@@ -10,6 +10,7 @@ final class PaywallPresentationModel {
         case postOnboarding
         case manualDefault
         case scheduledDiscount
+        case youTubeImport
     }
 
     static let defaultOfferingIdentifier = "default"
@@ -47,6 +48,11 @@ final class PaywallPresentationModel {
 
     func presentDefaultPaywall() async {
         _ = await presentDefaultStylePaywall(source: .manualDefault)
+    }
+
+    /// Presents the default paywall when a freemium user submits a YouTube import.
+    func presentYouTubeImportPaywall() async {
+        _ = await presentDefaultStylePaywall(source: .youTubeImport)
     }
 
     func presentDefaultPaywallIfNeeded(
@@ -210,7 +216,7 @@ final class PaywallPresentationModel {
         switch activePresentationSource {
         case .postOnboarding, .scheduledDiscount:
             markScheduledOfferAnchorNow()
-        case .manualDefault, .none:
+        case .manualDefault, .youTubeImport, .none:
             break
         }
     }
@@ -332,7 +338,7 @@ final class PaywallPresentationModel {
 
     private var shouldCountDefaultPaywallDismissal: Bool {
         switch activePresentationSource {
-        case .manualDefault, .postOnboarding:
+        case .manualDefault, .postOnboarding, .youTubeImport:
             activeOfferingIdentifier == Self.defaultOfferingIdentifier
         case .scheduledDiscount, .none:
             false
@@ -375,6 +381,8 @@ final class PaywallPresentationModel {
             "manual_default"
         case .scheduledDiscount:
             "scheduled_discount"
+        case .youTubeImport:
+            "youtube_import"
         }
     }
 }

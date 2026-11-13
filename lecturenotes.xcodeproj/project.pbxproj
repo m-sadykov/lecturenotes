@@ -30,6 +30,13 @@
 			remoteGlobalIDString = 79F001022F90000100A03B6B;
 			remoteInfo = LectraRecordingWidget;
 		};
+		79C7A0072FA1000100A03B6B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 79D51D672F58B1CD00F515B1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 79D51D6E2F58B1CD00F515B1;
+			remoteInfo = lecturenotes;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -50,6 +57,7 @@
 		7993187530457A740050A728 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		79D51D6F2F58B1CD00F515B1 /* lecturenotes.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = lecturenotes.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		79F001012F90000100A03B6B /* LectraRecordingWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LectraRecordingWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		79C7A0012FA1000100A03B6B /* lecturenotesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = lecturenotesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -91,6 +99,11 @@
 			path = LectraRecordingWidget;
 			sourceTree = "<group>";
 		};
+		79C7A0022FA1000100A03B6B /* lecturenotesTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = lecturenotesTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -118,6 +131,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		79C7A0052FA1000100A03B6B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -128,6 +148,7 @@
 				79F001052F90000100A03B6B /* Shared */,
 				79F001062F90000100A03B6B /* LectraRecordingWidget */,
 				79D51D712F58B1CD00F515B1 /* lecturenotes */,
+				79C7A0022FA1000100A03B6B /* lecturenotesTests */,
 				79D51D702F58B1CD00F515B1 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -137,6 +158,7 @@
 			children = (
 				79D51D6F2F58B1CD00F515B1 /* lecturenotes.app */,
 				79F001012F90000100A03B6B /* LectraRecordingWidget.appex */,
+				79C7A0012FA1000100A03B6B /* lecturenotesTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -203,6 +225,29 @@
 			productReference = 79F001012F90000100A03B6B /* LectraRecordingWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		79C7A0032FA1000100A03B6B /* lecturenotesTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 79C7A00B2FA1000100A03B6B /* Build configuration list for PBXNativeTarget "lecturenotesTests" */;
+			buildPhases = (
+				79C7A0042FA1000100A03B6B /* Sources */,
+				79C7A0052FA1000100A03B6B /* Frameworks */,
+				79C7A0062FA1000100A03B6B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				79C7A0082FA1000100A03B6B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				79C7A0022FA1000100A03B6B /* lecturenotesTests */,
+			);
+			name = lecturenotesTests;
+			packageProductDependencies = (
+			);
+			productName = lecturenotesTests;
+			productReference = 79C7A0012FA1000100A03B6B /* lecturenotesTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -218,6 +263,10 @@
 					};
 					79F001022F90000100A03B6B = {
 						CreatedOnToolsVersion = 26.3;
+					};
+					79C7A0032FA1000100A03B6B = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = 79D51D6E2F58B1CD00F515B1;
 					};
 				};
 			};
@@ -273,6 +322,7 @@
 			targets = (
 				79D51D6E2F58B1CD00F515B1 /* lecturenotes */,
 				79F001022F90000100A03B6B /* LectraRecordingWidget */,
+				79C7A0032FA1000100A03B6B /* lecturenotesTests */,
 			);
 		};
 /* End PBXProject section */
@@ -291,6 +341,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				7993187630457A740050A728 /* AppIcon.icon in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		79C7A0062FA1000100A03B6B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -337,6 +394,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		79C7A0042FA1000100A03B6B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -344,6 +408,11 @@
 			isa = PBXTargetDependency;
 			target = 79F001022F90000100A03B6B /* LectraRecordingWidget */;
 			targetProxy = 79F001082F90000100A03B6B /* PBXContainerItemProxy */;
+		};
+		79C7A0082FA1000100A03B6B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 79D51D6E2F58B1CD00F515B1 /* lecturenotes */;
+			targetProxy = 79C7A0072FA1000100A03B6B /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -605,6 +674,52 @@
 			};
 			name = Release;
 		};
+		79C7A0092FA1000100A03B6B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 6;
+				DEVELOPMENT_TEAM = KKRU34GVP4;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17;
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.marat.lecturenotesai.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/lecturenotes.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/lecturenotes";
+			};
+			name = Debug;
+		};
+		79C7A00A2FA1000100A03B6B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 6;
+				DEVELOPMENT_TEAM = KKRU34GVP4;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17;
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.marat.lecturenotesai.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/lecturenotes.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/lecturenotes";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -631,6 +746,15 @@
 			buildConfigurations = (
 				79F0010D2F90000100A03B6B /* Debug */,
 				79F0010E2F90000100A03B6B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		79C7A00B2FA1000100A03B6B /* Build configuration list for PBXNativeTarget "lecturenotesTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				79C7A0092FA1000100A03B6B /* Debug */,
+				79C7A00A2FA1000100A03B6B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
