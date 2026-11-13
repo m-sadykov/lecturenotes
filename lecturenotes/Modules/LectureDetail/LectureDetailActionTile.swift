@@ -45,7 +45,7 @@ struct LectureDetailActionTile: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppColor.surface)
+        .background(AppColor.fillSubtle)
         .clipShape(.rect(cornerRadius: 16))
         .contentShape(.rect(cornerRadius: 16))
     }
@@ -59,9 +59,9 @@ private struct LectureDetailActionIcon: View {
     var body: some View {
         Image(systemName: systemImage)
             .font(.body)
-            .foregroundStyle(AppColor.accent)
+            .foregroundStyle(.primary)
             .frame(width: iconSize, height: iconSize)
-            .background(AppColor.accent.opacity(0.14))
+            .background(AppColor.fillSubtle)
             .clipShape(.circle)
     }
 }
@@ -94,7 +94,7 @@ private struct LectureDetailActionAccessory: View {
         switch accessory {
         case .checkmark:
             Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(AppColor.accent)
+                .foregroundStyle(.primary)
                 .accessibilityLabel(Text("Ready"))
         case .chevron:
             Image(systemName: "chevron.right")

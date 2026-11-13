@@ -51,10 +51,12 @@ private struct LectureDetailFolderButton: View {
             }
             .font(.subheadline)
             .lineLimit(1)
+            .foregroundStyle(.primary)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+            .background(AppColor.fillSubtle, in: .capsule)
         }
-        .buttonStyle(.bordered)
-        .buttonBorderShape(.capsule)
-        .tint(.primary)
+        .buttonStyle(.plain)
     }
 }
 

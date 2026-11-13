@@ -33,12 +33,10 @@ enum AppUIColor {
             : .white
     }
 
-    /// Highlight color for headings and icons in generated study notes: brand purple in
-    /// light mode, and plain white in dark mode to match the app's monochrome dark theme.
+    /// Highlight color for headings, icons and controls on the lecture detail screen.
+    /// Monochrome to match the rest of the app: black in light mode, white in dark mode.
     static let accent = UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? .white
-            : UIColor(red: 0.420, green: 0.357, blue: 0.886, alpha: 1)
+        traits.userInterfaceStyle == .dark ? .white : .black
     }
 
     static let overlayScrim = UIColor { traits in
