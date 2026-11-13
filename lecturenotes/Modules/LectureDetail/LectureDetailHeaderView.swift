@@ -9,6 +9,8 @@ struct LectureDetailHeaderView: View {
     var showsFolderChip = true
     let onFolderTap: () -> Void
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             LectureDetailTitleText(lecture: lecture)
@@ -16,12 +18,23 @@ struct LectureDetailHeaderView: View {
                 .bold()
                 .lineLimit(3)
 
-            VStack(alignment: .leading, spacing: 10) {
-                LectureDetailMetadataText(lecture: lecture)
-
-                if showsFolderChip, let folderName {
-                    LectureDetailFolderChip(folderName: folderName, action: onFolderTap)
+            if showsFolderChip, let folderName {
+                // Chip and metadata share one row, with the metadata wrapping to a second
+                // line if needed. At accessibility text sizes they stack instead.
+                if dynamicTypeSize.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: 10) {
+                        LectureDetailMetadataText(lecture: lecture)
+                        LectureDetailFolderChip(folderName: folderName, action: onFolderTap)
+                    }
+                } else {
+                    HStack(spacing: 12) {
+                        LectureDetailFolderChip(folderName: folderName, action: onFolderTap)
+                            .fixedSize()
+                        LectureDetailMetadataText(lecture: lecture)
+                    }
                 }
+            } else {
+                LectureDetailMetadataText(lecture: lecture)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
