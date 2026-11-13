@@ -43,12 +43,17 @@ private struct LectureDetailActionTitle: View {
     let title: LocalizedStringResource
     let detailText: String?
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
+            // One line in the two-column grid: long titles truncate instead of breaking
+            // mid-word, and the pushed screen shows the full title. At accessibility
+            // sizes the grid is one column wide, so the title may take two lines.
             Text(title)
                 .font(.subheadline)
                 .foregroundStyle(.primary)
-                .lineLimit(2)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
 
             if let detailText {
                 Text(detailText)
