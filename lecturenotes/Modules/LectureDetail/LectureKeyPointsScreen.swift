@@ -13,12 +13,10 @@ struct LectureKeyPointsScreen: View {
         .background(AppColor.canvas)
         .navigationTitle(Text(LectureDetailContent.keyPoints.titleResource))
         .navigationBarTitleDisplayMode(.inline)
-        .circleBackButton()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                ToolbarCircleButton("Copy", systemImage: "doc.on.doc", action: onCopy)
+                Button("Copy", systemImage: "doc.on.doc", action: onCopy)
             }
-            .hiddenSharedBackground()
         }
     }
 }

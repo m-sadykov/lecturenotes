@@ -23,12 +23,10 @@ struct LectureTranscriptScreen: View {
         .background(AppColor.canvas)
         .navigationTitle(Text(LectureDetailContent.transcript.titleResource))
         .navigationBarTitleDisplayMode(.inline)
-        .circleBackButton()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                ToolbarCircleButton("Copy", systemImage: "doc.on.doc", action: onCopy)
+                Button("Copy", systemImage: "doc.on.doc", action: onCopy)
             }
-            .hiddenSharedBackground()
         }
         .task(id: transcript) {
             paragraphs = TranscriptParagraphFormatter.paragraphs(from: transcript)
