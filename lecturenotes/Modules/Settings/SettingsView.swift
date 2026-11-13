@@ -138,6 +138,7 @@ struct SettingsView: View {
         .background(AppColor.canvas)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .circleBackButton()
         .task {
             analyticsService?.track(.settingsOpened(plan: subscriptionManager.currentPlan))
             crashReportingService?.setCurrentScreen("settings")

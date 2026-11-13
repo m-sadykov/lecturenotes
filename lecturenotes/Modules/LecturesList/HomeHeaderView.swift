@@ -28,6 +28,7 @@ struct HomeHeaderView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.primary)
+            .accessibilityLabel(Text("Settings"))
         }
     }
 }
