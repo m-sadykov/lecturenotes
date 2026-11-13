@@ -2,66 +2,12 @@ import Observation
 import SwiftUI
 import UIKit
 
-enum LectureDetailSection: CaseIterable, Identifiable {
-    case summary
-    case transcript
-    case flashcards
-    case quiz
-
-    var id: Self { self }
-
-    var titleResource: LocalizedStringResource {
-        switch self {
-        case .summary:
-            "Summary"
-        case .transcript:
-            "Transcript"
-        case .flashcards:
-            "Flashcards"
-        case .quiz:
-            "Quiz"
-        }
-    }
-
-    var title: String {
-        String(localized: titleResource)
-    }
-
-    var emoji: String {
-        switch self {
-        case .summary:
-            "📝"
-        case .transcript:
-            "📄"
-        case .flashcards:
-            "🔄"
-        case .quiz:
-            "⁉️"
-        }
-    }
-}
-
 enum LectureDetailDestination: Identifiable {
     case flashcards
     case quiz
 
     var id: String {
         switch self {
-        case .flashcards:
-            "flashcards"
-        case .quiz:
-            "quiz"
-        }
-    }
-}
-
-private extension LectureDetailSection {
-    var analyticsValue: String {
-        switch self {
-        case .summary:
-            "summary"
-        case .transcript:
-            "transcript"
         case .flashcards:
             "flashcards"
         case .quiz:
@@ -77,8 +23,8 @@ final class LectureDetailViewModel {
     var folders: [LectureFolder] = []
     var playerViewModel: LecturePlayerViewModel?
     var processingViewModel: LectureProcessingViewModel?
-    var selectedSection: LectureDetailSection = .summary
     var activeDestination: LectureDetailDestination?
+    var activeRoute: LectureDetailRoute?
     var isFolderPickerPresented = false
     var isRenameAlertPresented = false
     var isDeleteAlertPresented = false
@@ -117,16 +63,30 @@ final class LectureDetailViewModel {
         self.onLectureDeleted = onLectureDeleted
     }
 
-    var copyableText: String? {
-        switch selectedSection {
-        case .summary:
-            let text = lecture.summaryLong.isEmpty ? lecture.summaryShort : lecture.summaryLong
-            return text.isEmpty ? nil : text
-        case .transcript:
-            return lecture.transcript.isEmpty ? nil : lecture.transcript
-        case .flashcards, .quiz:
+    /// The note shown on the detail screen: the Markdown study note when the backend
+    /// produced one, otherwise the plain detailed summary, otherwise the short one.
+    var summaryText: String {
+        if !lecture.summaryNote.isEmpty {
+            return lecture.summaryNote
+        }
+        return lecture.summaryLong.isEmpty ? lecture.summaryShort : lecture.summaryLong
+    }
+
+    /// The one- or two-sentence summary shown above the full note. Hidden when the
+    /// full note is missing, because `summaryText` already falls back to it.
+    var summaryBriefText: String? {
+        let brief = lecture.summaryShort.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !brief.isEmpty, !lecture.summaryNote.isEmpty || !lecture.summaryLong.isEmpty else {
             return nil
         }
+        return brief
+    }
+
+    var folderName: String? {
+        guard let folderID = lecture.folderID else {
+            return nil
+        }
+        return folders.first { $0.id == folderID }?.name
     }
 
     var processingLecture: Lecture? {
@@ -237,20 +197,24 @@ final class LectureDetailViewModel {
         processingErrorFeedbackToken += 1
     }
 
-    func selectSection(_ section: LectureDetailSection) {
+    func open(_ content: LectureDetailContent) {
         analyticsService?.track(
             .detailSectionSelected(
                 context: .init(lecture: lecture),
-                section: section.analyticsValue
+                section: content.analyticsValue
             )
         )
-        switch section {
+        switch content {
         case .flashcards:
             activeDestination = .flashcards
         case .quiz:
             activeDestination = .quiz
-        case .summary, .transcript:
-            selectedSection = section
+        case .transcript:
+            activeRoute = .transcript
+        case .keyPoints:
+            activeRoute = .keyPoints
+        case .summary:
+            break
         }
     }
 
@@ -307,20 +271,19 @@ final class LectureDetailViewModel {
         }
     }
 
-    func copyActiveSectionText() {
-        guard let copyableText else {
+    func copy(_ content: LectureDetailContent) {
+        guard let text = content.copyableText(for: lecture, summaryText: summaryText) else {
             return
         }
 
-        UIPasteboard.general.string = copyableText
+        UIPasteboard.general.string = text
         analyticsService?.track(
             .sectionCopied(
                 context: .init(lecture: lecture),
-                section: selectedSection.analyticsValue
+                section: content.analyticsValue
             )
         )
-        let sectionName = selectedSection == .summary ? LectureDetailSection.summary.title : LectureDetailSection.transcript.title
-        showToast(String(localized: "\(sectionName) copied."))
+        showToast(String(localized: "Copied to clipboard."))
     }
 
     func requestDelete() {

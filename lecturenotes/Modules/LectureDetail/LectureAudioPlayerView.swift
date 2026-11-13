@@ -1,98 +1,96 @@
 import SwiftUI
 
+/// Audio player card: scrubber, ±10 s skip, play/pause, speed and share.
 struct LectureAudioPlayerView: View {
     let lecture: Lecture
     @Bindable var viewModel: LecturePlayerViewModel
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            VStack(alignment: .leading, spacing: 4) {
-                lectureTitleView
+    private static let skipInterval: Duration = .seconds(10)
 
-                metadataText
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+    var body: some View {
+        VStack(spacing: 16) {
+            VStack(spacing: 6) {
+                PlayerProgressBarView(
+                    progress: Binding(
+                        get: { viewModel.progress },
+                        set: { viewModel.seek(to: $0) }
+                    ),
+                    isEnabled: viewModel.canPlay
+                )
+
+                HStack {
+                    Text(LectureFormatters.clockText(viewModel.currentTime))
+                    Spacer()
+                    Text(LectureFormatters.clockText(viewModel.totalDuration))
+                }
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
             }
 
-            HStack(alignment: .top, spacing: 14) {
-                Button(action: viewModel.togglePlayback) {
-                    Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.title3)
-                        .foregroundStyle(.primary)
-                        .frame(width: 52, height: 52)
-                        .background(AppColor.fillSubtle)
-                        .clipShape(.circle)
+            HStack {
+                LectureAudioShareButton(audioURL: lecture.audioURL)
+                    .frame(maxWidth: .infinity)
+
+                Button("Back 10 seconds", systemImage: "gobackward.10") {
+                    viewModel.seek(by: .zero - Self.skipInterval)
                 }
-                .buttonStyle(.plain)
-                .disabled(!viewModel.canPlay)
+                .frame(maxWidth: .infinity)
 
-                VStack(spacing: 8) {
-                    PlayerProgressBarView(
-                        progress: Binding(
-                            get: { viewModel.progress },
-                            set: { viewModel.seek(to: $0) }
-                        ),
-                        isEnabled: viewModel.canPlay
-                    )
+                Button(
+                    viewModel.isPlaying ? "Pause" : "Play",
+                    systemImage: viewModel.isPlaying ? "pause.fill" : "play.fill",
+                    action: viewModel.togglePlayback
+                )
+                .font(.largeTitle)
+                .contentTransition(.symbolEffect(.replace))
+                .frame(maxWidth: .infinity)
 
-                    HStack {
-                        Text(LectureFormatters.clockText(viewModel.currentTime))
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
-
-                        Spacer()
-
-                        Text(LectureFormatters.clockText(viewModel.totalDuration))
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
+                Button("Forward 10 seconds", systemImage: "goforward.10") {
+                    viewModel.seek(by: Self.skipInterval)
                 }
-                .padding(.top, 14)
+                .frame(maxWidth: .infinity)
 
                 Button(action: viewModel.cyclePlaybackRate) {
                     Text(rateText)
-                        .font(.subheadline)
-                        .foregroundStyle(.primary)
-                        .frame(minWidth: 36)
+                        .font(.headline.monospacedDigit())
                 }
-                .buttonStyle(.plain)
-                .disabled(!viewModel.canPlay)
-                .padding(.top, 18)
+                .accessibilityLabel(Text("Playback speed"))
+                .accessibilityValue(Text(rateText))
+                .frame(maxWidth: .infinity)
             }
+            .labelStyle(.iconOnly)
+            .font(.title2)
+            .buttonStyle(.plain)
+            .foregroundStyle(.primary)
+            .disabled(!viewModel.canPlay)
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 6)
+        .padding()
+        .background(AppColor.surface)
+        .clipShape(.rect(cornerRadius: 20))
     }
 
     private var rateText: String {
         if viewModel.playbackRate == floor(viewModel.playbackRate) {
             "\(Int(viewModel.playbackRate))x"
         } else {
-            "\(viewModel.playbackRate.formatted(.number.precision(.fractionLength(2))))x"
+            "\(viewModel.playbackRate.formatted(.number.precision(.fractionLength(0...2))))x"
         }
     }
+}
 
-    @ViewBuilder
-    private var lectureTitleView: some View {
-        if let localizedDisplayTitleKey = lecture.localizedDisplayTitleKey {
-            Text(localizedDisplayTitleKey.resource)
-                .font(.title)
-                .bold()
-                .lineLimit(2)
+private struct LectureAudioShareButton: View {
+    let audioURL: URL?
+
+    var body: some View {
+        if let audioURL {
+            ShareLink(item: audioURL) {
+                Label("Share Audio", systemImage: "square.and.arrow.up")
+            }
         } else {
-            Text(lecture.title)
-                .font(.title)
-                .bold()
-                .lineLimit(2)
+            Label("Share Audio", systemImage: "square.and.arrow.up")
+                .hidden()
+                .accessibilityHidden(true)
         }
-    }
-
-    private var metadataText: Text {
-        Text(lecture.createdAt, format: LectureFormatters.date)
-        + Text(" · ")
-        + Text(LectureFormatters.clockText(lecture.duration))
-        + Text(" · ")
-        + Text(lecture.sourceType.titleResource)
     }
 }
 
@@ -113,11 +111,11 @@ private struct PlayerProgressBarView: View {
                     .frame(height: 6)
 
                 Capsule()
-                    .fill(AppColor.ink)
+                    .fill(AppColor.accent)
                     .frame(width: max(thumbOffset, 6), height: 6)
 
                 Circle()
-                    .fill(AppColor.ink)
+                    .fill(AppColor.accent)
                     .frame(width: 18, height: 18)
                     .shadow(color: AppColor.shadow, radius: 8, y: 2)
                     .offset(x: min(max(thumbOffset - 9, 0), width - 18))
@@ -145,6 +143,19 @@ private struct PlayerProgressBarView: View {
         }
         .frame(height: 24)
         .allowsHitTesting(isEnabled)
+        .accessibilityElement()
+        .accessibilityLabel(Text("Playback position"))
+        .accessibilityValue(Text(progress.clamped(to: 0...1), format: .percent.precision(.fractionLength(0))))
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment:
+                progress = (progress + 0.05).clamped(to: 0...1)
+            case .decrement:
+                progress = (progress - 0.05).clamped(to: 0...1)
+            @unknown default:
+                break
+            }
+        }
     }
 }
 
@@ -155,16 +166,20 @@ private extension Double {
 }
 
 #Preview {
-    LectureAudioPlayerView(
-        lecture: previewLectureForPlayer,
-        viewModel: LecturePlayerViewModel(
-            lectureTitle: previewLectureForPlayer.displayTitle,
-            audioURL: nil,
-            remoteAudioPath: nil,
-            fallbackDuration: .seconds(600)
+    ZStack {
+        AppColor.canvas.ignoresSafeArea()
+
+        LectureAudioPlayerView(
+            lecture: previewLectureForPlayer,
+            viewModel: LecturePlayerViewModel(
+                lectureTitle: previewLectureForPlayer.displayTitle,
+                audioURL: nil,
+                remoteAudioPath: nil,
+                fallbackDuration: .seconds(600)
+            )
         )
-    )
-    .padding()
+        .padding()
+    }
 }
 
 private let previewLectureForPlayer = Lecture(

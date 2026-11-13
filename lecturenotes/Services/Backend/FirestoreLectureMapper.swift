@@ -13,6 +13,8 @@ enum FirestoreLectureMapper {
             "transcript": lecture.transcript,
             "summaryShort": lecture.summaryShort,
             "summaryLong": lecture.summaryLong,
+            "summaryNote": lecture.summaryNote,
+            "keyPoints": lecture.keyPoints,
             "flashcards": lecture.flashcards.map {
                 [
                     "id": $0.id.uuidString,
@@ -93,6 +95,8 @@ enum FirestoreLectureMapper {
             transcript: stringValue(for: "transcript", in: data) ?? "",
             summaryShort: stringValue(for: "summaryShort", in: data) ?? "",
             summaryLong: stringValue(for: "summaryLong", in: data) ?? "",
+            summaryNote: stringValue(for: "summaryNote", in: data) ?? "",
+            keyPoints: stringValue(for: "keyPoints", in: data) ?? "",
             flashcards: flashcardsValue(for: "flashcards", in: data),
             quiz: quizValue(for: "quiz", in: data),
             processingErrorMessage: stringValue(for: "errorMessage", in: data)
