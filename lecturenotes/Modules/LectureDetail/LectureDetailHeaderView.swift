@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// Title, metadata and folder button at the top of the lecture detail screen.
+/// Title, metadata and folder chip at the top of the lecture detail screen.
+/// The chip appears only when the lecture is in a folder; adding to a folder lives in
+/// the actions menu, so the header does not repeat it.
 struct LectureDetailHeaderView: View {
     let lecture: Lecture
     let folderName: String?
-    var showsFolderButton = true
+    var showsFolderChip = true
     let onFolderTap: () -> Void
 
     var body: some View {
@@ -14,40 +16,29 @@ struct LectureDetailHeaderView: View {
                 .bold()
                 .lineLimit(3)
 
-            if showsFolderButton {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 12) {
-                        LectureDetailFolderButton(folderName: folderName, action: onFolderTap)
-                        LectureDetailMetadataText(lecture: lecture)
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        LectureDetailMetadataText(lecture: lecture)
-                        LectureDetailFolderButton(folderName: folderName, action: onFolderTap)
-                    }
-                }
-            } else {
+            VStack(alignment: .leading, spacing: 10) {
                 LectureDetailMetadataText(lecture: lecture)
+
+                if showsFolderChip, let folderName {
+                    LectureDetailFolderChip(folderName: folderName, action: onFolderTap)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-private struct LectureDetailFolderButton: View {
-    let folderName: String?
+/// Shows the lecture's folder; tapping it opens the folder picker to move the lecture.
+private struct LectureDetailFolderChip: View {
+    let folderName: String
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Label {
-                if let folderName {
-                    Text(folderName)
-                } else {
-                    Text("Add to Folder")
-                }
+                Text(folderName)
             } icon: {
-                Image(systemName: folderName == nil ? "folder.badge.plus" : "folder")
+                Image(systemName: "folder")
             }
             .font(.subheadline)
             .lineLimit(1)
