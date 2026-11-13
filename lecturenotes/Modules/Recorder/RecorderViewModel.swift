@@ -99,7 +99,7 @@ final class RecorderViewModel {
         }
 
         mode = .paused
-        errorMessage = String(localized: "Recording was paused by the system.")
+        errorMessage = String(appLocalized: "Recording was paused by the system.")
         syncLiveActivity()
         crashReportingService?.breadcrumb(
             "recording_session_interrupted",
@@ -246,7 +246,7 @@ final class RecorderViewModel {
                 guard mode == .recording else { continue }
                 guard recordingManager.isRecording else {
                     mode = .paused
-                    errorMessage = String(localized: "Recording was paused by the system.")
+                    errorMessage = String(appLocalized: "Recording was paused by the system.")
                     crashReportingService?.breadcrumb(
                         "recording_session_interrupted",
                         metadata: [

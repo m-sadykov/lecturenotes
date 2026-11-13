@@ -171,11 +171,11 @@ enum YouTubeImportAlertError: Equatable {
     var message: String {
         switch self {
         case .invalidLink:
-            String(localized: "Enter a valid YouTube link.")
+            String(appLocalized: "Enter a valid YouTube link.")
         case .processingLimitReached(let remainingCount, let plan):
             String(appLocalized: "You have \(remainingCount) processing attempts left on your \(plan.title) plan.")
         case .saveFailed:
-            String(localized: "Unable to save YouTube import right now.")
+            String(appLocalized: "Unable to save YouTube import right now.")
         }
     }
 }
@@ -222,7 +222,7 @@ private struct YouTubeURLField: UIViewRepresentable {
 
     private func updatePlaceholder(for textField: UITextField) {
         textField.attributedPlaceholder = NSAttributedString(
-            string: String(localized: "https://www.youtube.com/watch?v=..."),
+            string: String(appLocalized: "https://www.youtube.com/watch?v=..."),
             attributes: [
                 .foregroundColor: UIColor.placeholderText,
             ]

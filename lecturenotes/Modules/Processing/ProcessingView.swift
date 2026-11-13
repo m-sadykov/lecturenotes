@@ -172,7 +172,7 @@ struct ProcessingView: View {
         case .ready:
             .localized("You can now open the summary, transcript, flashcards, and quiz.")
         case .failed:
-            .custom(lecture.processingErrorMessage ?? String(localized: "Processing failed."))
+            .custom(lecture.processingErrorMessage ?? String(appLocalized: "Processing failed."))
         case .draft:
             .localized("Getting everything ready.")
         }

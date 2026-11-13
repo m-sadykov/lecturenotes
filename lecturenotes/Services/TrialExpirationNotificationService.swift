@@ -223,7 +223,7 @@ final class TrialExpirationNotificationService {
         )
 
         let content = UNMutableNotificationContent()
-        content.title = String(localized: "Your trial ends tomorrow")
+        content.title = String(appLocalized: "Your trial ends tomorrow")
         content.body = String(
             localized: "Subscribe to keep your \(plan.title) features."
         )

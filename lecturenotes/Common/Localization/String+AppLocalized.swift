@@ -16,4 +16,16 @@ extension String {
         let languageCode = languageBundle.bundleURL.deletingPathExtension().lastPathComponent
         self.init(localized: value, bundle: languageBundle, locale: Locale(identifier: languageCode))
     }
+
+    /// `String(appLocalized:)` for a `LocalizedStringResource` written as a string literal,
+    /// such as an enum's `titleResource`. The lookup key comes from the resource's default
+    /// value, so this suits literal resources, not ones created with a separate key.
+    nonisolated init(appLocalizedResource resource: LocalizedStringResource) {
+        guard Bundle.appLanguageBundle != nil else {
+            self.init(localized: resource)
+            return
+        }
+
+        self.init(appLocalized: resource.defaultValue)
+    }
 }

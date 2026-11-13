@@ -80,7 +80,7 @@ struct SettingsView: View {
 
                     openURL(draft.mailtoURL) { accepted in
                         if !accepted {
-                            presentAlert(String(localized: "Unable to open Mail right now."))
+                            presentAlert(String(appLocalized: "Unable to open Mail right now."))
                         }
                     }
                 }
@@ -120,7 +120,7 @@ struct SettingsView: View {
                     canCopyUserID: viewModel.canCopyUserID
                 ) {
                     guard viewModel.copyUserID() else {
-                        presentAlert(String(localized: "User ID is not available yet."))
+                        presentAlert(String(appLocalized: "User ID is not available yet."))
                         return
                     }
                 }
@@ -161,7 +161,7 @@ struct SettingsView: View {
     private func openExternalURL(_ url: URL) {
         openURL(url) { accepted in
             if !accepted {
-                presentAlert(String(localized: "Unable to open the link right now."))
+                presentAlert(String(appLocalized: "Unable to open the link right now."))
             }
         }
     }

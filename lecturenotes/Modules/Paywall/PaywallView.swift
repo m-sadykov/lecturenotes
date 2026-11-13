@@ -259,7 +259,7 @@ final class PaywallPresentationModel {
 
             guard let offering = resolvedOffering ?? resolvedFallbackOffering ?? fallbackOffering else {
                 if showsError {
-                    paywallErrorMessage = String(localized: "Paywall is unavailable right now.")
+                    paywallErrorMessage = String(appLocalized: "Paywall is unavailable right now.")
                 }
                 return false
             }
@@ -284,7 +284,7 @@ final class PaywallPresentationModel {
             return true
         } catch {
             if showsError {
-                paywallErrorMessage = String(localized: "Paywall is unavailable right now.")
+                paywallErrorMessage = String(appLocalized: "Paywall is unavailable right now.")
             }
             crashReportingService?.recordNonFatal(
                 error,

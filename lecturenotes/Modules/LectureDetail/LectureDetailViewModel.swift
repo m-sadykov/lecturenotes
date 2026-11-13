@@ -259,12 +259,12 @@ final class LectureDetailViewModel {
         Task {
             do {
                 try await repository.saveLecture(renamedLecture)
-                showToast(String(localized: "Title updated."))
+                showToast(String(appLocalized: "Title updated."))
             } catch {
                 lecture = previousLecture
                 onLectureUpdated(previousLecture)
                 try? await repository.saveLecture(previousLecture)
-                presentErrorAlert(String(localized: "Unable to update title right now."))
+                presentErrorAlert(String(appLocalized: "Unable to update title right now."))
             }
 
             isSavingTitle = false
@@ -283,7 +283,7 @@ final class LectureDetailViewModel {
                 section: content.analyticsValue
             )
         )
-        showToast(String(localized: "Copied to clipboard."))
+        showToast(String(appLocalized: "Copied to clipboard."))
     }
 
     func requestDelete() {
@@ -302,7 +302,7 @@ final class LectureDetailViewModel {
             } catch {
                 await MainActor.run {
                     self.folders.removeAll { $0.id == folder.id }
-                    showToast(String(localized: "Unable to create folder right now."))
+                    showToast(String(appLocalized: "Unable to create folder right now."))
                 }
             }
         }
@@ -380,16 +380,16 @@ final class LectureDetailViewModel {
                 let message = if let folderName = folders.first(where: { $0.id == folderID })?.name {
                     String(appLocalized: "Added to \(folderName).")
                 } else if folderID == nil {
-                    String(localized: "Removed from folder.")
+                    String(appLocalized: "Removed from folder.")
                 } else {
-                    String(localized: "Added to folder.")
+                    String(appLocalized: "Added to folder.")
                 }
                 showToast(message)
             } catch {
                 lecture = previousLecture
                 onLectureUpdated(previousLecture)
                 try? await repository.saveLecture(previousLecture)
-                showToast(String(localized: "Unable to update folder right now."))
+                showToast(String(appLocalized: "Unable to update folder right now."))
             }
 
             isSavingFolder = false

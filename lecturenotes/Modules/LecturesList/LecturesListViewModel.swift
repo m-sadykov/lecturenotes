@@ -31,39 +31,39 @@ final class LecturesListViewModel {
         var title: String {
             switch kind {
             case .audio:
-                String(localized: "Recording Too Long")
+                String(appLocalized: "Recording Too Long")
             case .pdf:
-                String(localized: "PDF Too Large")
+                String(appLocalized: "PDF Too Large")
             }
         }
 
         var message: String {
             switch (kind, plan) {
             case (.audio, .freemium):
-                String(localized: "This recording exceeds your plan limit. Freemium plan allows only 5 minutes per audio import.")
+                String(appLocalized: "This recording exceeds your plan limit. Freemium plan allows only 5 minutes per audio import.")
             case (.audio, .premium):
-                String(localized: "This recording exceeds your plan limit. Premium plan allows only 100 minutes per audio import.")
+                String(appLocalized: "This recording exceeds your plan limit. Premium plan allows only 100 minutes per audio import.")
             case (.audio, .pro):
-                String(localized: "This recording exceeds your plan limit. Pro plan allows only 4 hours per audio import.")
+                String(appLocalized: "This recording exceeds your plan limit. Pro plan allows only 4 hours per audio import.")
             case (.pdf, .freemium):
-                String(localized: "This file exceeds your plan limit. Freemium plan allows only 5 pages per file import.")
+                String(appLocalized: "This file exceeds your plan limit. Freemium plan allows only 5 pages per file import.")
             case (.pdf, .premium):
-                String(localized: "This file exceeds your plan limit. Premium plan allows only 50 pages per file import.")
+                String(appLocalized: "This file exceeds your plan limit. Premium plan allows only 50 pages per file import.")
             case (.pdf, .pro):
-                String(localized: "This file exceeds your plan limit. Pro plan allows only 200 pages per file import.")
+                String(appLocalized: "This file exceeds your plan limit. Pro plan allows only 200 pages per file import.")
             }
         }
 
         var upgradeTitle: String {
-            String(localized: "Upgrade to Pro")
+            String(appLocalized: "Upgrade to Pro")
         }
 
         var upgradeMessage: String {
             switch kind {
             case .audio:
-                String(localized: "Record up to 4 hours per recording with Pro.")
+                String(appLocalized: "Record up to 4 hours per recording with Pro.")
             case .pdf:
-                String(localized: "Import PDFs up to 200 pages with Pro.")
+                String(appLocalized: "Import PDFs up to 200 pages with Pro.")
             }
         }
     }
@@ -415,7 +415,7 @@ final class LecturesListViewModel {
             } catch {
                 handleLectureUpdated(previousLecture)
                 try? await repository.saveLecture(previousLecture)
-                presentErrorAlert(String(localized: "Unable to update title right now."))
+                presentErrorAlert(String(appLocalized: "Unable to update title right now."))
             }
 
             isSavingTitle = false
@@ -561,10 +561,10 @@ final class LecturesListViewModel {
                     sourceType: "recording",
                     entryPoint: "mini_recorder",
                     plan: currentPlan,
-                    reason: String(localized: "Recording must be at least 3 seconds long.")
+                    reason: String(appLocalized: "Recording must be at least 3 seconds long.")
                 )
             )
-            return .rejected(message: String(localized: "Recording must be at least 3 seconds long."))
+            return .rejected(message: String(appLocalized: "Recording must be at least 3 seconds long."))
         }
 
         if let validationMessage = await validateRecordingDuration(recording.duration) {
@@ -620,10 +620,10 @@ final class LecturesListViewModel {
                     sourceType: "recording",
                     entryPoint: "mini_recorder",
                     plan: currentPlan,
-                    reason: String(localized: "Unable to save recording right now.")
+                    reason: String(appLocalized: "Unable to save recording right now.")
                 )
             )
-            return .rejected(message: String(localized: "Unable to save recording right now."))
+            return .rejected(message: String(appLocalized: "Unable to save recording right now."))
         }
     }
 
@@ -634,7 +634,7 @@ final class LecturesListViewModel {
                     sourceType: "recording",
                     entryPoint: "mini_recorder",
                     plan: currentPlan,
-                    reason: String(localized: "Recording must be at least 3 seconds long.")
+                    reason: String(appLocalized: "Recording must be at least 3 seconds long.")
                 )
             )
             showLocalizedToast("Recording must be at least 3 seconds long.")
@@ -724,10 +724,10 @@ final class LecturesListViewModel {
                         sourceType: "audio",
                         entryPoint: "file_importer",
                         plan: currentPlan,
-                        reason: String(localized: "Unable to save imported audio right now.")
+                        reason: String(appLocalized: "Unable to save imported audio right now.")
                     )
                 )
-                return .rejected(message: String(localized: "Unable to save imported audio right now."))
+                return .rejected(message: String(appLocalized: "Unable to save imported audio right now."))
             }
         } catch {
             crashReportingService?.recordNonFatal(
@@ -757,10 +757,10 @@ final class LecturesListViewModel {
                     sourceType: "text",
                     entryPoint: "text_import_sheet",
                     plan: currentPlan,
-                    reason: String(localized: "Enter some lecture text first.")
+                    reason: String(appLocalized: "Enter some lecture text first.")
                 )
             )
-            return .rejected(message: String(localized: "Enter some lecture text first."))
+            return .rejected(message: String(appLocalized: "Enter some lecture text first."))
         }
 
         if let validationMessage = await validateProcessingAvailability() {
@@ -878,11 +878,11 @@ final class LecturesListViewModel {
             lectures.removeAll { $0.id == lecture.id }
             let message = switch textDocument.sourceType {
             case .pdf:
-                String(localized: "Unable to save imported PDF right now.")
+                String(appLocalized: "Unable to save imported PDF right now.")
             case .text:
-                String(localized: "Unable to save imported text right now.")
+                String(appLocalized: "Unable to save imported text right now.")
             case .audio, .youtube:
-                String(localized: "Unable to save imported content right now.")
+                String(appLocalized: "Unable to save imported content right now.")
             }
             analyticsService?.track(
                 .contentCreateFailed(
@@ -912,7 +912,7 @@ final class LecturesListViewModel {
                     sourceType: "youtube",
                     entryPoint: "youtube_import_sheet",
                     plan: currentPlan,
-                    reason: String(localized: "Enter a valid YouTube link.")
+                    reason: String(appLocalized: "Enter a valid YouTube link.")
                 )
             )
             return .rejected(.invalidLink)
@@ -924,7 +924,7 @@ final class LecturesListViewModel {
                     sourceType: "youtube",
                     entryPoint: "youtube_import_sheet",
                     plan: currentPlan,
-                    reason: String(localized: "Enter a valid YouTube link.")
+                    reason: String(appLocalized: "Enter a valid YouTube link.")
                 )
             )
             return .rejected(.invalidLink)
@@ -962,7 +962,7 @@ final class LecturesListViewModel {
             summaryLong: "",
             flashcards: [],
             quiz: [],
-            processingErrorMessage: processingService == nil ? String(localized: "YouTube import requires backend processing.") : nil
+            processingErrorMessage: processingService == nil ? String(appLocalized: "YouTube import requires backend processing.") : nil
         )
 
         lectures.insert(lecture, at: 0)
@@ -992,7 +992,7 @@ final class LecturesListViewModel {
                     sourceType: "youtube",
                     entryPoint: "youtube_import_sheet",
                     plan: currentPlan,
-                    reason: String(localized: "Unable to save YouTube import right now.")
+                    reason: String(appLocalized: "Unable to save YouTube import right now.")
                 )
             )
             return .rejected(.saveFailed)
@@ -1036,7 +1036,7 @@ final class LecturesListViewModel {
                     "source_type": deletedLecture.sourceType.rawValue,
                 ]
             )
-            return .rejected(message: String(localized: "Unable to delete lecture right now."))
+            return .rejected(message: String(appLocalized: "Unable to delete lecture right now."))
         }
     }
 
@@ -1058,7 +1058,7 @@ final class LecturesListViewModel {
         switch result {
         case .success(let urls):
             guard let url = urls.first else {
-                presentImportError(String(localized: "No audio file was selected."))
+                presentImportError(String(appLocalized: "No audio file was selected."))
                 return
             }
 
@@ -1073,7 +1073,7 @@ final class LecturesListViewModel {
         switch result {
         case .success(let urls):
             guard let url = urls.first else {
-                presentImportError(String(localized: "No PDF file was selected."))
+                presentImportError(String(appLocalized: "No PDF file was selected."))
                 return
             }
 
@@ -1410,7 +1410,7 @@ final class LecturesListViewModel {
                         context: .init(lecture: lecture),
                         plan: currentPlan,
                         stage: previousLecture.status.rawValue,
-                        reason: lecture.processingErrorMessage ?? String(localized: "Unknown processing error")
+                        reason: lecture.processingErrorMessage ?? String(appLocalized: "Unknown processing error")
                     )
                 )
             }

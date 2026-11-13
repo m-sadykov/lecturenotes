@@ -245,13 +245,13 @@ enum FirebaseLectureProcessingError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingAudioFile:
-            return String(localized: "Recording file is unavailable.")
+            return String(appLocalized: "Recording file is unavailable.")
         case .missingTranscript:
-            return String(localized: "Imported content is empty.")
+            return String(appLocalized: "Imported content is empty.")
         case .missingSourceURL:
-            return String(localized: "Source URL is unavailable.")
+            return String(appLocalized: "Source URL is unavailable.")
         case .missingLectureDocument:
-            return String(localized: "Lecture document is unavailable.")
+            return String(appLocalized: "Lecture document is unavailable.")
         case .processingLimitExceeded(let remainingCount):
             return String(appLocalized: "Not enough processing attempts left. Remaining: \(max(remainingCount, 0)).")
         case .audioLimitExceeded(let limit):
