@@ -82,6 +82,43 @@ final class FirebaseLectureCommandService {
         )
     }
 
+    /// Asks the backend for a new set of flashcards or quiz questions for a ready lecture.
+    /// The function saves the set to the lecture document and returns it.
+    func regenerateStudyItems(
+        lectureID: UUID,
+        kind: StudyItemsKind
+    ) async throws -> RegeneratedStudyItems {
+        _ = try await authService.ensureSignedIn()
+
+        let data: [String: Any] = [
+            "lectureId": lectureID.uuidString,
+            "kind": kind.rawValue,
+        ]
+
+        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<RegeneratedStudyItems, Error>) in
+            functions.httpsCallable("regenerateStudyItems").call(data) { result, error in
+                if let error {
+                    continuation.resume(throwing: StudyItemsRegenerationError(error: error))
+                    return
+                }
+
+                let items = (result?.data as? [String: Any])?["items"]
+                let regenerated: RegeneratedStudyItems = switch kind {
+                case .flashcards:
+                    .flashcards(FirestoreLectureMapper.flashcards(from: items))
+                case .quiz:
+                    .quiz(FirestoreLectureMapper.quiz(from: items))
+                }
+
+                if regenerated.isEmpty {
+                    continuation.resume(throwing: StudyItemsRegenerationError.failed)
+                } else {
+                    continuation.resume(returning: regenerated)
+                }
+            }
+        }
+    }
+
     private func call(_ name: String, data: Any) async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             functions.httpsCallable(name).call(data) { _, error in

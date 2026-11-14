@@ -4,7 +4,8 @@ import Observation
 @MainActor
 @Observable
 final class QuizViewModel {
-    let questions: [QuizQuestion]
+    private(set) var questions: [QuizQuestion]
+    let regeneration: StudyItemsRegenerationModel<QuizQuestion>
 
     var currentIndex = 0
     private var answersByQuestionIndex: [Int: Int] = [:]
@@ -14,9 +15,11 @@ final class QuizViewModel {
     init(
         questions: [QuizQuestion],
         analyticsService: AppAnalyticsService? = nil,
-        analyticsContext: LectureAnalyticsContext? = nil
+        analyticsContext: LectureAnalyticsContext? = nil,
+        regeneration: StudyItemsRegenerationModel<QuizQuestion>? = nil
     ) {
         self.questions = questions
+        self.regeneration = regeneration ?? .unavailable
         self.analyticsService = analyticsService
         self.analyticsContext = analyticsContext
     }
@@ -128,6 +131,21 @@ final class QuizViewModel {
             return
         }
         currentIndex = index
+    }
+
+    /// Replaces the quiz with newly generated questions and starts it over.
+    func generateNewSet() async {
+        guard let newQuestions = await regeneration.generate() else {
+            return
+        }
+
+        replaceQuestions(newQuestions)
+    }
+
+    func replaceQuestions(_ newQuestions: [QuizQuestion]) {
+        questions = newQuestions
+        answersByQuestionIndex = [:]
+        currentIndex = 0
     }
 
     func trackStarted() {

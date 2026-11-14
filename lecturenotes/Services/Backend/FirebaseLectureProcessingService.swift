@@ -30,6 +30,22 @@ final class FirebaseLectureProcessingService {
         self.crashReportingService = crashReportingService
     }
 
+    /// Generates a new set of flashcards or quiz questions for a ready lecture.
+    /// Throws `StudyItemsRegenerationError`.
+    func regenerateStudyItems(
+        for lecture: Lecture,
+        kind: StudyItemsKind
+    ) async throws -> RegeneratedStudyItems {
+        crashReportingService?.breadcrumb(
+            "study_items_regeneration_started",
+            metadata: [
+                "lecture_id": lecture.id.uuidString,
+                "kind": kind.rawValue,
+            ]
+        )
+        return try await commandService.regenerateStudyItems(lectureID: lecture.id, kind: kind)
+    }
+
     func startProcessing(for lecture: Lecture) async throws -> Lecture {
         var processingLecture = lecture
         processingLecture.processingErrorMessage = nil

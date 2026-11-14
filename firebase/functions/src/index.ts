@@ -10,6 +10,7 @@ import {
 import { processLectureAudio } from "./processLectureAudio";
 import { processLectureText } from "./processLectureText";
 import { processLectureYouTube } from "./processLectureYouTube";
+import { regenerateStudyItems } from "./studyItemsRegeneration";
 
 admin.initializeApp();
 
@@ -21,6 +22,7 @@ export {
   processLectureAudio,
   processLectureText,
   processLectureYouTube,
+  regenerateStudyItems,
   startLectureProcessing,
   upsertLecture,
 };

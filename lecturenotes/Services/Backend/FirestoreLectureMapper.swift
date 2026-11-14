@@ -163,7 +163,12 @@ enum FirestoreLectureMapper {
     }
 
     private static func flashcardsValue(for key: String, in data: [String: Any]) -> [Flashcard] {
-        let values = data[key] as? [[String: Any]] ?? []
+        flashcards(from: data[key])
+    }
+
+    /// Flashcards from a Firestore or callable-function array of `{id, question, answer}`.
+    static func flashcards(from value: Any?) -> [Flashcard] {
+        let values = value as? [[String: Any]] ?? []
 
         return values.map { item in
             Flashcard(
@@ -175,7 +180,13 @@ enum FirestoreLectureMapper {
     }
 
     private static func quizValue(for key: String, in data: [String: Any]) -> [QuizQuestion] {
-        let values = data[key] as? [[String: Any]] ?? []
+        quiz(from: data[key])
+    }
+
+    /// Quiz questions from a Firestore or callable-function array of
+    /// `{id, question, options, correctIndex}`.
+    static func quiz(from value: Any?) -> [QuizQuestion] {
+        let values = value as? [[String: Any]] ?? []
 
         return values.map { item in
             QuizQuestion(

@@ -218,6 +218,11 @@ struct LecturesListView: View {
                         case .rejected(let message):
                             return message
                         }
+                    },
+                    onUpgradeRequested: {
+                        Task {
+                            await paywallPresentationModel.presentDefaultPaywall()
+                        }
                     }
                 )
             }

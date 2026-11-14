@@ -29,6 +29,17 @@ enum AppUserPlan: String, CaseIterable, Codable, Identifiable {
         }
     }
 
+    /// Whether the plan includes generating a new set of flashcards or quiz questions
+    /// for a lecture. The backend enforces the same rule and a daily per-lecture limit.
+    var canRegenerateStudyItems: Bool {
+        switch self {
+        case .freemium:
+            false
+        case .premium, .pro:
+            true
+        }
+    }
+
     var processingLimitTotalCount: Int? {
         switch self {
         case .freemium:

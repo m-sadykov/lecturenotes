@@ -16,7 +16,14 @@ struct QuizView: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if viewModel.isFinished {
-                QuizResultView(score: viewModel.correctCount, total: viewModel.questions.count) {
+                QuizResultView(
+                    score: viewModel.correctCount,
+                    total: viewModel.questions.count,
+                    showsNewSet: viewModel.regeneration.isOffered,
+                    onNewSet: {
+                        viewModel.regeneration.requestNewSet()
+                    }
+                ) {
                     dismiss()
                 }
             } else {
@@ -72,6 +79,9 @@ struct QuizView: View {
                 .labelStyle(.iconOnly)
                 .foregroundStyle(.primary)
             }
+        }
+        .studyItemsRegeneration(viewModel.regeneration) {
+            await viewModel.generateNewSet()
         }
         .alert("Close Quiz?", isPresented: $isCloseAlertPresented) {
             Button("Keep Going", role: .cancel) {}

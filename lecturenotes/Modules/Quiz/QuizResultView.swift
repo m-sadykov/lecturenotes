@@ -3,6 +3,9 @@ import SwiftUI
 struct QuizResultView: View {
     let score: Int
     let total: Int
+    /// Whether to offer a freshly generated quiz.
+    var showsNewSet = false
+    var onNewSet: () -> Void = {}
     let onDone: () -> Void
 
     var body: some View {
@@ -20,6 +23,17 @@ struct QuizResultView: View {
             .padding(.top, 48)
 
             Spacer()
+
+            if showsNewSet {
+                Button("New Set", systemImage: "arrow.clockwise", action: onNewSet)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: 320)
+                    .padding(.vertical, 18)
+                    .background(AppColor.surface, in: .capsule)
+                    .buttonStyle(.plain)
+                    .padding(.bottom, 12)
+            }
 
             Button("Finish", action: onDone)
                 .font(.headline)

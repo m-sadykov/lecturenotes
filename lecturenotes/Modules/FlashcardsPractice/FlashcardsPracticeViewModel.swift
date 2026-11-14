@@ -4,7 +4,8 @@ import Observation
 @MainActor
 @Observable
 final class FlashcardsPracticeViewModel {
-    let cards: [Flashcard]
+    private(set) var cards: [Flashcard]
+    let regeneration: StudyItemsRegenerationModel<Flashcard>
 
     var currentIndex = 0
     var isShowingAnswer = false
@@ -14,9 +15,11 @@ final class FlashcardsPracticeViewModel {
     init(
         cards: [Flashcard],
         analyticsService: AppAnalyticsService? = nil,
-        analyticsContext: LectureAnalyticsContext? = nil
+        analyticsContext: LectureAnalyticsContext? = nil,
+        regeneration: StudyItemsRegenerationModel<Flashcard>? = nil
     ) {
         self.cards = cards
+        self.regeneration = regeneration ?? .unavailable
         self.analyticsService = analyticsService
         self.analyticsContext = analyticsContext
     }
@@ -55,6 +58,21 @@ final class FlashcardsPracticeViewModel {
             return
         }
         currentIndex = index
+        isShowingAnswer = false
+    }
+
+    /// Replaces the deck with a newly generated one and starts again from the first card.
+    func generateNewSet() async {
+        guard let newCards = await regeneration.generate() else {
+            return
+        }
+
+        replaceCards(newCards)
+    }
+
+    func replaceCards(_ newCards: [Flashcard]) {
+        cards = newCards
+        currentIndex = 0
         isShowingAnswer = false
     }
 
