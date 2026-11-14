@@ -173,6 +173,10 @@ struct Lecture: Identifiable, Hashable, Codable {
     var sourceType: LectureSourceType
     var audioURL: URL?
     var remoteAudioPath: String?
+    /// Storage paths of the 15-minute chunks a long recording was uploaded as, in upload
+    /// order. `remoteAudioPath` points at the first chunk only, so playback and sharing
+    /// join these to get the whole recording. `nil` for recordings uploaded as one file.
+    var remoteAudioChunkPaths: [String]?
     var pdfPageCount: Int?
     var sourceURL: URL?
     var youtubeVideoID: String?
@@ -196,6 +200,7 @@ struct Lecture: Identifiable, Hashable, Codable {
         sourceType: LectureSourceType = .audio,
         audioURL: URL? = nil,
         remoteAudioPath: String? = nil,
+        remoteAudioChunkPaths: [String]? = nil,
         pdfPageCount: Int? = nil,
         sourceURL: URL? = nil,
         youtubeVideoID: String? = nil,
@@ -217,6 +222,7 @@ struct Lecture: Identifiable, Hashable, Codable {
         self.sourceType = sourceType
         self.audioURL = audioURL
         self.remoteAudioPath = remoteAudioPath
+        self.remoteAudioChunkPaths = remoteAudioChunkPaths
         self.pdfPageCount = pdfPageCount
         self.sourceURL = sourceURL
         self.youtubeVideoID = youtubeVideoID

@@ -121,6 +121,7 @@ final class LectureDetailViewModel {
                 lectureTitle: lecture.displayTitle,
                 localURL: lecture.audioURL,
                 remoteAudioPath: lecture.remoteAudioPath,
+                remoteAudioChunkPaths: lecture.remoteAudioChunkPaths,
                 fallbackDuration: lecture.duration,
                 analyticsContext: analyticsContext
             )
@@ -129,6 +130,7 @@ final class LectureDetailViewModel {
                 lectureTitle: lecture.displayTitle,
                 audioURL: lecture.audioURL,
                 remoteAudioPath: lecture.remoteAudioPath,
+                remoteAudioChunkPaths: lecture.remoteAudioChunkPaths,
                 fallbackDuration: lecture.duration,
                 analyticsService: analyticsService,
                 analyticsContext: analyticsContext
