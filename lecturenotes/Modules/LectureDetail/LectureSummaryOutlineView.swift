@@ -9,14 +9,19 @@ struct LectureSummaryOutlineView: View {
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
                 ForEach(items) { item in
-                    Button(item.title) {
+                    // White capsule on the canvas, matching the home screen's folder chips.
+                    Button {
                         onSelect(item)
+                    } label: {
+                        Text(item.title)
+                            .font(.subheadline)
+                            .lineLimit(1)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(AppColor.surface, in: .capsule)
+                            .contentShape(.capsule)
                     }
-                    .font(.subheadline)
-                    .lineLimit(1)
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
-                    .tint(AppColor.accent)
+                    .buttonStyle(.plain)
                 }
             }
         }

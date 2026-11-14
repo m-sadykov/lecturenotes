@@ -62,7 +62,7 @@ private struct LectureDetailFolderChip: View {
             .padding(.vertical, 8)
             // Fills whatever width the parent offers, so the chip can stretch to its column.
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(AppColor.fillSubtle, in: .capsule)
+            .background(AppColor.surface, in: .capsule)
             .contentShape(.capsule)
         }
         .buttonStyle(.plain)

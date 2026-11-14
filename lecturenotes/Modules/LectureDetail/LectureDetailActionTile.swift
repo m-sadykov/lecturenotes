@@ -18,7 +18,7 @@ struct LectureDetailActionTile: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(AppColor.fillSubtle)
+        .background(AppColor.surface)
         .clipShape(.rect(cornerRadius: 16))
         .contentShape(.rect(cornerRadius: 16))
     }
@@ -34,7 +34,7 @@ private struct LectureDetailActionIcon: View {
             .font(.subheadline)
             .foregroundStyle(.primary)
             .frame(width: iconSize, height: iconSize)
-            .background(AppColor.fillOnSubtle)
+            .background(AppColor.fillSubtle)
             .clipShape(.circle)
     }
 }
