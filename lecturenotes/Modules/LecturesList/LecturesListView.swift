@@ -3,9 +3,6 @@ import StoreKit
 import UniformTypeIdentifiers
 
 struct LecturesListView: View {
-    private let searchBarReservedHeight: CGFloat = 56
-    private let stickySearchTopInset: CGFloat = 70
-
     @AppStorage("hasConfirmedAIProcessingConsent") private var hasConfirmedAIProcessingConsent = false
     @Environment(\.requestReview) private var requestReview
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
@@ -20,144 +17,185 @@ struct LecturesListView: View {
     @State private var activeFileImport: LocalFileImport = .importAudio
     @State private var isFileImporterPresented = false
     @State private var pendingLocalConsentAction: LocalFileImport?
-    @State private var currentScrollOffset: CGFloat = 0
     @State private var isPremiumBannerVisible = false
     @State private var hasPendingPremiumBannerFadeOut = false
 
     var body: some View {
         @Bindable var viewModel = viewModel
         let shouldShowPremiumBanner = userProfileService?.currentProfile?.plan == .freemium
-        let showsInlineSearchBar = (viewModel.isSearchPresented || viewModel.hasActiveSearchQuery) && currentScrollOffset < 140
-        let showsFloatingSearchBar = viewModel.isSearchAutoPresented || ((viewModel.isSearchPresented || viewModel.hasActiveSearchQuery) && currentScrollOffset >= 140)
         let displayedLectures = viewModel.displayedLectures
 
         NavigationStack {
-            VStack(spacing: 0) {
-                HomeHeaderView(
-                    authService: authService,
-                    userProfileService: userProfileService,
-                    analyticsService: analyticsService,
-                    crashReportingService: crashReportingService
-                )
-                    .padding(.horizontal, 20)
-                    .padding(.top, 6)
-                    .padding(.bottom, 12)
+            List {
+                if isPremiumBannerVisible {
+                    PremiumBannerView(paywallPresentationModel: paywallPresentationModel)
+                        .homeListRowStyle()
+                        .transition(.opacity)
+                }
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        LecturesListScrollOffsetReader()
+                if !viewModel.folders.isEmpty {
+                    FolderFilterChipsView(
+                        folders: viewModel.folders,
+                        selectedFolderID: $viewModel.selectedFolderID
+                    )
+                    .homeListRowStyle()
+                }
 
-                        if isPremiumBannerVisible {
-                            PremiumBannerView(paywallPresentationModel: paywallPresentationModel)
-                                .transition(.opacity)
-                        }
-
-                        QuickActionsStripView {
-                            presentAudioImportFlow()
-                        } onImportText: {
-                            viewModel.requestFlow(.importText, hasConfirmedAIProcessingConsent: hasConfirmedAIProcessingConsent)
-                        } onImportYouTube: {
-                            viewModel.requestFlow(.importYouTube, hasConfirmedAIProcessingConsent: hasConfirmedAIProcessingConsent)
-                        } onImportPDF: {
-                            presentPDFImportFlow()
-                        }
-
-                        RecordingsSectionHeaderView(
-                            foldersDestination: FoldersScreen(viewModel: viewModel),
-                            showsFoldersNavigation: true,
-                            onSearchTap: {
-                                viewModel.presentSearch()
-                            }
-                        )
-
-                        if showsInlineSearchBar {
-                            LecturesSearchBarView(
-                                text: $viewModel.searchText,
-                                isSearching: viewModel.isSearching,
-                                onClear: {
-                                    viewModel.clearSearch()
-                                },
-                                onCancel: {
-                                    viewModel.dismissSearch()
-                                }
-                            )
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                        }
-                        
-                        if !viewModel.folders.isEmpty {
-                            FolderFilterChipsView(
-                                folders: viewModel.folders,
-                                selectedFolderID: $viewModel.selectedFolderID
-                            )
-                        }
-
-                        if viewModel.showsInitialLoadingIndicator && !viewModel.hasCompletedInitialLoad {
-                            LoadingLecturesPlaceholderView()
-                                .frame(maxWidth: .infinity)
-                                .padding(.top, 40)
-                        } else if viewModel.lectures.isEmpty {
-                            EmptyLecturesPlaceholderView()
-                                .frame(maxWidth: .infinity)
-                                .padding(.top, 40)
-                        } else if viewModel.filteredLectures.isEmpty, viewModel.hasActiveSearchQuery {
-                            EmptySearchResultsPlaceholderView(query: viewModel.searchText)
-                                .frame(maxWidth: .infinity)
-                                .padding(.top, 40)
-                        } else if viewModel.filteredLectures.isEmpty, viewModel.selectedFolderID != nil {
-                            EmptyFolderPlaceholderView()
-                                .frame(maxWidth: .infinity)
-                                .padding(.top, 40)
+                if viewModel.showsInitialLoadingIndicator && !viewModel.hasCompletedInitialLoad {
+                    LoadingLecturesPlaceholderView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 40)
+                        .homeListRowStyle()
+                } else if viewModel.lectures.isEmpty && viewModel.hasCompletedInitialLoad {
+                    EmptyLecturesPlaceholderView {
+                        presentAudioImportFlow()
+                    } onImportText: {
+                        viewModel.requestFlow(.importText, hasConfirmedAIProcessingConsent: hasConfirmedAIProcessingConsent)
+                    } onImportYouTube: {
+                        viewModel.requestFlow(.importYouTube, hasConfirmedAIProcessingConsent: hasConfirmedAIProcessingConsent)
+                    } onImportPDF: {
+                        presentPDFImportFlow()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 24)
+                    .homeListRowStyle()
+                } else if viewModel.filteredLectures.isEmpty, viewModel.hasActiveSearchQuery {
+                    Group {
+                        if viewModel.isSearching {
+                            ProgressView()
                         } else {
-                            LazyVStack(spacing: 0) {
-                                ForEach(displayedLectures) { lecture in
-                                    LectureRowView(
-                                        lecture: lecture,
-                                        onOpen: {
-                                            viewModel.openLecture(lecture)
-                                        },
-                                        onMore: {
-                                            viewModel.presentActionSheet(for: lecture.id)
-                                        }
-                                    )
-                                    .onAppear {
-                                        viewModel.loadMoreLecturesIfNeeded(currentLectureID: lecture.id)
-                                    }
-
-                                    if lecture.id != displayedLectures.last?.id {
-                                        Divider()
-                                            .padding(.leading, 58)
-                                    }
-                                }
-
-                                if viewModel.hasMoreLecturesToDisplay {
-                                    ProgressView()
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 20)
-                                }
-                            }
+                            EmptySearchResultsPlaceholderView(query: viewModel.searchText)
                         }
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, showsFloatingSearchBar ? searchBarReservedHeight + 8 : 0)
-                    .padding(.bottom, 100)
-                }
-                .coordinateSpace(name: LecturesListContainerSpace.name)
-                .onPreferenceChange(LecturesListScrollOffsetPreferenceKey.self) { newOffset in
-                    handleScrollOffsetChange(currentOffset: newOffset, viewModel: viewModel)
-                    currentScrollOffset = newOffset
-                }
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 8)
-                        .onChanged { value in
-                            handleScrollDragChange(
-                                translationHeight: value.translation.height,
-                                viewModel: viewModel
-                            )
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 40)
+                    .homeListRowStyle()
+                } else if viewModel.filteredLectures.isEmpty, viewModel.selectedFolderID != nil {
+                    EmptyFolderPlaceholderView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 40)
+                        .homeListRowStyle()
+                } else {
+                    ForEach(displayedLectures) { lecture in
+                        LectureRowView(
+                            lecture: lecture,
+                            onOpen: {
+                                viewModel.openLecture(lecture)
+                            },
+                            onMore: {
+                                viewModel.presentActionSheet(for: lecture.id)
+                            }
+                        )
+                        .listRowInsets(.init(top: 0, leading: 20, bottom: 0, trailing: 12))
+                        .listRowBackground(Color.clear)
+                        .alignmentGuide(.listRowSeparatorLeading) { _ in 52 }
+                        .swipeActions(edge: .trailing) {
+                            Button("Delete", systemImage: "trash") {
+                                viewModel.requestDelete(lecture)
+                            }
+                            .tint(.red)
+
+                            if lecture.folderID == nil {
+                                Button("Add to folder", systemImage: "folder") {
+                                    viewModel.presentFolderPicker(for: lecture.id)
+                                }
+                                .tint(.indigo)
+                            } else {
+                                Button("Remove from folder", systemImage: "folder.badge.minus") {
+                                    removeLectureFromFolder(lecture.id)
+                                }
+                                .tint(.orange)
+                            }
                         }
-                )
+                        .contextMenu {
+                            if lecture.status == .failed, processingService != nil {
+                                Button("Retry", systemImage: "arrow.clockwise") {
+                                    viewModel.retryProcessing(lecture.id)
+                                }
+                            }
+
+                            Button("Edit title", systemImage: "pencil") {
+                                viewModel.requestRename(lecture)
+                            }
+
+                            if lecture.folderID == nil {
+                                Button("Add to folder", systemImage: "folder") {
+                                    viewModel.presentFolderPicker(for: lecture.id)
+                                }
+                            } else {
+                                Button("Remove from folder", systemImage: "folder.badge.minus") {
+                                    removeLectureFromFolder(lecture.id)
+                                }
+                            }
+
+                            Divider()
+
+                            Button("Delete", systemImage: "trash", role: .destructive) {
+                                viewModel.requestDelete(lecture)
+                            }
+                        }
+                        .onAppear {
+                            viewModel.loadMoreLecturesIfNeeded(currentLectureID: lecture.id)
+                        }
+                    }
+
+                    if viewModel.hasMoreLecturesToDisplay {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 20)
+                            .homeListRowStyle()
+                    }
+                }
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .contentMargins(.bottom, 100, for: .scrollContent)
             .background(AppColor.canvas)
-            .toolbar(.hidden, for: .navigationBar)
+            .navigationTitle("Recordings")
+            .searchable(
+                text: $viewModel.searchText,
+                isPresented: $viewModel.isSearchPresented,
+                prompt: Text("Search lectures")
+            )
+            .onChange(of: viewModel.isSearchPresented) { _, isPresented in
+                if !isPresented {
+                    viewModel.dismissSearch()
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    NavigationLink {
+                        FoldersScreen(viewModel: viewModel)
+                    } label: {
+                        Label("Folders", systemImage: "folder")
+                    }
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    HomeImportMenu {
+                        presentAudioImportFlow()
+                    } onImportText: {
+                        viewModel.requestFlow(.importText, hasConfirmedAIProcessingConsent: hasConfirmedAIProcessingConsent)
+                    } onImportYouTube: {
+                        viewModel.requestFlow(.importYouTube, hasConfirmedAIProcessingConsent: hasConfirmedAIProcessingConsent)
+                    } onImportPDF: {
+                        presentPDFImportFlow()
+                    }
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        SettingsView(
+                            authService: authService,
+                            userProfileService: userProfileService,
+                            analyticsService: analyticsService,
+                            crashReportingService: crashReportingService
+                        )
+                    } label: {
+                        Label("Settings", systemImage: "gearshape")
+                    }
+                }
+            }
             .navigationDestination(item: $viewModel.selectedLecture) { lecture in
                 LectureDetailView(
                     lecture: lecture,
@@ -183,17 +221,13 @@ struct LecturesListView: View {
                     }
                 )
             }
-            .overlay(alignment: .bottomTrailing) {
-                if viewModel.activeSheet == nil && viewModel.recorderViewModel == nil {
-                    FloatingRecordButton {
-                        Task {
-                            await viewModel.requestRecordingFlow(
-                                hasConfirmedAIProcessingConsent: hasConfirmedAIProcessingConsent
-                            )
-                        }
-                    }
-                        .padding(.trailing, 20)
-                        .padding(.bottom, 20)
+            .homeRecordControl(
+                isHidden: viewModel.activeSheet != nil || viewModel.recorderViewModel != nil || viewModel.isAIConsentPresented
+            ) {
+                Task {
+                    await viewModel.requestRecordingFlow(
+                        hasConfirmedAIProcessingConsent: hasConfirmedAIProcessingConsent
+                    )
                 }
             }
             .overlay {
@@ -265,23 +299,6 @@ struct LecturesListView: View {
                 }
             }
             .overlay(alignment: .top) {
-                if showsFloatingSearchBar {
-                    LecturesSearchBarView(
-                        text: $viewModel.searchText,
-                        isSearching: viewModel.isSearching,
-                        onClear: {
-                            viewModel.clearSearch()
-                        },
-                        onCancel: {
-                            viewModel.dismissSearch()
-                        }
-                    )
-                    .padding(.horizontal, 20)
-                    .padding(.top, stickySearchTopInset)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                }
-            }
-            .overlay(alignment: .top) {
                 if let toastPresentation = viewModel.toastPresentation {
                     ToastBannerView(toastPresentation: toastPresentation)
                         .padding(.top, 12)
@@ -290,8 +307,6 @@ struct LecturesListView: View {
             }
             .animation(.easeInOut(duration: 0.2), value: viewModel.toastPresentation != nil)
             .animation(.spring(response: 0.32, dampingFraction: 0.88), value: viewModel.recorderViewModel != nil)
-            .animation(.spring(response: 0.28, dampingFraction: 0.88), value: showsInlineSearchBar)
-            .animation(.spring(response: 0.28, dampingFraction: 0.88), value: showsFloatingSearchBar)
             .sensoryFeedback(.success, trigger: viewModel.removalFeedbackToken)
             .sensoryFeedback(.impact(weight: .light), trigger: viewModel.importFeedbackToken)
             .sensoryFeedback(.impact(weight: .light), trigger: viewModel.importLimitFeedbackToken)
@@ -306,12 +321,7 @@ struct LecturesListView: View {
                                 viewModel.presentFolderPicker(for: lectureID)
                             },
                             onRemoveFromFolder: lecture.folderID == nil ? nil : {
-                                let folderName = viewModel.removeLectureFromFolder(lectureID)
-                                viewModel.closeActiveSheet()
-                                viewModel.removalFeedbackToken += 1
-                                viewModel.showToast(
-                                    folderName.map { String(appLocalized: "Removed from \($0).") } ?? String(appLocalized: "Removed from folder.")
-                                )
+                                removeLectureFromFolder(lectureID)
                             },
                             onEditTitle: {
                                 viewModel.requestRename(lecture)
@@ -569,50 +579,24 @@ struct LecturesListView: View {
         isFileImporterPresented = true
     }
 
-    private func handleScrollOffsetChange(currentOffset: CGFloat, viewModel: LecturesListViewModel) {
-        if currentOffset < 40 {
-            viewModel.hideSearchForScrollIfNeeded()
-        }
-    }
-
-    private func handleScrollDragChange(
-        translationHeight: CGFloat,
-        viewModel: LecturesListViewModel
-    ) {
-        guard currentScrollOffset > 140 else {
-            return
-        }
-
-        if translationHeight > 18 {
-            viewModel.presentSearchFromScroll()
-        } else if translationHeight < -24 {
-            viewModel.hideSearchForScrollIfNeeded()
-        }
+    /// Takes a lecture out of its folder from any entry point (row swipe, context menu
+    /// or actions sheet) and confirms it with haptics and a toast.
+    private func removeLectureFromFolder(_ lectureID: Lecture.ID) {
+        let folderName = viewModel.removeLectureFromFolder(lectureID)
+        viewModel.closeActiveSheet()
+        viewModel.removalFeedbackToken += 1
+        viewModel.showToast(
+            folderName.map { String(appLocalized: "Removed from \($0).") } ?? String(appLocalized: "Removed from folder.")
+        )
     }
 }
 
-private enum LecturesListContainerSpace {
-    static let name = "lecturesListContainer"
-}
-
-private struct LecturesListScrollOffsetPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
-
-private struct LecturesListScrollOffsetReader: View {
-    var body: some View {
-        GeometryReader { geometry in
-            Color.clear
-                .preference(
-                    key: LecturesListScrollOffsetPreferenceKey.self,
-                    value: max(-geometry.frame(in: .named(LecturesListContainerSpace.name)).minY, 0)
-                )
-        }
-        .frame(height: 0)
+private extension View {
+    /// Full-width list row without a separator or background, for banners, chips and placeholders.
+    func homeListRowStyle() -> some View {
+        listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
     }
 }
 
@@ -637,15 +621,6 @@ private struct ToastBannerView: View {
     }
 }
 
-private struct EmptyLecturesPlaceholderView: View {
-    var body: some View {
-        ContentUnavailableView {
-            Text("No recordings yet")
-        } description: {
-            Text("Tap the mic button to start recording.")
-        }
-    }
-}
 
 private struct LoadingLecturesPlaceholderView: View {
     var body: some View {
@@ -695,94 +670,29 @@ private enum LocalFileImport {
 
 private struct LecturesListPreviewCanvas: View {
     private let lectures = MockLectures.makeLectures()
-    private let folders = MockLectures.makeFolders()
     @State private var paywallPresentationModel = PaywallPresentationModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            previewHeader
-                .padding(.horizontal, 20)
-                .padding(.top, 6)
-                .padding(.bottom, 12)
+        NavigationStack {
+            List {
+                PremiumBannerView(paywallPresentationModel: paywallPresentationModel)
+                    .homeListRowStyle()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    PremiumBannerView(paywallPresentationModel: paywallPresentationModel)
-                    QuickActionsStripView {} onImportText: {} onImportYouTube: {} onImportPDF: {}
-                    previewSectionHeader
-                    LecturesSearchBarView(
-                        text: .constant("Plant"),
-                        isSearching: false,
-                        onClear: {},
-                        onCancel: {}
-                    )
-                    previewFolderChips
-
-                    if let firstLecture = lectures.first {
-                        LectureRowView(lecture: firstLecture, onOpen: {}, onMore: {})
-                    }
-
-                    if lectures.count > 1 {
-                        LectureRowView(lecture: lectures[1], onOpen: {}, onMore: {})
-                    }
+                ForEach(lectures) { lecture in
+                    LectureRowView(lecture: lecture, onOpen: {}, onMore: {})
+                        .listRowInsets(.init(top: 0, leading: 20, bottom: 0, trailing: 12))
+                        .listRowBackground(Color.clear)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 100)
             }
-        }
-        .background(AppColor.canvas)
-    }
-
-    private var previewHeader: some View {
-        HStack {
-            Text("LectraAI")
-                .font(.title)
-                .bold()
-            Spacer()
-            Image(systemName: "gearshape")
-                .font(.title3)
-                .frame(width: 44, height: 44)
-                .background(AppColor.fillSubtle)
-                .clipShape(.circle)
-        }
-    }
-
-    private var previewSectionHeader: some View {
-        RecordingsSectionHeaderView(
-            foldersDestination: FoldersScreen(viewModel: LecturesListViewModel(repository: MockLectureRepository())),
-            showsFoldersNavigation: false,
-            onSearchTap: {}
-        )
-    }
-
-    private var previewFolderChips: some View {
-        ScrollView(.horizontal) {
-            HStack {
-                previewChip(title: "All", isSelected: true)
-
-                if !folders.isEmpty {
-                    previewChip(title: folders[0].name, isSelected: false)
-                }
-
-                if folders.count > 1 {
-                    previewChip(title: folders[1].name, isSelected: false)
-                }
-
-                if folders.count > 2 {
-                    previewChip(title: folders[2].name, isSelected: false)
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(AppColor.canvas)
+            .navigationTitle("Recordings")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    HomeImportMenu {} onImportText: {} onImportYouTube: {} onImportPDF: {}
                 }
             }
         }
-        .scrollIndicators(.hidden)
-    }
-
-    private func previewChip(title: String, isSelected: Bool) -> some View {
-        Text(title)
-            .font(.caption)
-            .foregroundStyle(isSelected ? AppColor.onInk : .primary)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(isSelected ? AppColor.ink : AppColor.surface)
-            .clipShape(.rect(cornerRadius: 16))
     }
 }
