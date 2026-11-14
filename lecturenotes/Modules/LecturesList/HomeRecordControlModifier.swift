@@ -20,9 +20,15 @@ struct HomeRecordControlModifier: ViewModifier {
                     ToolbarSpacer(.fixed, placement: .bottomBar)
 
                     ToolbarItem(placement: .bottomBar) {
-                        Button("Record", systemImage: "mic.fill", action: record)
-                            .buttonStyle(.glassProminent)
-                            .tint(AppColor.ink)
+                        Button(action: record) {
+                            // The prominent glass picks a gray icon on a white tint, which
+                            // fades in dark mode; pin the icon to the tint's contrast color.
+                            Label("Record", systemImage: "mic.fill")
+                                .labelStyle(.iconOnly)
+                                .foregroundStyle(AppColor.onInk)
+                        }
+                        .buttonStyle(.glassProminent)
+                        .tint(AppColor.ink)
                     }
                 }
                 .toolbarVisibility(isHidden ? .hidden : .visible, for: .bottomBar)
