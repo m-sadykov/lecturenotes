@@ -2,7 +2,7 @@
   "fill-specializations": [
     {
       "value": {
-        "automatic-gradient": "srgb:0.42000,0.35700,0.88600,1.00000"
+        "automatic-gradient": "srgb:1.00000,0.43100,0.36900,1.00000"
       }
     },
     {
@@ -20,8 +20,8 @@
         {
           "glass": false,
           "hidden": false,
-          "image-name": "graduation-cap.png",
-          "name": "graduation-cap",
+          "image-name": "voice-to-notes.png",
+          "name": "voice-to-notes",
           "position": {
             "scale": 1,
             "translation-in-points": [
