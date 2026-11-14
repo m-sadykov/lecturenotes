@@ -8,6 +8,7 @@ import RevenueCatUI
 final class PaywallPresentationModel {
     private enum PresentationSource {
         case postOnboarding
+        case appLaunch
         case manualDefault
         case scheduledDiscount
         case youTubeImport
@@ -28,6 +29,8 @@ final class PaywallPresentationModel {
     @ObservationIgnored private var didUnlockInActivePresentation = false
     @ObservationIgnored private var activeOfferingIdentifier: String?
     @ObservationIgnored private var activeProductIdentifier: String?
+    /// Kept in memory only, so the launch paywall is considered once per cold start.
+    @ObservationIgnored private(set) var hasHandledAppLaunchPaywall = false
 
     private static let scheduledOfferPresentationInterval: TimeInterval = 3 * 60 * 60
     static let scheduledOfferPollingInterval: Duration = .seconds(60)
@@ -71,6 +74,24 @@ final class PaywallPresentationModel {
         guard presentedOffering == nil else { return }
 
         _ = await presentDefaultStylePaywall(source: .postOnboarding)
+    }
+
+    /// Presents the default paywall once per cold start for freemium users.
+    ///
+    /// Call it once the subscription plan is known. Later calls in the same process do nothing,
+    /// and so does a launch that starts in onboarding, which shows its own paywall afterwards.
+    func presentAppLaunchPaywallIfNeeded(
+        for currentPlan: AppUserPlan,
+        isOnboardingRequired: Bool
+    ) async {
+        guard !hasHandledAppLaunchPaywall else { return }
+        hasHandledAppLaunchPaywall = true
+
+        guard !isOnboardingRequired else { return }
+        guard shouldAllowPaywallPresentation(for: currentPlan) else { return }
+        guard presentedOffering == nil else { return }
+
+        _ = await presentDefaultStylePaywall(source: .appLaunch)
     }
 
     func presentScheduledProYearlyDiscountPaywallIfNeeded(
@@ -216,7 +237,7 @@ final class PaywallPresentationModel {
         switch activePresentationSource {
         case .postOnboarding, .scheduledDiscount:
             markScheduledOfferAnchorNow()
-        case .manualDefault, .youTubeImport, .none:
+        case .manualDefault, .appLaunch, .youTubeImport, .none:
             break
         }
     }
@@ -338,7 +359,7 @@ final class PaywallPresentationModel {
 
     private var shouldCountDefaultPaywallDismissal: Bool {
         switch activePresentationSource {
-        case .manualDefault, .postOnboarding, .youTubeImport:
+        case .manualDefault, .postOnboarding, .appLaunch, .youTubeImport:
             activeOfferingIdentifier == Self.defaultOfferingIdentifier
         case .scheduledDiscount, .none:
             false
@@ -377,6 +398,8 @@ final class PaywallPresentationModel {
         switch source {
         case .postOnboarding:
             "post_onboarding"
+        case .appLaunch:
+            "app_launch"
         case .manualDefault:
             "manual_default"
         case .scheduledDiscount:

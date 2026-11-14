@@ -58,7 +58,6 @@ struct lecturenotesApp: App {
     @State private var appEnvironment: AppEnvironment
     @State private var lecturesListViewModel: LecturesListViewModel
     @State private var isSplashVisible = true
-    @State private var splashProgress = 0.0
     @State private var hasPreparedStartup = false
 
     // register app delegate for Firebase setup
@@ -108,26 +107,21 @@ struct lecturenotesApp: App {
         hasPreparedStartup = true
 
         appEnvironment.crashReportingService.setCurrentFlow("app_launch")
-        await updateSplashProgress(to: 0.15)
         appEnvironment.crashReportingService.breadcrumb("subscription_start_requested")
         subscriptionManager.start()
 
         appEnvironment.crashReportingService.breadcrumb("repository_start_started")
         await appEnvironment.repository.start()
         appEnvironment.crashReportingService.breadcrumb("repository_start_completed")
-        await updateSplashProgress(to: 0.4)
 
         appEnvironment.crashReportingService.breadcrumb("user_profile_prepare_started")
         await appEnvironment.userProfileService?.prepareCurrentUserProfile()
         appEnvironment.crashReportingService.breadcrumb("user_profile_prepare_completed")
-        await updateSplashProgress(to: 0.65)
 
         await subscriptionManager.refresh()
-        await updateSplashProgress(to: 0.82)
 
         await lecturesListViewModel.load()
         appEnvironment.crashReportingService.breadcrumb("app_launch_completed")
-        await updateSplashProgress(to: 1.0)
 
         await MainActor.run {
             withAnimation(.easeOut(duration: 0.25)) {
@@ -136,19 +130,11 @@ struct lecturenotesApp: App {
         }
     }
 
-    private func updateSplashProgress(to value: Double) async {
-        await MainActor.run {
-            withAnimation(.easeOut(duration: 0.2)) {
-                splashProgress = value
-            }
-        }
-    }
-
     var body: some Scene {
         WindowGroup {
             Group {
                 if isSplashVisible {
-                    SplashScreenView(progress: splashProgress)
+                    SplashScreenView()
                         .transition(.opacity)
                         .zIndex(1)
                         .task() {

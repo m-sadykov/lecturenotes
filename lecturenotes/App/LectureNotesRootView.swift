@@ -128,6 +128,17 @@ struct LectureNotesRootView: View {
                 await paywallPresentationModel.presentDefaultPaywallIfNeeded(for: subscriptionManager)
             }
         }
+        .onChange(of: subscriptionManager.customerInfo != nil, initial: true) { _, hasCustomerInfo in
+            // Wait for RevenueCat so subscribers never see the launch paywall before their plan loads.
+            guard hasCustomerInfo else { return }
+
+            Task {
+                await paywallPresentationModel.presentAppLaunchPaywallIfNeeded(
+                    for: subscriptionManager.currentPlan,
+                    isOnboardingRequired: appState.needsOnboarding
+                )
+            }
+        }
         .onChange(of: lecturesListViewModel.processingLimitReachedToken, initial: false) { oldValue, newValue in
             guard newValue > oldValue else { return }
 

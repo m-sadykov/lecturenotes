@@ -8,40 +8,20 @@
 import SwiftUI
 import UIKit
 
+/// Launch splash: the app icon centered on black while startup work finishes.
 struct SplashScreenView: View {
-    let progress: Double
-
     var body: some View {
         ZStack {
-//            AppBackgroundView()
-            Color(.black)
+            Color.black
                 .ignoresSafeArea()
 
-
-            VStack {
-                Spacer()
-
-                appIcon
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 110, height: 110)
-                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                    .shadow(color: Color.black.opacity(0.2), radius: 16, x: 0, y: 8)
-                
-                Text("LectraAI")
-                    .font(.title)
-                    .foregroundStyle(.white)
-                    .bold()
-
-                Spacer()
-
-                ProgressView(value: progress)
-                    .progressViewStyle(.linear)
-                    .tint(Color.white)
-                    .padding(.horizontal, 32)
-                    .padding(.bottom, 24)
-                    .frame(width: 180)
-            }
+            appIcon
+                .resizable()
+                .scaledToFit()
+                .frame(width: 110, height: 110)
+                .clipShape(.rect(cornerRadius: 24, style: .continuous))
+                .shadow(color: .black.opacity(0.2), radius: 16, x: 0, y: 8)
+                .accessibilityHidden(true)
         }
     }
 
@@ -69,5 +49,5 @@ private enum AppIconProvider {
 }
 
 #Preview {
-    SplashScreenView(progress: 0.5)
+    SplashScreenView()
 }
