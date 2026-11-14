@@ -40,6 +40,8 @@ enum QuizResultTier: Equatable {
 /// A question answered wrongly, shown in the results' mistakes review.
 struct QuizMistake: Identifiable, Equatable {
     let id: QuizQuestion.ID
+    /// The question's 1-based position in the quiz.
+    let number: Int
     let question: String
     let selectedAnswer: String
     let correctAnswer: String

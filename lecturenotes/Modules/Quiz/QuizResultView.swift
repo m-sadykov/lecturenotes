@@ -79,58 +79,51 @@ private struct QuizMistakesSection: View {
     }
 }
 
+/// A wrong answer shown the way the question looked in the quiz: the numbered badge,
+/// the question, the chosen option in pink and the right one outlined in mint.
 private struct QuizMistakeRow: View {
     let mistake: QuizMistake
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(mistake.question)
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Question \(mistake.number)")
                 .font(.headline)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(AppColor.fillSubtle)
+                .clipShape(.rect(cornerRadius: 8))
+
+            Text(mistake.question)
+                .font(.title3)
+                .bold()
                 .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 20)
 
-            QuizMistakeAnswerLine(
-                title: "Your answer",
-                answer: mistake.selectedAnswer,
-                systemImage: "xmark.circle.fill",
-                tint: .red
-            )
+            VStack(spacing: 12) {
+                QuizOptionLabel(text: mistake.selectedAnswer, state: .incorrect) {
+                    Image(systemName: "xmark")
+                        .font(.subheadline.bold())
+                        .accessibilityHidden(true)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(Text("Your answer"))
+                .accessibilityValue(Text(mistake.selectedAnswer))
 
-            QuizMistakeAnswerLine(
-                title: "Correct answer",
-                answer: mistake.correctAnswer,
-                systemImage: "checkmark.circle.fill",
-                tint: .green
-            )
+                QuizOptionLabel(text: mistake.correctAnswer, state: .revealedCorrect) {
+                    Image(systemName: "checkmark")
+                        .font(.subheadline.bold())
+                        .accessibilityHidden(true)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(Text("Correct answer"))
+                .accessibilityValue(Text(mistake.correctAnswer))
+            }
+            .padding(.top, 20)
         }
-        .padding()
+        .padding(24)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppColor.surface)
-        .clipShape(.rect(cornerRadius: 18))
-    }
-}
-
-private struct QuizMistakeAnswerLine: View {
-    let title: LocalizedStringResource
-    let answer: String
-    let systemImage: String
-    let tint: Color
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: systemImage)
-                .foregroundStyle(tint)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(answer)
-                    .font(.subheadline)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .accessibilityElement(children: .combine)
+        .clipShape(.rect(cornerRadius: 22))
     }
 }
 
@@ -176,6 +169,7 @@ private struct QuizResultActions: View {
         mistakes: [
             QuizMistake(
                 id: UUID(),
+                number: 1,
                 question: "Who is the host introducing the course on C.S. Lewis?",
                 selectedAnswer: "Timothy Shutt",
                 correctAnswer: "Jack Garrett"

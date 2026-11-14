@@ -83,6 +83,7 @@ final class QuizViewModel {
 
             return QuizMistake(
                 id: question.id,
+                number: questionIndex + 1,
                 question: question.question,
                 selectedAnswer: question.options[selectedIndex],
                 correctAnswer: question.options[question.correctIndex]
