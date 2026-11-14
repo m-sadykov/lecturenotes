@@ -62,6 +62,34 @@ final class QuizViewModel {
         max(questionsAnsweredCount - correctCount, 0)
     }
 
+    var resultTier: QuizResultTier {
+        QuizResultTier(correctCount: correctCount, totalCount: questions.count)
+    }
+
+    /// Wrongly answered questions in quiz order, with the chosen and the correct option.
+    var mistakes: [QuizMistake] {
+        answersByQuestionIndex.keys.sorted().compactMap { questionIndex in
+            guard questions.indices.contains(questionIndex),
+                  let selectedIndex = answersByQuestionIndex[questionIndex] else {
+                return nil
+            }
+
+            let question = questions[questionIndex]
+            guard selectedIndex != question.correctIndex,
+                  question.options.indices.contains(selectedIndex),
+                  question.options.indices.contains(question.correctIndex) else {
+                return nil
+            }
+
+            return QuizMistake(
+                id: question.id,
+                question: question.question,
+                selectedAnswer: question.options[selectedIndex],
+                correctAnswer: question.options[question.correctIndex]
+            )
+        }
+    }
+
     var questionsAnsweredCount: Int {
         answersByQuestionIndex.count
     }

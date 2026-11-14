@@ -19,6 +19,8 @@ struct QuizView: View {
                 QuizResultView(
                     score: viewModel.correctCount,
                     total: viewModel.questions.count,
+                    tier: viewModel.resultTier,
+                    mistakes: viewModel.mistakes,
                     showsNewSet: viewModel.regeneration.isOffered,
                     onNewSet: {
                         viewModel.regeneration.requestNewSet()
@@ -80,7 +82,7 @@ struct QuizView: View {
                 .foregroundStyle(.primary)
             }
         }
-        .studyItemsRegeneration(viewModel.regeneration) {
+        .studyItemsRegeneration(viewModel.regeneration, showsToolbarButton: !viewModel.isFinished) {
             await viewModel.generateNewSet()
         }
         .alert("Close Quiz?", isPresented: $isCloseAlertPresented) {

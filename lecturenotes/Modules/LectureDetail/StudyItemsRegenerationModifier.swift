@@ -4,12 +4,14 @@ import SwiftUI
 /// confirmation before replacing the set, a progress overlay and the error alert.
 private struct StudyItemsRegenerationModifier<Item: Sendable>: ViewModifier {
     @Bindable var model: StudyItemsRegenerationModel<Item>
+    /// `false` where the screen offers its own "New Set" button, like the quiz results.
+    let showsToolbarButton: Bool
     let onGenerate: () async -> Void
 
     func body(content: Content) -> some View {
         content
             .toolbar {
-                if model.isOffered {
+                if model.isOffered && showsToolbarButton {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("New Set", systemImage: "arrow.clockwise", action: model.requestNewSet)
                             .labelStyle(.iconOnly)
@@ -60,8 +62,9 @@ private struct StudyItemsRegenerationProgressView: View {
 extension View {
     func studyItemsRegeneration<Item: Sendable>(
         _ model: StudyItemsRegenerationModel<Item>,
+        showsToolbarButton: Bool = true,
         onGenerate: @escaping () async -> Void
     ) -> some View {
-        modifier(StudyItemsRegenerationModifier(model: model, onGenerate: onGenerate))
+        modifier(StudyItemsRegenerationModifier(model: model, showsToolbarButton: showsToolbarButton, onGenerate: onGenerate))
     }
 }
