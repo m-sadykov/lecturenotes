@@ -300,9 +300,9 @@ private struct LectureDetailToastView: View {
     }
 }
 
-/// Header and, for audio lectures, the player card. While the lecture is still processing
-/// only the title and metadata are shown: the audio is not uploaded yet and the lecture
-/// is not ready to be organized.
+/// Header and, for audio lectures, the player card; for YouTube imports, a link to the
+/// source video. While the lecture is still processing the player and folder chip are
+/// hidden: the audio is not uploaded yet and the lecture is not ready to be organized.
 private struct LectureDetailTopContentView: View {
     let viewModel: LectureDetailViewModel
     let isProcessing: Bool
@@ -318,6 +318,11 @@ private struct LectureDetailTopContentView: View {
 
             if !isProcessing, let playerViewModel = viewModel.playerViewModel {
                 LectureAudioPlayerView(lecture: viewModel.lecture, viewModel: playerViewModel)
+            }
+
+            // The source video exists before processing finishes, so the link is always offered.
+            if let youtubeURL = viewModel.lecture.youtubeWatchURL {
+                LectureYouTubeLinkView(url: youtubeURL)
             }
         }
     }
