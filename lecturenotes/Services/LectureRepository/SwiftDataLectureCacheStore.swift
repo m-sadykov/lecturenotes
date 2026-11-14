@@ -4,11 +4,13 @@ import SwiftData
 @MainActor
 final class SwiftDataLectureCacheStore {
     private let modelContainer: ModelContainer
+    private let audioStore: LectureLocalAudioStore
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
-    init(modelContainer: ModelContainer) {
+    init(modelContainer: ModelContainer, audioStore: LectureLocalAudioStore = LectureLocalAudioStore()) {
         self.modelContainer = modelContainer
+        self.audioStore = audioStore
     }
 
     func fetchLectures(for userID: String) -> [Lecture] {
@@ -20,7 +22,8 @@ final class SwiftDataLectureCacheStore {
         )
 
         let records = (try? modelContext.fetch(descriptor)) ?? []
-        return records.compactMap(decodeLecture(from:))
+        var resolver = LectureAudioFileResolver(audioStore: audioStore)
+        return records.compactMap { decodeLecture(from: $0, resolver: &resolver) }
     }
 
     func fetchLectures(for userID: String, remoteIDs: [String]) -> [Lecture] {
@@ -36,8 +39,10 @@ final class SwiftDataLectureCacheStore {
 
         let remoteIDSet = Set(remoteIDs)
         let records = (try? modelContext.fetch(descriptor)) ?? []
+        var resolver = LectureAudioFileResolver(audioStore: audioStore)
         let lecturesByRemoteID = records.reduce(into: [String: Lecture]()) { result, record in
-            guard remoteIDSet.contains(record.remoteID), let lecture = decodeLecture(from: record) else {
+            guard remoteIDSet.contains(record.remoteID),
+                  let lecture = decodeLecture(from: record, resolver: &resolver) else {
                 return
             }
 
@@ -78,7 +83,8 @@ final class SwiftDataLectureCacheStore {
             return nil
         }
 
-        return decodeLecture(from: record)
+        var resolver = LectureAudioFileResolver(audioStore: audioStore)
+        return decodeLecture(from: record, resolver: &resolver)
     }
 
     func cachedLectureMap(for userID: String) -> [String: Lecture] {
@@ -89,8 +95,9 @@ final class SwiftDataLectureCacheStore {
         )
 
         let records = (try? modelContext.fetch(descriptor)) ?? []
+        var resolver = LectureAudioFileResolver(audioStore: audioStore)
         return records.reduce(into: [String: Lecture]()) { result, record in
-            if let lecture = decodeLecture(from: record) {
+            if let lecture = decodeLecture(from: record, resolver: &resolver) {
                 result[record.remoteID] = lecture
             }
         }
@@ -115,7 +122,8 @@ final class SwiftDataLectureCacheStore {
         record.transcriptPreview = Self.transcriptPreview(for: lecture)
         record.folderRemoteID = lecture.folderID?.uuidString
         record.createdAt = lecture.createdAt
-        record.payload = try encoder.encode(lecture)
+        var resolver = LectureAudioFileResolver(audioStore: audioStore)
+        try apply(lecture, to: record, resolver: &resolver)
 
         if record.modelContext == nil {
             modelContext.insert(record)
@@ -134,6 +142,7 @@ final class SwiftDataLectureCacheStore {
         let existingRecords = (try? modelContext.fetch(descriptor)) ?? []
         let existingByRemoteID = Dictionary(uniqueKeysWithValues: existingRecords.map { ($0.remoteID, $0) })
         let incomingRemoteIDs = Set(lectures.map { $0.id.uuidString })
+        var resolver = LectureAudioFileResolver(audioStore: audioStore)
 
         for lecture in lectures {
             let remoteID = lecture.id.uuidString
@@ -154,7 +163,7 @@ final class SwiftDataLectureCacheStore {
             record.transcriptPreview = Self.transcriptPreview(for: lecture)
             record.folderRemoteID = lecture.folderID?.uuidString
             record.createdAt = lecture.createdAt
-            record.payload = try encoder.encode(lecture)
+            try apply(lecture, to: record, resolver: &resolver)
 
             if record.modelContext == nil {
                 modelContext.insert(record)
@@ -253,8 +262,44 @@ final class SwiftDataLectureCacheStore {
         return try modelContext.fetch(descriptor).first
     }
 
-    private func decodeLecture(from record: CachedLectureRecord) -> Lecture? {
-        try? decoder.decode(Lecture.self, from: record.payload)
+    /// Decodes a cached lecture and points `audioURL` at its file in the
+    /// current recordings directory, or `nil` when no local file exists.
+    private func decodeLecture(from record: CachedLectureRecord, resolver: inout LectureAudioFileResolver) -> Lecture? {
+        guard var lecture = try? decoder.decode(Lecture.self, from: record.payload) else {
+            return nil
+        }
+
+        // Payloads written before `audioFileName` existed carry an absolute URL
+        // that may point into an earlier app container; keep only its file name.
+        let legacyFileName = audioStore.fileName(for: lecture.audioURL)
+        lecture.audioURL = audioStore.existingFileURL(named: record.audioFileName)
+            ?? audioStore.existingFileURL(named: legacyFileName)
+            ?? audioStore.existingFileURL(named: resolver.lectureIDNamedFileName(for: lecture))
+        return lecture
+    }
+
+    /// Writes a lecture into a record without ever dropping a known local audio file.
+    ///
+    /// A `nil` `audioURL` only means the caller does not know the local file:
+    /// lectures rebuilt from a Firestore snapshot before `saveLecture` reaches
+    /// the cache, or stale in-memory copies. The local link is cleared only by
+    /// deleting the record.
+    private func apply(_ lecture: Lecture, to record: CachedLectureRecord, resolver: inout LectureAudioFileResolver) throws {
+        let legacyFileName = record.audioFileName == nil ? legacyAudioFileName(in: record.payload) : nil
+        let knownFileName = audioStore.fileName(for: lecture.audioURL) ?? record.audioFileName ?? legacyFileName
+        record.audioFileName = knownFileName ?? resolver.lectureIDNamedFileName(for: lecture)
+
+        var payloadLecture = lecture
+        payloadLecture.audioURL = nil
+        record.payload = try encoder.encode(payloadLecture)
+    }
+
+    private func legacyAudioFileName(in payload: Data) -> String? {
+        guard !payload.isEmpty, let lecture = try? decoder.decode(Lecture.self, from: payload) else {
+            return nil
+        }
+
+        return audioStore.fileName(for: lecture.audioURL)
     }
 
     private func saveContext() throws {
