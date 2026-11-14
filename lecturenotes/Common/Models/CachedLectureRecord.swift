@@ -12,6 +12,10 @@ final class CachedLectureRecord {
     var folderRemoteID: String?
     var createdAt: Date
     var payload: Data
+    /// Name of the lecture's audio file in `Documents/Recordings`, if it was
+    /// recorded or imported on this device. Stored instead of an absolute URL
+    /// because the app container path changes between installs.
+    var audioFileName: String?
 
     init(
         ownerUserID: String,
@@ -21,7 +25,8 @@ final class CachedLectureRecord {
         transcriptPreview: String,
         folderRemoteID: String?,
         createdAt: Date,
-        payload: Data
+        payload: Data,
+        audioFileName: String? = nil
     ) {
         self.cacheKey = Self.cacheKey(ownerUserID: ownerUserID, remoteID: remoteID)
         self.ownerUserID = ownerUserID
@@ -32,6 +37,7 @@ final class CachedLectureRecord {
         self.folderRemoteID = folderRemoteID
         self.createdAt = createdAt
         self.payload = payload
+        self.audioFileName = audioFileName
     }
 
     static func cacheKey(ownerUserID: String, remoteID: String) -> String {
