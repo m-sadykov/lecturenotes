@@ -5,8 +5,6 @@ struct LectureAudioPlayerView: View {
     let lecture: Lecture
     @Bindable var viewModel: LecturePlayerViewModel
 
-    @Environment(\.colorScheme) private var colorScheme
-
     private static let skipInterval: Duration = .seconds(10)
 
     var body: some View {
@@ -38,13 +36,10 @@ struct LectureAudioPlayerView: View {
                 }
                 .frame(maxWidth: .infinity)
 
-                Button(
-                    viewModel.isPlaying ? "Pause" : "Play",
-                    systemImage: viewModel.isPlaying ? "pause.fill" : "play.fill",
+                LecturePlayPauseButton(
+                    isPlaying: viewModel.isPlaying,
                     action: viewModel.togglePlayback
                 )
-                .font(.largeTitle)
-                .contentTransition(.symbolEffect(.replace))
                 .frame(maxWidth: .infinity)
 
                 Button("Forward 10 seconds", systemImage: "goforward.10") {
@@ -67,11 +62,7 @@ struct LectureAudioPlayerView: View {
             .disabled(!viewModel.canPlay)
         }
         .padding()
-        // The player is the screen's one control surface, so it uses inverted colors:
-        // its contents render in the opposite scheme (white on black in light mode,
-        // black on white in dark mode), while the card fill resolves in the real scheme.
-        .environment(\.colorScheme, colorScheme == .dark ? .light : .dark)
-        .background(AppColor.ink)
+        .background(AppColor.surface)
         .clipShape(.rect(cornerRadius: 20))
     }
 
@@ -81,6 +72,32 @@ struct LectureAudioPlayerView: View {
         } else {
             "\(viewModel.playbackRate.formatted(.number.precision(.fractionLength(0...2))))x"
         }
+    }
+}
+
+/// The player's main action: a filled `ink` circle, like the record button on the home
+/// screen, so the card itself can stay white while play/pause still stands out.
+private struct LecturePlayPauseButton: View {
+    let isPlaying: Bool
+    let action: () -> Void
+
+    @Environment(\.isEnabled) private var isEnabled
+    @ScaledMetric(relativeTo: .title2) private var diameter: CGFloat = 56
+
+    var body: some View {
+        Button(
+            isPlaying ? "Pause" : "Play",
+            systemImage: isPlaying ? "pause.fill" : "play.fill",
+            action: action
+        )
+        .labelStyle(.iconOnly)
+        .font(.title2)
+        .contentTransition(.symbolEffect(.replace))
+        .foregroundStyle(AppColor.onInk)
+        .frame(width: diameter, height: diameter)
+        .background(AppColor.ink, in: .circle)
+        .contentShape(.circle)
+        .opacity(isEnabled ? 1 : 0.35)
     }
 }
 
