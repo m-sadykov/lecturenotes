@@ -29,7 +29,8 @@ struct QuizOptionButton: View {
     private var backgroundStyle: Color {
         switch state {
         case .idle, .revealedCorrect:
-            Color.primary.opacity(0.14)
+            // Same fill as the "Question N" badge above, so the card reads as one surface.
+            AppColor.fillSubtle
         case .correct:
             Color(red: 0.46, green: 0.88, blue: 0.76)
         case .incorrect:
@@ -40,7 +41,7 @@ struct QuizOptionButton: View {
     private var borderColor: Color {
         switch state {
         case .idle:
-            Color.primary.opacity(0.22)
+            .clear
         case .correct, .revealedCorrect:
             Color(red: 0.22, green: 0.83, blue: 0.67)
         case .incorrect:
