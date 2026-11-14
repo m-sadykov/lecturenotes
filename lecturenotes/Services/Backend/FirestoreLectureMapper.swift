@@ -85,6 +85,7 @@ enum FirestoreLectureMapper {
             sourceType: LectureSourceType(rawValue: stringValue(for: "sourceType", in: data) ?? "") ?? .audio,
             audioURL: preservedLocalAudioURL,
             remoteAudioPath: stringValue(for: "audioPath", in: data),
+            remoteAudioChunkPaths: stringArrayValue(for: "chunkPaths", in: data),
             pdfPageCount: intValue(for: "pdfPageCount", in: data),
             sourceURL: urlValue(for: "sourceURL", in: data),
             youtubeVideoID: stringValue(for: "youtubeVideoID", in: data),
@@ -105,6 +106,12 @@ enum FirestoreLectureMapper {
 
     private static func stringValue(for key: String, in data: [String: Any]) -> String? {
         data[key] as? String
+    }
+
+    /// Non-empty strings from an array field, or `nil` when the field is missing or has none.
+    private static func stringArrayValue(for key: String, in data: [String: Any]) -> [String]? {
+        let values = (data[key] as? [Any])?.compactMap { $0 as? String }.filter { !$0.isEmpty } ?? []
+        return values.isEmpty ? nil : values
     }
 
     private static func doubleValue(for key: String, in data: [String: Any]) -> Double? {
