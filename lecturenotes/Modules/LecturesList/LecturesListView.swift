@@ -17,22 +17,13 @@ struct LecturesListView: View {
     @State private var activeFileImport: LocalFileImport = .importAudio
     @State private var isFileImporterPresented = false
     @State private var pendingLocalConsentAction: LocalFileImport?
-    @State private var isPremiumBannerVisible = false
-    @State private var hasPendingPremiumBannerFadeOut = false
 
     var body: some View {
         @Bindable var viewModel = viewModel
-        let shouldShowPremiumBanner = userProfileService?.currentProfile?.plan == .freemium
         let displayedLectures = viewModel.displayedLectures
 
         NavigationStack {
             List {
-                if isPremiumBannerVisible {
-                    PremiumBannerView(paywallPresentationModel: paywallPresentationModel)
-                        .homeListRowStyle()
-                        .transition(.opacity)
-                }
-
                 if !viewModel.folders.isEmpty {
                     FolderFilterChipsView(
                         folders: viewModel.folders,
@@ -501,33 +492,7 @@ struct LecturesListView: View {
                 Text("Delete \"\(lecture.displayTitle)\"? This action cannot be undone.")
             }
             .task {
-                isPremiumBannerVisible = shouldShowPremiumBanner
                 await viewModel.load()
-            }
-            .onChange(of: shouldShowPremiumBanner, initial: false) { _, newValue in
-                if newValue {
-                    hasPendingPremiumBannerFadeOut = false
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        isPremiumBannerVisible = true
-                    }
-                } else if paywallPresentationModel.presentedOffering != nil {
-                    hasPendingPremiumBannerFadeOut = true
-                    isPremiumBannerVisible = true
-                } else {
-                    withAnimation(.easeOut(duration: 0.3)) {
-                        isPremiumBannerVisible = false
-                    }
-                }
-            }
-            .onChange(of: paywallPresentationModel.presentedOffering != nil, initial: false) { _, isPresented in
-                guard !isPresented, hasPendingPremiumBannerFadeOut, !shouldShowPremiumBanner else {
-                    return
-                }
-
-                hasPendingPremiumBannerFadeOut = false
-                withAnimation(.easeOut(duration: 0.3)) {
-                    isPremiumBannerVisible = false
-                }
             }
             .onChange(of: viewModel.reviewRequestToken, initial: false) { oldValue, newValue in
                 guard newValue > oldValue else {
@@ -675,14 +640,10 @@ private enum LocalFileImport {
 
 private struct LecturesListPreviewCanvas: View {
     private let lectures = MockLectures.makeLectures()
-    @State private var paywallPresentationModel = PaywallPresentationModel()
 
     var body: some View {
         NavigationStack {
             List {
-                PremiumBannerView(paywallPresentationModel: paywallPresentationModel)
-                    .homeListRowStyle()
-
                 ForEach(lectures) { lecture in
                     LectureRowView(lecture: lecture, onOpen: {}, onMore: {})
                         .listRowInsets(.init(top: 0, leading: 20, bottom: 0, trailing: 12))

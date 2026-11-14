@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 
 struct SettingsView: View {
     @Environment(\.openURL) private var openURL
@@ -9,6 +10,7 @@ struct SettingsView: View {
     @State private var alertMessage = ""
     @State private var isAlertPresented = false
     @State private var isLanguagePickerPresented = false
+    @State private var isManageSubscriptionsPresented = false
     let analyticsService: AppAnalyticsService?
     let crashReportingService: CrashReportingService?
 
@@ -61,6 +63,16 @@ struct SettingsView: View {
                         let message = await viewModel.restorePurchases(using: subscriptionManager)
                         presentAlert(message)
                     }
+                }
+
+                SettingsRowDivider()
+
+                SettingsActionRow(
+                    title: .localized("Manage subscription"),
+                    systemImage: "creditcard"
+                ) {
+                    crashReportingService?.breadcrumb("manage_subscriptions_opened")
+                    isManageSubscriptionsPresented = true
                 }
 
                 SettingsRowDivider()
@@ -144,6 +156,15 @@ struct SettingsView: View {
         }
         .sheet(item: $supportEmailDraft) { draft in
             SettingsMailComposer(draft: draft)
+        }
+        .manageSubscriptionsSheet(isPresented: $isManageSubscriptionsPresented)
+        .onChange(of: isManageSubscriptionsPresented) { wasPresented, isPresented in
+            // Pick up a cancellation or plan change made in the App Store sheet.
+            guard wasPresented, !isPresented else { return }
+
+            Task {
+                await subscriptionManager.refresh()
+            }
         }
         .sheet(isPresented: $isLanguagePickerPresented) {
             SettingsLanguagePickerView(
