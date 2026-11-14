@@ -5,6 +5,8 @@ struct LectureAudioPlayerView: View {
     let lecture: Lecture
     @Bindable var viewModel: LecturePlayerViewModel
 
+    @Environment(\.colorScheme) private var colorScheme
+
     private static let skipInterval: Duration = .seconds(10)
 
     var body: some View {
@@ -65,7 +67,11 @@ struct LectureAudioPlayerView: View {
             .disabled(!viewModel.canPlay)
         }
         .padding()
-        .background(AppColor.fillSubtle)
+        // The player is the screen's one control surface, so it uses inverted colors:
+        // its contents render in the opposite scheme (white on black in light mode,
+        // black on white in dark mode), while the card fill resolves in the real scheme.
+        .environment(\.colorScheme, colorScheme == .dark ? .light : .dark)
+        .background(AppColor.ink)
         .clipShape(.rect(cornerRadius: 20))
     }
 

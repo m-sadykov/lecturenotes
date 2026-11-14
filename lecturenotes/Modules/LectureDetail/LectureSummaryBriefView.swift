@@ -17,7 +17,7 @@ struct LectureSummaryBriefView: View {
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppColor.fillSubtle)
+        .background(AppColor.surface)
         .clipShape(.rect(cornerRadius: 16))
         .accessibilityElement(children: .combine)
     }
