@@ -4,7 +4,8 @@ import Observation
 @MainActor
 @Observable
 final class QuizViewModel {
-    let questions: [QuizQuestion]
+    private(set) var questions: [QuizQuestion]
+    let regeneration: StudyItemsRegenerationModel<QuizQuestion>
 
     var currentIndex = 0
     private var answersByQuestionIndex: [Int: Int] = [:]
@@ -14,9 +15,11 @@ final class QuizViewModel {
     init(
         questions: [QuizQuestion],
         analyticsService: AppAnalyticsService? = nil,
-        analyticsContext: LectureAnalyticsContext? = nil
+        analyticsContext: LectureAnalyticsContext? = nil,
+        regeneration: StudyItemsRegenerationModel<QuizQuestion>? = nil
     ) {
         self.questions = questions
+        self.regeneration = regeneration ?? .unavailable
         self.analyticsService = analyticsService
         self.analyticsContext = analyticsContext
     }
@@ -57,6 +60,35 @@ final class QuizViewModel {
 
     var wrongCount: Int {
         max(questionsAnsweredCount - correctCount, 0)
+    }
+
+    var resultTier: QuizResultTier {
+        QuizResultTier(correctCount: correctCount, totalCount: questions.count)
+    }
+
+    /// Wrongly answered questions in quiz order, with the chosen and the correct option.
+    var mistakes: [QuizMistake] {
+        answersByQuestionIndex.keys.sorted().compactMap { questionIndex in
+            guard questions.indices.contains(questionIndex),
+                  let selectedIndex = answersByQuestionIndex[questionIndex] else {
+                return nil
+            }
+
+            let question = questions[questionIndex]
+            guard selectedIndex != question.correctIndex,
+                  question.options.indices.contains(selectedIndex),
+                  question.options.indices.contains(question.correctIndex) else {
+                return nil
+            }
+
+            return QuizMistake(
+                id: question.id,
+                number: questionIndex + 1,
+                question: question.question,
+                selectedAnswer: question.options[selectedIndex],
+                correctAnswer: question.options[question.correctIndex]
+            )
+        }
     }
 
     var questionsAnsweredCount: Int {
@@ -128,6 +160,21 @@ final class QuizViewModel {
             return
         }
         currentIndex = index
+    }
+
+    /// Replaces the quiz with newly generated questions and starts it over.
+    func generateNewSet() async {
+        guard let newQuestions = await regeneration.generate() else {
+            return
+        }
+
+        replaceQuestions(newQuestions)
+    }
+
+    func replaceQuestions(_ newQuestions: [QuizQuestion]) {
+        questions = newQuestions
+        answersByQuestionIndex = [:]
+        currentIndex = 0
     }
 
     func trackStarted() {

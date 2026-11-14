@@ -3,6 +3,7 @@ import SwiftUI
 struct LectureDetailView: View {
     @State private var viewModel: LectureDetailViewModel
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
 
     init(
         lecture: Lecture,
@@ -11,7 +12,8 @@ struct LectureDetailView: View {
         analyticsService: AppAnalyticsService? = nil,
         crashReportingService: CrashReportingService? = nil,
         onLectureUpdated: @escaping (Lecture) -> Void = { _ in },
-        onLectureDeleted: @escaping (Lecture.ID) async -> String? = { _ in nil }
+        onLectureDeleted: @escaping (Lecture.ID) async -> String? = { _ in nil },
+        onUpgradeRequested: @escaping () -> Void = {}
     ) {
         _viewModel = State(
             initialValue: LectureDetailViewModel(
@@ -21,7 +23,8 @@ struct LectureDetailView: View {
                 analyticsService: analyticsService,
                 crashReportingService: crashReportingService,
                 onLectureUpdated: onLectureUpdated,
-                onLectureDeleted: onLectureDeleted
+                onLectureDeleted: onLectureDeleted,
+                onUpgradeRequested: onUpgradeRequested
             )
         )
     }
@@ -159,7 +162,7 @@ struct LectureDetailView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
-        .fullScreenCover(item: $viewModel.activeDestination) { destination in
+        .fullScreenCover(item: $viewModel.activeDestination, onDismiss: viewModel.handleStudyScreenDismissed) { destination in
             NavigationStack {
                 switch destination {
                 case .flashcards:
@@ -167,7 +170,8 @@ struct LectureDetailView: View {
                         viewModel: FlashcardsPracticeViewModel(
                             cards: viewModel.lecture.flashcards,
                             analyticsService: viewModel.analytics,
-                            analyticsContext: .init(lecture: viewModel.lecture)
+                            analyticsContext: .init(lecture: viewModel.lecture),
+                            regeneration: viewModel.makeFlashcardsRegeneration(plan: subscriptionManager.currentPlan)
                         )
                     )
                 case .quiz:
@@ -175,7 +179,8 @@ struct LectureDetailView: View {
                         viewModel: QuizViewModel(
                             questions: viewModel.lecture.quiz,
                             analyticsService: viewModel.analytics,
-                            analyticsContext: .init(lecture: viewModel.lecture)
+                            analyticsContext: .init(lecture: viewModel.lecture),
+                            regeneration: viewModel.makeQuizRegeneration(plan: subscriptionManager.currentPlan)
                         )
                     )
                 }

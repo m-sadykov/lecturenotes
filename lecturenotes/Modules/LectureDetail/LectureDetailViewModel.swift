@@ -43,7 +43,11 @@ final class LectureDetailViewModel {
     @ObservationIgnored private let crashReportingService: CrashReportingService?
     @ObservationIgnored private let onLectureUpdated: (Lecture) -> Void
     @ObservationIgnored private let onLectureDeleted: (Lecture.ID) async -> String?
+    @ObservationIgnored private let onUpgradeRequested: () -> Void
     @ObservationIgnored private var repositoryObservationTask: Task<Void, Never>?
+    /// Set when a study screen asked for the paywall; it opens once that screen closes,
+    /// because the paywall is presented from the app root and can't cover it.
+    @ObservationIgnored private var isUpgradePendingDismissal = false
 
     init(
         lecture: Lecture,
@@ -52,7 +56,8 @@ final class LectureDetailViewModel {
         analyticsService: AppAnalyticsService? = nil,
         crashReportingService: CrashReportingService? = nil,
         onLectureUpdated: @escaping (Lecture) -> Void = { _ in },
-        onLectureDeleted: @escaping (Lecture.ID) async -> String? = { _ in nil }
+        onLectureDeleted: @escaping (Lecture.ID) async -> String? = { _ in nil },
+        onUpgradeRequested: @escaping () -> Void = {}
     ) {
         self.lecture = lecture
         self.repository = repository
@@ -61,6 +66,85 @@ final class LectureDetailViewModel {
         self.crashReportingService = crashReportingService
         self.onLectureUpdated = onLectureUpdated
         self.onLectureDeleted = onLectureDeleted
+        self.onUpgradeRequested = onUpgradeRequested
+    }
+
+    /// Whether the flashcards and quiz screens can offer a new set: needs the backend and
+    /// a processed lecture, whose transcript the new set is generated from.
+    var canOfferStudyItemsRegeneration: Bool {
+        processingService != nil && lecture.status == .ready
+    }
+
+    /// Generates a new set of flashcards or quiz questions, replaces the lecture's set
+    /// and passes the updated lecture up. Throws `StudyItemsRegenerationError`.
+    func regenerateStudyItems(_ kind: StudyItemsKind) async throws -> RegeneratedStudyItems {
+        guard let processingService else {
+            throw StudyItemsRegenerationError.failed
+        }
+
+        let regenerated = try await processingService.regenerateStudyItems(for: lecture, kind: kind)
+        switch regenerated {
+        case .flashcards(let cards):
+            lecture.flashcards = cards
+        case .quiz(let questions):
+            lecture.quiz = questions
+        }
+        onLectureUpdated(lecture)
+        return regenerated
+    }
+
+    /// "New Set" state for the flashcards screen, based on the user's plan.
+    func makeFlashcardsRegeneration(plan: AppUserPlan) -> StudyItemsRegenerationModel<Flashcard> {
+        StudyItemsRegenerationModel(
+            access: studyItemsRegenerationAccess(plan: plan),
+            regenerate: { [weak self] in
+                guard let self, case .flashcards(let cards) = try await regenerateStudyItems(.flashcards) else {
+                    throw StudyItemsRegenerationError.failed
+                }
+                return cards
+            },
+            onUpgradeRequested: { [weak self] in
+                self?.requestUpgradeFromStudyScreen()
+            }
+        )
+    }
+
+    /// "New Set" state for the quiz screen, based on the user's plan.
+    func makeQuizRegeneration(plan: AppUserPlan) -> StudyItemsRegenerationModel<QuizQuestion> {
+        StudyItemsRegenerationModel(
+            access: studyItemsRegenerationAccess(plan: plan),
+            regenerate: { [weak self] in
+                guard let self, case .quiz(let questions) = try await regenerateStudyItems(.quiz) else {
+                    throw StudyItemsRegenerationError.failed
+                }
+                return questions
+            },
+            onUpgradeRequested: { [weak self] in
+                self?.requestUpgradeFromStudyScreen()
+            }
+        )
+    }
+
+    func studyItemsRegenerationAccess<Item>(plan: AppUserPlan) -> StudyItemsRegenerationModel<Item>.Access {
+        guard canOfferStudyItemsRegeneration else {
+            return .unavailable
+        }
+        return plan.canRegenerateStudyItems ? .available : .upgradeRequired
+    }
+
+    /// Closes the open study screen and shows the paywall once it is gone.
+    func requestUpgradeFromStudyScreen() {
+        isUpgradePendingDismissal = true
+        activeDestination = nil
+    }
+
+    func handleStudyScreenDismissed() {
+        guard isUpgradePendingDismissal else {
+            return
+        }
+
+        isUpgradePendingDismissal = false
+        onUpgradeRequested()
     }
 
     /// The note shown on the detail screen: the Markdown study note when the backend

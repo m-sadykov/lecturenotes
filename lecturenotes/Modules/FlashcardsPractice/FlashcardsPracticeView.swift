@@ -61,6 +61,9 @@ struct FlashcardsPracticeView: View {
                 .foregroundStyle(.primary)
             }
         }
+        .studyItemsRegeneration(viewModel.regeneration) {
+            await viewModel.generateNewSet()
+        }
     }
 }
 
