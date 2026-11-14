@@ -4,7 +4,7 @@ struct LectureRowView: View {
     let lecture: Lecture
     let onOpen: () -> Void
     let onMore: () -> Void
-    
+
     @State private var menuTapFeedbackTrigger = 0
 
     var body: some View {
@@ -22,16 +22,12 @@ struct LectureRowView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
-                        if !previewText.isEmpty {
-                            Text(previewText)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(2)
-                        }
+                        LectureRowStatusView(status: LectureRowStatus(lecture: lecture), previewText: previewText)
                     }
 
                     Spacer(minLength: 0)
                 }
+                .contentShape(.rect)
             }
             .buttonStyle(.plain)
 
@@ -39,9 +35,11 @@ struct LectureRowView: View {
                 menuTapFeedbackTrigger += 1
                 onMore()
             } label: {
-                Image(systemName: "ellipsis")
+                Label("Actions", systemImage: "ellipsis")
+                    .labelStyle(.iconOnly)
                     .rotationEffect(.degrees(90))
                     .frame(width: 32, height: 32)
+                    .contentShape(.rect)
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
@@ -55,11 +53,11 @@ struct LectureRowView: View {
         if let localizedDisplayTitleKey = lecture.localizedDisplayTitleKey {
             Text(localizedDisplayTitleKey.resource)
                 .bold()
-                .lineLimit(1)
+                .lineLimit(2)
         } else {
             Text(lecture.title)
                 .bold()
-                .lineLimit(1)
+                .lineLimit(2)
         }
     }
 

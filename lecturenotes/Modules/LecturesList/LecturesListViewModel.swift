@@ -106,7 +106,6 @@ final class LecturesListViewModel {
     }
     var searchResults: [Lecture] = []
     var isSearchPresented = false
-    var isSearchAutoPresented = false
     var isSearching = false
     var selectedFolderID: LectureFolder.ID? {
         didSet {
@@ -325,38 +324,27 @@ final class LecturesListViewModel {
         selectedLecture = lecture
     }
 
-    func presentSearch() {
-        isSearchAutoPresented = false
-        isSearchPresented = true
-    }
-
-    func presentSearchFromScroll() {
-        guard !hasActiveSearchQuery, !isSearchPresented else {
-            return
-        }
-
-        isSearchAutoPresented = true
-    }
-
-    func hideSearchForScrollIfNeeded() {
-        guard !hasActiveSearchQuery, !isSearchPresented else {
-            return
-        }
-
-        isSearchAutoPresented = false
-    }
-
-    func clearSearch() {
-        searchText = ""
-    }
-
+    /// Resets the search state once the system search field is dismissed.
     func dismissSearch() {
         searchTask?.cancel()
         searchText = ""
         searchResults = []
         isSearching = false
         isSearchPresented = false
-        isSearchAutoPresented = false
+    }
+
+    /// Restarts processing for a lecture whose previous attempt failed.
+    func retryProcessing(_ lectureID: Lecture.ID) {
+        guard processingService != nil,
+              var lecture = lecture(withID: lectureID),
+              lecture.status == .failed else {
+            return
+        }
+
+        lecture.status = lecture.processingStartStatus
+        lecture.processingErrorMessage = nil
+        replaceLecture(lecture)
+        startProcessingIfNeeded(for: lecture)
     }
 
     func requestDelete(_ lecture: Lecture) {
