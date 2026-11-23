@@ -106,6 +106,25 @@ struct lecturenotesApp: App {
         guard !hasPreparedStartup else { return }
         hasPreparedStartup = true
 
+        // Unstructured on purpose: if the deadline passes, startup keeps running after the splash goes away.
+        let startupTask = Task { await runStartupWork() }
+        let finishedInTime = await StartupDeadline.wait(
+            for: startupTask,
+            timeout: StartupDeadline.splashTimeout
+        )
+        if !finishedInTime {
+            appEnvironment.crashReportingService.recordNonFatal(
+                StartupDeadlineError.splashTimedOut,
+                reason: "app_launch_splash_timed_out"
+            )
+        }
+
+        withAnimation(.easeOut(duration: 0.25)) {
+            isSplashVisible = false
+        }
+    }
+
+    private func runStartupWork() async {
         appEnvironment.crashReportingService.setCurrentFlow("app_launch")
         appEnvironment.crashReportingService.breadcrumb("subscription_start_requested")
         subscriptionManager.start()
@@ -122,12 +141,6 @@ struct lecturenotesApp: App {
 
         await lecturesListViewModel.load()
         appEnvironment.crashReportingService.breadcrumb("app_launch_completed")
-
-        await MainActor.run {
-            withAnimation(.easeOut(duration: 0.25)) {
-                isSplashVisible = false
-            }
-        }
     }
 
     var body: some Scene {

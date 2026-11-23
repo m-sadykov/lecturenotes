@@ -39,11 +39,9 @@ final class FirebaseUserProfileService {
 
         if let data = snapshot.data(), !data.isEmpty {
             let normalizedProfile = normalizedProfile(userID: user.uid, data: data)
-            try await setData(
-                makeDocumentData(for: normalizedProfile),
-                at: documentReference,
-                merge: true
-            )
+            // Firestore only calls back once the server acknowledges a write, which never happens
+            // while offline. The profile is already read, so write the normalized copy without waiting.
+            documentReference.setData(makeDocumentData(for: normalizedProfile), merge: true) { _ in }
             currentProfile = normalizedProfile
             startObservingCurrentUserProfile(userID: user.uid, at: documentReference)
             return normalizedProfile

@@ -97,9 +97,7 @@ final class PaywallPresentationModel {
     func presentScheduledProYearlyDiscountPaywallIfNeeded(
         for subscriptionManager: SubscriptionManager
     ) async {
-        guard shouldAllowPaywallPresentation(for: subscriptionManager.currentPlan) else { return }
-        guard presentedOffering == nil else { return }
-        guard shouldPresentScheduledOffer else { return }
+        guard canPresentScheduledOffer(for: subscriptionManager.currentPlan) else { return }
 
         let didPresent = await presentPaywall(
             offeringIdentifier: Self.proYearlyDiscountOfferingIdentifier,
@@ -235,9 +233,10 @@ final class PaywallPresentationModel {
         }
 
         switch activePresentationSource {
-        case .postOnboarding, .scheduledDiscount:
+        // Restart the discount's wait, so it doesn't follow right after a closed launch paywall.
+        case .postOnboarding, .appLaunch, .scheduledDiscount:
             markScheduledOfferAnchorNow()
-        case .manualDefault, .appLaunch, .youTubeImport, .none:
+        case .manualDefault, .youTubeImport, .none:
             break
         }
     }
@@ -331,6 +330,18 @@ final class PaywallPresentationModel {
 
     var hasScheduledOfferAnchor: Bool {
         scheduledOfferLastPresentedAt != nil
+    }
+
+    /// Whether the scheduled Pro yearly discount may show now.
+    ///
+    /// It waits until the launch paywall has been handled. That only happens once RevenueCat
+    /// reports the plan, so before then `currentPlan` is still the `.freemium` placeholder,
+    /// and the launch slot belongs to the default paywall.
+    func canPresentScheduledOffer(for currentPlan: AppUserPlan) -> Bool {
+        hasHandledAppLaunchPaywall
+            && shouldAllowPaywallPresentation(for: currentPlan)
+            && presentedOffering == nil
+            && shouldPresentScheduledOffer
     }
 
     private var shouldPresentScheduledOffer: Bool {
